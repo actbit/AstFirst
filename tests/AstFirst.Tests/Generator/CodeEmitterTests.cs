@@ -56,7 +56,7 @@ public class CodeEmitterTests
     public void EmitLexerContainsTokenizeAndDfa()
     {
         var source = CodeEmitter.EmitLexer(CalcModel(), "CalcLexer", "TestNs");
-        Assert.Contains("internal static class CalcLexer", source);
+        Assert.Contains("public static class CalcLexer", source);
         Assert.Contains("public static List<LexToken> Tokenize(string input)", source);
         Assert.Contains("Boundaries", source);
         Assert.Contains("Transitions", source);

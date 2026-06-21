@@ -25,7 +25,7 @@ public static class CodeEmitter
         sb.AppendLine("using AstFirst.Core.Lexing;");
         sb.AppendLine();
         if (ns.Length > 0) { sb.AppendLine("namespace " + ns + ";"); sb.AppendLine(); }
-        sb.AppendLine("internal static class " + className);
+        sb.AppendLine("public static class " + className);
         sb.AppendLine("{");
 
         // Boundaries
