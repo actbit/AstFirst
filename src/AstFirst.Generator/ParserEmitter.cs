@@ -92,25 +92,52 @@ public static class ParserEmitter
         sb.AppendLine("            int val = ActionValue[state, sym];");
         sb.AppendLine("            if (kind == 1) // Shift");
         sb.AppendLine("            {");
-        sb.AppendLine("                values.Push(sym == EofSym ? null : (object)tokens[i]);");
+        sb.AppendLine("                values.Push(sym == EofSym ? null : (object)ToToken(tokens[i]));");
         sb.AppendLine("                states.Push(val);");
         sb.AppendLine("                i++;");
         sb.AppendLine("            }");
         sb.AppendLine("            else if (kind == 2) // Reduce");
         sb.AppendLine("            {");
-        sb.AppendLine("                int len = ProdLen[val];");
-        sb.AppendLine("                for (int k = 0; k < len; k++) { states.Pop(); values.Pop(); }");
-        sb.AppendLine("                values.Push(null); // (4) でコンストラクタ呼び出しに差し替え");
+        sb.AppendLine("                object? node;");
+        sb.AppendLine("                switch (val)");
+        sb.AppendLine("                {");
+        for (int pi = 0; pi < grammar.Productions.Count; pi++)
+        {
+            var prod = grammar.Productions[pi];
+            if (prod.Tag is not ReduceActionModel action) continue;
+            sb.Append("                    case ").Append(prod.Id).Append(": { var c = PopN(values, ").Append(prod.Rhs.Length).Append("); PopN(states, ").Append(prod.Rhs.Length).Append("); node = new ").Append(action.AstTypeName).Append("(");
+            for (int i = 0; i < action.Parameters.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                var p = action.Parameters[i];
+                if (p.IsContext) sb.Append("ctx");
+                else sb.Append("(").Append(p.CastTypeName).Append(")c[").Append(p.ChildIndex).Append("]");
+            }
+            sb.AppendLine("); break; }");
+        }
+        sb.AppendLine("                    default: { PopN(values, ProdLen[val]); PopN(states, ProdLen[val]); node = null; break; }");
+        sb.AppendLine("                }");
+        sb.AppendLine("                values.Push(node);");
         sb.AppendLine("                states.Push(Goto[states.Peek(), ProdLhs[val]]);");
         sb.AppendLine("            }");
         sb.AppendLine("            else if (kind == 3) // Accept");
         sb.AppendLine("            {");
+        sb.AppendLine("                values.Pop(); // $ を捨てる");
         sb.AppendLine("                return values.Peek();");
         sb.AppendLine("            }");
         sb.AppendLine("            else throw new System.Exception(\"構文エラー: 状態 \" + state + \" で予期しないトークンです。\");");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
 
+        sb.AppendLine("    private static T[] PopN<T>(Stack<T> s, int n)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var a = new T[n];");
+        sb.AppendLine("        for (int i = 0; i < n; i++) a[n - 1 - i] = s.Pop();");
+        sb.AppendLine("        return a;");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    private static AstFirst.Token ToToken(AstFirst.Core.Lexing.LexToken t)");
+        sb.AppendLine("        => new AstFirst.BasicToken(t.Text, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, 0, 0), new AstFirst.Position(t.End, 0, 0)));");
         sb.AppendLine("}");
         return sb.ToString();
     }

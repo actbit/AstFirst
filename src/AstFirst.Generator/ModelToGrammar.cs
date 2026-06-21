@@ -58,12 +58,21 @@ public static class ModelToGrammar
             foreach (var ctor in n.Constructors)
             {
                 var rhs = new List<Symbol>();
+                var reduceParams = new List<ReduceParamModel>();
+                int childIndex = 0;
                 foreach (var p in ctor.Parameters)
                 {
-                    if (p.IsContext) continue;
+                    if (p.IsContext)
+                    {
+                        reduceParams.Add(new ReduceParamModel(true, p.TypeFullName, -1));
+                        continue;
+                    }
+                    reduceParams.Add(new ReduceParamModel(false, p.TypeFullName, childIndex));
                     rhs.Add(ParamToSymbol(p));
+                    childIndex++;
                 }
-                b.Production(lhs, rhs.ToArray(), n.FullName);
+                var action = new ReduceActionModel(n.FullName, reduceParams);
+                b.Production(lhs, rhs.ToArray(), action);
             }
         }
 

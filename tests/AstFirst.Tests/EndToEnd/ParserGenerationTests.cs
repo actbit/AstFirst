@@ -10,11 +10,15 @@ namespace AstFirst.Tests.EndToEnd;
 public class ParserGenerationTests
 {
     [Fact]
-    public void AcceptsValidExpression()
+    public void ParsesToAst()
     {
-        // 例外が飛ばなければ受理。
-        ExprParser.Parse("1+2");
-        ExprParser.Parse("1+2+3");
+        // "1+2" → AddExpr(NumExpr(1), +, NumExpr(2))
+        var ast = ExprParser.Parse("1+2");
+        var add = Assert.IsType<AddExpr>(ast);
+        var left = Assert.IsType<NumExpr>(add.Left);
+        var right = Assert.IsType<NumExpr>(add.Right);
+        Assert.Equal(1, left.Value);
+        Assert.Equal(2, right.Value);
     }
 
     [Fact]

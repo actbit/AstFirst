@@ -20,3 +20,9 @@ public abstract class Token
 
     public override string ToString() => Text;
 }
+
+/// <summary>Token の単純な具象実装。生成コードが LexToken から変換して使う。</summary>
+public sealed class BasicToken : Token
+{
+    public BasicToken(string text, SourceSpan span) : base(text, span) { }
+}

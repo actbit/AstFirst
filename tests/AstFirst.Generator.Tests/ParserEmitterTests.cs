@@ -58,7 +58,19 @@ public class ParserEmitterTests
         var model = CalcModel();
         var lexerSource = CodeEmitter.EmitLexer(model, "ExprLexer", "TestNs");
         var parserSource = ParserEmitter.EmitParser(model, "TestNs");
-        var comp = Compile(lexerSource, parserSource);
+        var stubs = @"
+namespace AstFirst {
+    public abstract class AstNode { }
+    public abstract class Token { public Token(string t, SourceSpan s) { } }
+    public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } }
+    public readonly struct Position { public Position(int o, int l, int c) { } }
+    public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
+}
+public class Expr : AstFirst.AstNode { }
+public class NumExpr : Expr { public NumExpr(AstFirst.Token t) { } }
+public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) { } }
+";
+        var comp = Compile(stubs, lexerSource, parserSource);
         var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         Assert.False(errors.Count > 0, "生成コードのコンパイルエラー:\n" + string.Join("\n", errors.Select(e => e.ToString())));
     }
