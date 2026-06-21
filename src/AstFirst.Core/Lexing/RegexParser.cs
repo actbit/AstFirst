@@ -119,6 +119,17 @@ public sealed class RegexParser
         if (c == '\0') throw Error("予期しない入力の終端です");
         if (c == '*' || c == '+' || c == '?' || c == '|' || c == ')')
             throw Error($"予期しないメタ文字 '{c}'");
+        // 上位サロゲート (補助面文字の1文字目) → 下位サロゲートも読んで ConcatAst
+        if (c >= 0xD800 && c <= 0xDBFF)
+        {
+            Advance();
+            if (Peek() >= 0xDC00 && Peek() <= 0xDFFF)
+            {
+                char lo = Advance();
+                return new ConcatAst(new[] { new LiteralAst(c), new LiteralAst(lo) });
+            }
+            return new LiteralAst(c);
+        }
         Advance();
         return new LiteralAst(c);
     }
@@ -139,8 +150,32 @@ public sealed class RegexParser
             case 't': return new LiteralAst('\t');
             case 'r': return new LiteralAst('\r');
             case '0': return new LiteralAst('\0');
+            case 'u': return ParseUnicodeEscape(4);
+            case 'U': return ParseUnicodeEscape(8);
             default: return new LiteralAst(c); // \+ \* \( \. 等 → リテラル
         }
+    }
+
+    /// <summary>\uXXXX (4桁) または \UXXXXXXXX (8桁) をパース。補助面はサロゲートペアに分解。</summary>
+    private RegexAst ParseUnicodeEscape(int hexDigits)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < hexDigits; i++)
+        {
+            char h = Peek();
+            if (!((h >= '0' && h <= '9') || (h >= 'a' && h <= 'f') || (h >= 'A' && h <= 'F')))
+                throw Error("\\" + (hexDigits == 8 ? 'U' : 'u') + " の後に" + hexDigits + "桁の16進数が必要です");
+            sb.Append(Advance());
+        }
+        int code = int.Parse(sb.ToString(), System.Globalization.NumberStyles.HexNumber);
+        if (code <= 0xFFFF)
+            return new LiteralAst((char)code);
+        if (code > 0x10FFFF)
+            throw Error("Unicode コードポイント U+" + code.ToString("X") + " は大きすぎます (最大 U+10FFFF)");
+        int v = code - 0x10000;
+        char hi = (char)(0xD800 + (v >> 10));
+        char lo = (char)(0xDC00 + (v & 0x3FF));
+        return new ConcatAst(new[] { new LiteralAst(hi), new LiteralAst(lo) });
     }
 
     private RegexAst ParseCharClass()
@@ -191,6 +226,9 @@ public sealed class RegexParser
                 case 'n': return CharSet.Single('\n');
                 case 't': return CharSet.Single('\t');
                 case 'r': return CharSet.Single('\r');
+                case 'u':
+                case 'U':
+                    throw new RegexParseException("文字クラス [..] 内では \\u/\\U (補助面文字) は使えません。トップレベルで指定してください。", -1);
                 default: return CharSet.Single(e); // \] \- \\ 等 → リテラル
             }
         }
