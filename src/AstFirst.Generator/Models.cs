@@ -80,19 +80,23 @@ public sealed class ParamModel : IEquatable<ParamModel>
     public string? Pattern { get; }     // [Pattern]
     public bool IsContext { get; }      // [Context]
     public int Priority { get; }        // [Priority]
+    public AstFirst.Core.Parsing.Associativity Associativity { get; } // [Left]/[Right]/[NonAssoc]
 
-    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, int priority)
+    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, int priority,
+        AstFirst.Core.Parsing.Associativity associativity = AstFirst.Core.Parsing.Associativity.Left)
     {
         TypeFullName = typeFullName;
         Name = name;
         Pattern = pattern;
         IsContext = isContext;
         Priority = priority;
+        Associativity = associativity;
     }
 
     public bool Equals(ParamModel? other) =>
         other is not null && TypeFullName == other.TypeFullName && Name == other.Name
-        && Pattern == other.Pattern && IsContext == other.IsContext && Priority == other.Priority;
+        && Pattern == other.Pattern && IsContext == other.IsContext && Priority == other.Priority
+        && Associativity == other.Associativity;
     public override bool Equals(object? obj) => obj is ParamModel p && Equals(p);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(TypeFullName);
 }

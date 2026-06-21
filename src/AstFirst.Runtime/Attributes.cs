@@ -2,12 +2,21 @@ using System;
 
 namespace AstFirst;
 
-/// <summary>コンストラクタ引数の字句ルール (正規表現)。Token 派生クラスの引数、
-/// または AST クラスのトークン引数に付ける。</summary>
+/// <summary>
+/// コンストラクタ引数の字句ルール (正規表現)。Token 派生クラスの引数、
+/// または AST クラスのトークン引数に付ける。優先度/結合性もここで指定する。
+/// </summary>
 [AttributeUsage(AttributeTargets.Parameter)]
 public sealed class PatternAttribute(string regex) : Attribute
 {
     public string Regex { get; } = regex;
+
+    /// <summary>演算子優先度 (大きいほど高優先。* を + より大きくする等)。
+    /// 同一入力で複数トークンが受理した際のレクサ優先度と shift-reduce 衝突解決に使う。</summary>
+    public int Priority { get; set; }
+
+    /// <summary>右結合 (代入 = や べき乗 ** 等)。既定は左結合。</summary>
+    public bool IsRightAssociative { get; set; }
 }
 
 /// <summary>コンストラクタ引数に意味解析コンテキストを注入することを示す。</summary>
@@ -22,7 +31,7 @@ public sealed class GrammarAttribute : Attribute
     public string? Mode { get; set; }
 }
 
-/// <summary>トークン種別の絞り込み、または優先度/結合性ヒント。</summary>
+/// <summary>トークン種別の絞り込み。</summary>
 [AttributeUsage(AttributeTargets.Parameter)]
 public sealed class ExpectAttribute : Attribute
 {
@@ -35,11 +44,4 @@ public sealed class ExpectAttribute : Attribute
 public sealed class SkipAttribute(string regex) : Attribute
 {
     public string Regex { get; } = regex;
-}
-
-/// <summary>同一入力で複数トークンが受理した際の優先度 (小さいほど高優先)。</summary>
-[AttributeUsage(AttributeTargets.Parameter)]
-public sealed class PriorityAttribute(int priority) : Attribute
-{
-    public int Priority { get; } = priority;
 }

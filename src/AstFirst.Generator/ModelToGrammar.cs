@@ -27,6 +27,16 @@ public static class ModelToGrammar
                 patternByTokenType[td.Key] = td.Pattern;
         }
 
+        // 終端の優先度/結合性を設定 ([Pattern] 付き引数の Priority/Associativity)。
+        foreach (var n in model.Nodes)
+            foreach (var ctor in n.Constructors)
+                foreach (var p in ctor.Parameters)
+                {
+                    if (p.Pattern is null || p.Priority == 0) continue;
+                    if (terminals.TryGetValue(p.Pattern, out var sym))
+                        b.SetPrecedence(sym, p.Priority, p.Associativity);
+                }
+
         // 非終端: AstNode 派生クラスごとに。
         foreach (var n in model.Nodes)
         {

@@ -63,23 +63,40 @@ public static class ModelExtraction
     {
         foreach (var p in parameters)
         {
-            var pattern = GetStringAttribute(p, "PatternAttribute", 0);
             var isContext = contextBase is not null && InheritsFrom(p.Type, contextBase);
-            var priority = GetIntAttribute(p, "PriorityAttribute", 0);
-            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority);
+            var (pattern, priority, isRight) = GetPattern(p);
+            var assoc = isRight ? AstFirst.Core.Parsing.Associativity.Right : AstFirst.Core.Parsing.Associativity.Left;
+            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority, assoc);
         }
+    }
+
+    /// <summary>[Pattern] から (Regex, Priority, IsRightAssociative) を取得。未設定なら (null,0,false)。</summary>
+    private static (string? regex, int priority, bool isRight) GetPattern(ISymbol symbol)
+    {
+        foreach (var a in symbol.GetAttributes())
+        {
+            if (a.AttributeClass?.Name != "PatternAttribute") continue;
+            string? regex = a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string s ? s : null;
+            int priority = 0;
+            bool isRight = false;
+            foreach (var na in a.NamedArguments)
+            {
+                if (na.Key == "Priority" && na.Value.Value is int pr) priority = pr;
+                if (na.Key == "IsRightAssociative" && na.Value.Value is bool ir) isRight = ir;
+            }
+            return (regex, priority, isRight);
+        }
+        return (null, 0, false);
     }
 
     private static IEnumerable<TokenDefModel> ExtractTokenDefsFromCtors(INamedTypeSymbol tokenType)
     {
-        // Token 派生クラス: コンストラクタの [Pattern] 引数がそのトークンの字句ルール。
         foreach (var ctor in tokenType.Constructors)
         {
             foreach (var p in ctor.Parameters)
             {
-                var pattern = GetStringAttribute(p, "PatternAttribute", 0);
+                var (pattern, priority, _) = GetPattern(p);
                 if (pattern is null) continue;
-                var priority = GetIntAttribute(p, "PriorityAttribute", 0);
                 yield return new TokenDefModel(tokenType.ToDisplayString(), pattern, priority, isHidden: false);
             }
         }
@@ -87,16 +104,14 @@ public static class ModelExtraction
 
     private static IEnumerable<TokenDefModel> ExtractInlineTokenDefs(INamedTypeSymbol type, INamedTypeSymbol? tokenBase)
     {
-        // Token 派生でないクラス (AST ノード等) の [Pattern] 引数: 引数型 (Token 型) をキーに。
         foreach (var ctor in type.Constructors)
         {
             foreach (var p in ctor.Parameters)
             {
-                var pattern = GetStringAttribute(p, "PatternAttribute", 0);
+                var (pattern, priority, _) = GetPattern(p);
                 if (pattern is null) continue;
                 if (tokenBase is not null && !InheritsFromOrEquals(p.Type, tokenBase)) continue;
                 var key = p.Type.ToDisplayString();
-                var priority = GetIntAttribute(p, "PriorityAttribute", 0);
                 yield return new TokenDefModel(key, pattern, priority, isHidden: false);
             }
         }
