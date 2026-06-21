@@ -82,20 +82,22 @@ public static class ParserEmitter
                 { needsContext = true; break; }
 
         // Parse
-        sb.AppendLine("    public static object? Parse(string input)");
+        sb.AppendLine("    public static AstFirst.ParseResult Parse(string input)");
         sb.AppendLine("    {");
         if (needsContext)
             sb.AppendLine("        var ctx = new AstFirst.BasicSemanticContext();");
         sb.AppendLine("        var tokens = " + lexerName + ".Tokenize(input);");
         sb.AppendLine("        var states = new Stack<int>();");
         sb.AppendLine("        var values = new Stack<object?>();");
+        sb.AppendLine("        var errors = new System.Collections.Generic.List<AstFirst.ParseError>();");
+        sb.AppendLine("        object? result = null;");
         sb.AppendLine("        states.Push(0);");
         sb.AppendLine("        int i = 0;");
         sb.AppendLine("        while (true)");
         sb.AppendLine("        {");
         sb.AppendLine("            int state = states.Peek();");
         sb.AppendLine("            int sym = (i < tokens.Count) ? TokenIdToSym[tokens[i].TokenId] : EofSym;");
-        sb.AppendLine("            if (sym < 0) throw new System.Exception(\"未知のトークンです。\");");
+        sb.AppendLine("            if (sym < 0) { errors.Add(new AstFirst.ParseError(\"未知のトークンです\", tokens[i].Start)); i++; continue; }");
         sb.AppendLine("            byte kind = ActionKind[state, sym];");
         sb.AppendLine("            int val = ActionValue[state, sym];");
         sb.AppendLine("            if (kind == 1) // Shift");
@@ -131,10 +133,18 @@ public static class ParserEmitter
         sb.AppendLine("            else if (kind == 3) // Accept");
         sb.AppendLine("            {");
         sb.AppendLine("                values.Pop(); // $ を捨てる");
-        sb.AppendLine("                return values.Peek();");
+        sb.AppendLine("                result = values.Peek();");
+        sb.AppendLine("                break;");
         sb.AppendLine("            }");
-        sb.AppendLine("            else throw new System.Exception(\"構文エラー: 状態 \" + state + \" で予期しないトークンです。\");");
+        sb.AppendLine("            else // Error: panic mode");
+        sb.AppendLine("            {");
+        sb.AppendLine("                int pos = i < tokens.Count ? tokens[i].Start : (tokens.Count > 0 ? tokens[tokens.Count - 1].End : 0);");
+        sb.AppendLine("                errors.Add(new AstFirst.ParseError(\"状態 \" + state + \" で予期しないトークン\", pos));");
+        sb.AppendLine("                if (states.Count > 1) states.Pop();");
+        sb.AppendLine("                if (i < tokens.Count) i++; else break;");
+        sb.AppendLine("            }");
         sb.AppendLine("        }");
+        sb.AppendLine("        return new AstFirst.ParseResult(result, errors);");
         sb.AppendLine("    }");
 
         sb.AppendLine("    private static T[] PopN<T>(Stack<T> s, int n)");

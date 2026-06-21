@@ -80,7 +80,7 @@ public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) {
     {
         var source = ParserEmitter.EmitParser(CalcModel(), "TestNs");
         Assert.Contains("public static class ExprParser", source);
-        Assert.Contains("public static object? Parse(string input)", source);
+        Assert.Contains("public static AstFirst.ParseResult Parse(string input)", source);
         Assert.Contains("ActionKind", source);
         Assert.Contains("Goto", source);
         Assert.Contains("ProdLhs", source);
