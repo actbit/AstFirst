@@ -3,17 +3,28 @@ using System.Collections.Generic;
 
 namespace AstFirst.Core.Lexing;
 
-/// <summary>レクサが生成したトークン。</summary>
+/// <summary>
+/// レクサが生成したトークン。字面は元ソースのスライスで持ち、
+/// <see cref="Text"/> は必要な時だけ生成する (トークン化時のアロケーションなし)。
+/// </summary>
 public readonly struct LexToken
 {
     public int TokenId { get; }
-    public string Text { get; }
+    public string Source { get; }
     public int Start { get; }
     public int End { get; }
-    public LexToken(int tokenId, string text, int start, int end)
+    public int Length => End - Start;
+
+    /// <summary>トークンの字面のスライス。コピーなし。</summary>
+    public ReadOnlyMemory<char> Span => Source.AsMemory(Start, Length);
+
+    /// <summary>字面の文字列表現 (必要な時だけ生成)。</summary>
+    public string Text => Source.Substring(Start, Length);
+
+    public LexToken(int tokenId, string source, int start, int end)
     {
         TokenId = tokenId;
-        Text = text;
+        Source = source;
         Start = start;
         End = end;
     }
@@ -76,8 +87,8 @@ public sealed class Lexer
 
             if (!_hiddenTokens.Contains(lastAcceptToken))
             {
-                int len = lastAcceptPos - pos;
-                result.Add(new LexToken(lastAcceptToken, _source.Substring(pos, len), pos, lastAcceptPos));
+                // Substring せず、元ソースの (Start, End) だけ保持。Text は遅延生成。
+                result.Add(new LexToken(lastAcceptToken, _source, pos, lastAcceptPos));
             }
             pos = lastAcceptPos;
         }
