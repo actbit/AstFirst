@@ -1,3 +1,7 @@
 <Solution>
-  <Project Path="AstFirst/AstFirst.csproj" />
+  <Project Path="src/AstFirst.Core/AstFirst.Core.csproj" />
+  <Project Path="src/AstFirst.Runtime/AstFirst.Runtime.csproj" />
+  <Project Path="src/AstFirst.Generator/AstFirst.Generator.csproj" />
+  <Project Path="src/AstFirst/AstFirst.csproj" />
+  <Project Path="tests/AstFirst.Tests/AstFirst.Tests.csproj" />
 </Solution>
