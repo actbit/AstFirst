@@ -1,0 +1,184 @@
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.CodeAnalysis;
+
+namespace AstFirst.Generator;
+
+/// <summary>
+/// [Grammar] ルートクラスから AstNode/Token 派生と [Pattern] を走査し
+/// <see cref="GrammarModel"/> に変換する。Roslyn シンボルを文字列/整数の POCO に落とす
+/// (IncrementalGenerator のキャッシュが壊れないように)。
+/// </summary>
+public static class ModelExtraction
+{
+    private const string AstNodeFullName = "AstFirst.AstNode";
+    private const string TokenFullName = "AstFirst.Token";
+    private const string SemanticContextFullName = "AstFirst.SemanticContext";
+
+    public static GrammarModel? Extract(GeneratorAttributeSyntaxContext context)
+    {
+        if (context.TargetSymbol is not INamedTypeSymbol rootType) return null;
+        return Extract(context.SemanticModel.Compilation, rootType);
+    }
+
+    public static GrammarModel Extract(Compilation compilation, INamedTypeSymbol rootType)
+    {
+        var astNodeBase = compilation.GetTypeByMetadataName(AstNodeFullName);
+        var tokenBase = compilation.GetTypeByMetadataName(TokenFullName);
+        var contextBase = compilation.GetTypeByMetadataName(SemanticContextFullName);
+
+        var nodes = new List<NodeModel>();
+        var tokenDefs = new List<TokenDefModel>();
+
+        foreach (var type in GetAllTypes(compilation.Assembly.GlobalNamespace))
+        {
+            if (type.TypeKind != TypeKind.Class) continue;
+
+            if (astNodeBase is not null && InheritsFrom(type, astNodeBase))
+                nodes.Add(ExtractNode(type, contextBase));
+
+            if (tokenBase is not null && InheritsFrom(type, tokenBase))
+                foreach (var td in ExtractTokenDefsFromCtors(type)) tokenDefs.Add(td);
+            else
+                foreach (var td in ExtractInlineTokenDefs(type, tokenBase)) tokenDefs.Add(td);
+        }
+
+        nodes.Sort((a, b) => a.FullName.CompareTo(b.FullName));
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs));
+    }
+
+    private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase)
+    {
+        var ctors = new List<CtorModel>();
+        foreach (var ctor in type.Constructors)
+        {
+            if (ctor.IsStatic || ctor.DeclaredAccessibility == Accessibility.Private) continue;
+            ctors.Add(new CtorModel(ExtractParams(ctor.Parameters, contextBase).ToList()));
+        }
+        var baseName = type.BaseType?.ToDisplayString() ?? "";
+        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, ctors);
+    }
+
+    private static IEnumerable<ParamModel> ExtractParams(IEnumerable<IParameterSymbol> parameters, INamedTypeSymbol? contextBase)
+    {
+        foreach (var p in parameters)
+        {
+            var pattern = GetStringAttribute(p, "PatternAttribute", 0);
+            var isContext = contextBase is not null && InheritsFrom(p.Type, contextBase);
+            var priority = GetIntAttribute(p, "PriorityAttribute", 0);
+            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority);
+        }
+    }
+
+    private static IEnumerable<TokenDefModel> ExtractTokenDefsFromCtors(INamedTypeSymbol tokenType)
+    {
+        // Token 派生クラス: コンストラクタの [Pattern] 引数がそのトークンの字句ルール。
+        foreach (var ctor in tokenType.Constructors)
+        {
+            foreach (var p in ctor.Parameters)
+            {
+                var pattern = GetStringAttribute(p, "PatternAttribute", 0);
+                if (pattern is null) continue;
+                var priority = GetIntAttribute(p, "PriorityAttribute", 0);
+                yield return new TokenDefModel(tokenType.ToDisplayString(), pattern, priority, isHidden: false);
+            }
+        }
+    }
+
+    private static IEnumerable<TokenDefModel> ExtractInlineTokenDefs(INamedTypeSymbol type, INamedTypeSymbol? tokenBase)
+    {
+        // Token 派生でないクラス (AST ノード等) の [Pattern] 引数: 引数型 (Token 型) をキーに。
+        foreach (var ctor in type.Constructors)
+        {
+            foreach (var p in ctor.Parameters)
+            {
+                var pattern = GetStringAttribute(p, "PatternAttribute", 0);
+                if (pattern is null) continue;
+                if (tokenBase is not null && !InheritsFromOrEquals(p.Type, tokenBase)) continue;
+                var key = p.Type.ToDisplayString();
+                var priority = GetIntAttribute(p, "PriorityAttribute", 0);
+                yield return new TokenDefModel(key, pattern, priority, isHidden: false);
+            }
+        }
+    }
+
+    private static string? GetStringAttribute(ISymbol symbol, string attrName, int ctorArgIndex)
+    {
+        foreach (var a in symbol.GetAttributes())
+        {
+            if (a.AttributeClass?.Name == attrName)
+            {
+                if (a.ConstructorArguments.Length > ctorArgIndex
+                    && a.ConstructorArguments[ctorArgIndex].Value is string s)
+                    return s;
+            }
+        }
+        return null;
+    }
+
+    private static int GetIntAttribute(ISymbol symbol, string attrName, int ctorArgIndex)
+    {
+        foreach (var a in symbol.GetAttributes())
+        {
+            if (a.AttributeClass?.Name == attrName)
+            {
+                if (a.ConstructorArguments.Length > ctorArgIndex
+                    && a.ConstructorArguments[ctorArgIndex].Value is int i)
+                    return i;
+            }
+        }
+        return 0;
+    }
+
+    private static bool InheritsFromOrEquals(ITypeSymbol type, INamedTypeSymbol baseType)
+    {
+        if (SymbolEqualityComparer.Default.Equals(type, baseType)) return true;
+        return InheritsFrom(type, baseType);
+    }
+
+    private static bool InheritsFrom(ITypeSymbol type, INamedTypeSymbol baseType)
+    {
+        for (var t = type.BaseType; t is not null; t = t.BaseType)
+            if (SymbolEqualityComparer.Default.Equals(t, baseType)) return true;
+        return false;
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetAllTypes(INamespaceSymbol ns)
+    {
+        foreach (var t in ns.GetTypeMembers())
+        {
+            yield return t;
+            foreach (var nested in GetNested(t)) yield return nested;
+        }
+        foreach (var child in ns.GetNamespaceMembers())
+            if (child is INamespaceSymbol cns)
+                foreach (var t in GetAllTypes(cns)) yield return t;
+    }
+
+    private static IEnumerable<INamedTypeSymbol> GetNested(INamedTypeSymbol type)
+    {
+        foreach (var t in type.GetTypeMembers())
+        {
+            yield return t;
+            foreach (var n in GetNested(t)) yield return n;
+        }
+    }
+
+    private static IReadOnlyList<TokenDefModel> Dedup(List<TokenDefModel> defs)
+    {
+        // 同一キー+パターンは1つに。異パターン同キーは優先度最小を採用せずそのまま残す (衝突として後で報告)。
+        var seen = new Dictionary<(string, string), TokenDefModel>();
+        foreach (var d in defs)
+        {
+            var k = (d.Key, d.Pattern);
+            if (!seen.ContainsKey(k)) seen[k] = d;
+        }
+        var result = seen.Values.ToList();
+        result.Sort((a, b) =>
+        {
+            int c = a.Key.CompareTo(b.Key);
+            return c != 0 ? c : a.Pattern.CompareTo(b.Pattern);
+        });
+        return result;
+    }
+}
