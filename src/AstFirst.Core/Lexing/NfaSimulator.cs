@@ -54,5 +54,5 @@ public static class NfaSimulator
         return closure;
     }
 
-    private static HashSet<int> EpsilonClosure(Nfa nfa, int seed) => EpsilonClosure(nfa, new[] { seed });
+    public static HashSet<int> EpsilonClosure(Nfa nfa, int seed) => EpsilonClosure(nfa, new[] { seed });
 }
