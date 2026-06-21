@@ -52,11 +52,13 @@ public class ModelToTableTests
     }
 
     [Fact]
-    public void TableHasNoConflicts()
+    public void TableHasShiftReduceConflictFromLeftRecursion()
     {
+        // Expr -> Expr + Expr (左再帰・優先度なし) は shift-reduce 衝突。
+        // デフォルト shift (左結合) で解決される。
         var model = CalcModel();
         var (_, table) = ModelToTable.BuildWithGrammar(model);
-        Assert.False(table.HasConflicts, string.Join("\n", table.Conflicts.Select(c => c.Description)));
+        Assert.Contains(table.Conflicts, c => c.Description.Contains("shift-reduce"));
     }
 
     [Fact]

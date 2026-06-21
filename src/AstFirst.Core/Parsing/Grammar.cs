@@ -63,6 +63,16 @@ public sealed class GrammarBuilder
         return p;
     }
 
+    /// <summary>Tag (AST クラス名等) 付きの生成規則。モデル→文法変換で使用。</summary>
+    public Production Production(Symbol lhs, Symbol[] rhs, object? tag)
+    {
+        if (lhs.IsTerminal)
+            throw new ArgumentException("生成規則の左辺は非終端である必要があります: " + lhs.Name, nameof(lhs));
+        var p = new Core.Parsing.Production(_productions.Count, lhs, rhs, tag);
+        _productions.Add(p);
+        return p;
+    }
+
     /// <summary>拡張開始規則 S' -> S $ を付与して文法を完成させる。</summary>
     public Grammar Build(Symbol startSymbol)
     {

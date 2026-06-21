@@ -16,10 +16,11 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.13.0" />
   </ItemGroup>
 
+  <!-- Generator は Core のソースを取り込んで単一アセンブリ化されているので、
+       Core.dll を別途参照しない (型重複 CS0433 を回避)。 -->
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AstFirst.Core\AstFirst.Core.csproj" />
+    <ProjectReference Include="..\..\src\AstFirst.Generator\AstFirst.Generator.csproj" />
     <ProjectReference Include="..\..\src\AstFirst.Runtime\AstFirst.Runtime.csproj" />
-    <ProjectReference Include="..\..\src\AstFirst\AstFirst.csproj" />
   </ItemGroup>
 
   <ItemGroup>

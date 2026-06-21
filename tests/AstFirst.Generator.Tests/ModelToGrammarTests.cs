@@ -63,15 +63,16 @@ public class ModelToGrammarTests
     }
 
     [Fact]
-    public void TableBuildsWithoutConflicts()
+    public void TableHasShiftReduceConflictFromLeftRecursion()
     {
-        // 文法が LALR ならテーブル構築で衝突なし。
+        // BuildCalcGrammar は Expr -> [0-9]+ | Expr + Expr (左再帰・優先度なし)。
+        // shift-reduce 衝突が発生しデフォルト shift で解決される。
         var g = BuildCalcGrammar();
         var first = new FirstSet(g);
         var auto = Lr0AutomatonBuilder.Build(g);
         var la = new LalrLookahead(g, auto, first);
         var table = LalrTableBuilder.Build(g, auto, la);
-        Assert.False(table.HasConflicts, string.Join("\n", table.Conflicts.Select(c => c.Description)));
+        Assert.Contains(table.Conflicts, c => c.Description.Contains("shift-reduce"));
     }
 
     [Fact]

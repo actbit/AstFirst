@@ -4,4 +4,5 @@
   <Project Path="src/AstFirst.Generator/AstFirst.Generator.csproj" />
   <Project Path="src/AstFirst/AstFirst.csproj" />
   <Project Path="tests/AstFirst.Tests/AstFirst.Tests.csproj" />
+  <Project Path="tests/AstFirst.Generator.Tests/AstFirst.Generator.Tests.csproj" />
 </Solution>

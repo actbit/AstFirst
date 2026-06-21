@@ -92,7 +92,7 @@ public static class ParserEmitter
         sb.AppendLine("            int val = ActionValue[state, sym];");
         sb.AppendLine("            if (kind == 1) // Shift");
         sb.AppendLine("            {");
-        sb.AppendLine("                values.Push(tokens[i]);");
+        sb.AppendLine("                values.Push(sym == EofSym ? null : (object)tokens[i]);");
         sb.AppendLine("                states.Push(val);");
         sb.AppendLine("                i++;");
         sb.AppendLine("            }");

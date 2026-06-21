@@ -23,14 +23,14 @@ public sealed class ParserGenerator : IIncrementalGenerator
             .Where(m => m is not null)
             .Select((m, _) => m!);
 
-        // Lexer を生成 (Parser 駆動は後のフェーズ)。
+        // Lexer と Parser を生成。
         context.RegisterSourceOutput(models.Collect(), (spc, modelArray) =>
         {
             foreach (var model in modelArray)
             {
                 var (ns, typeName) = CodeEmitter.SplitFullName(model.RootTypeFullName);
-                var source = CodeEmitter.EmitLexer(model, typeName + "Lexer", ns);
-                spc.AddSource(typeName + "Lexer.g.cs", source);
+                spc.AddSource(typeName + "Lexer.g.cs", CodeEmitter.EmitLexer(model, typeName + "Lexer", ns));
+                spc.AddSource(typeName + "Parser.g.cs", ParserEmitter.EmitParser(model, ns));
             }
         });
     }

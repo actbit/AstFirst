@@ -51,7 +51,10 @@ public static class ModelToGrammar
         foreach (var n in model.Nodes)
         {
             if (n.IsAbstract) continue;
-            var lhs = nonTerminals[n.FullName];
+            // 左辺は直接の親 (非終端)。NumExpr : Expr → 規則 Expr -> ... (AST は NumExpr)。
+            // 継承ツリーで具象クラスが親非終端の生成規則を表す。
+            if (!nonTerminals.TryGetValue(n.BaseFullName, out var lhs))
+                continue; // 親が非終端でない (AstNode 等) は対象外
             foreach (var ctor in n.Constructors)
             {
                 var rhs = new List<Symbol>();
@@ -60,7 +63,7 @@ public static class ModelToGrammar
                     if (p.IsContext) continue;
                     rhs.Add(ParamToSymbol(p));
                 }
-                b.Production(lhs, rhs.ToArray());
+                b.Production(lhs, rhs.ToArray(), n.FullName);
             }
         }
 

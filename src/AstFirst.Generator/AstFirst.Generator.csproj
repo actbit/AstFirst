@@ -18,9 +18,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\AstFirst.Core\AstFirst.Core.csproj"
-                      OutputItemType="Analyzer"
-                      PrivateAssets="all" />
+    <!-- Core のソースを Generator に直接コンパイルし、Analyzer 実行時の
+         Core.dll ロード (FileNotFoundException) を回避して単一アセンブリ化する。
+         生成コード側は本体が Core.dll を通常参照して使う。 -->
+    <Compile Include="..\AstFirst.Core\Lexing\*.cs" />
+    <Compile Include="..\AstFirst.Core\Parsing\*.cs" />
   </ItemGroup>
 
 </Project>
