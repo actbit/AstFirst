@@ -48,3 +48,17 @@ public sealed class SkipAttribute(string regex) : Attribute
 {
     public string Regex { get; } = regex;
 }
+
+/// <summary>
+/// 演算子優先度/結合性。演算ノード (AST クラス) に付ける。
+/// shift-reduce 衝突を解決する。大きいほど高優先。
+/// </summary>
+[AttributeUsage(AttributeTargets.Class)]
+public sealed class PrecedenceAttribute(int priority) : Attribute
+{
+    public int Priority { get; } = priority;
+    /// <summary>右結合 (= や **)。既定は左結合。</summary>
+    public bool IsRightAssociative { get; set; }
+    /// <summary>非結合 (&lt; &gt; 等)。IsRightAssociative より優先。</summary>
+    public bool IsNonAssociative { get; set; }
+}

@@ -56,7 +56,20 @@ public static class ModelExtraction
             ctors.Add(new CtorModel(ExtractParams(ctor.Parameters, contextBase).ToList()));
         }
         var baseName = type.BaseType?.ToDisplayString() ?? "";
-        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, ctors);
+
+        int precPriority = 0;
+        var precAssoc = AstFirst.Core.Parsing.Associativity.Left;
+        foreach (var a in type.GetAttributes())
+        {
+            if (a.AttributeClass?.Name != "PrecedenceAttribute") continue;
+            if (a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is int pr) precPriority = pr;
+            foreach (var na in a.NamedArguments)
+            {
+                if (na.Key == "IsNonAssociative" && na.Value.Value is bool inn && inn) precAssoc = AstFirst.Core.Parsing.Associativity.NonAssoc;
+                else if (na.Key == "IsRightAssociative" && na.Value.Value is bool ir && ir) precAssoc = AstFirst.Core.Parsing.Associativity.Right;
+            }
+        }
+        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, ctors, precPriority, precAssoc);
     }
 
     private static IEnumerable<ParamModel> ExtractParams(IEnumerable<IParameterSymbol> parameters, INamedTypeSymbol? contextBase)

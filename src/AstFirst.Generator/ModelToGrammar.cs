@@ -27,15 +27,23 @@ public static class ModelToGrammar
                 patternByTokenType[td.Key] = td.Pattern;
         }
 
-        // 終端の優先度/結合性を設定 ([Pattern] 付き引数の Priority/Associativity)。
+        // 演算子優先度/結合性: [Precedence] を AST クラスに付けた場合、
+        // 規則の右辺の最後の終端に設定 (LalrTableBuilder が規則の優先度をそこから拾う)。
         foreach (var n in model.Nodes)
+        {
+            if (n.IsAbstract || n.PrecedencePriority == 0) continue;
             foreach (var ctor in n.Constructors)
+            {
+                Symbol? lastTerminal = null;
                 foreach (var p in ctor.Parameters)
                 {
-                    if (p.Pattern is null || p.Priority == 0) continue;
-                    if (terminals.TryGetValue(p.Pattern, out var sym))
-                        b.SetPrecedence(sym, p.Priority, p.Associativity);
+                    if (p.IsContext) continue;
+                    if (p.Pattern is not null && terminals.TryGetValue(p.Pattern, out var t)) lastTerminal = t;
                 }
+                if (lastTerminal.HasValue)
+                    b.SetPrecedence(lastTerminal.Value, n.PrecedencePriority, n.PrecedenceAssoc);
+            }
+        }
 
         // 非終端: AstNode 派生クラスごとに。
         foreach (var n in model.Nodes)

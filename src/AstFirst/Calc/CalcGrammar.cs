@@ -18,11 +18,12 @@ public sealed class NumExpr : Expr
 }
 
 /// <summary>規則 Expr : Expr + Expr</summary>
+[Precedence(1)]
 public sealed class AddExpr : Expr
 {
     public Expr Left { get; }
     public Expr Right { get; }
-    public AddExpr(Expr left, [Pattern(@"\+", Priority = 1)] Token op, Expr right)
+    public AddExpr(Expr left, [Pattern(@"\+")] Token op, Expr right)
     {
         Left = left;
         Right = right;
@@ -31,11 +32,12 @@ public sealed class AddExpr : Expr
 }
 
 /// <summary>規則 Expr : Expr * Expr</summary>
+[Precedence(2)]
 public sealed class MulExpr : Expr
 {
     public Expr Left { get; }
     public Expr Right { get; }
-    public MulExpr(Expr left, [Pattern(@"\*", Priority = 2)] Token op, Expr right)
+    public MulExpr(Expr left, [Pattern(@"\*")] Token op, Expr right)
     {
         Left = left;
         Right = right;

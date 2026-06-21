@@ -46,18 +46,24 @@ public sealed class NodeModel : IEquatable<NodeModel>
     public string BaseFullName { get; }       // 直接の基底 (非終端)
     public bool IsAbstract { get; }
     public IReadOnlyList<CtorModel> Constructors { get; }
+    public int PrecedencePriority { get; }    // [Precedence] の Priority (0=未設定)
+    public AstFirst.Core.Parsing.Associativity PrecedenceAssoc { get; }
 
-    public NodeModel(string fullName, string baseFullName, bool isAbstract, IReadOnlyList<CtorModel> constructors)
+    public NodeModel(string fullName, string baseFullName, bool isAbstract, IReadOnlyList<CtorModel> constructors,
+        int precedencePriority = 0, AstFirst.Core.Parsing.Associativity precedenceAssoc = AstFirst.Core.Parsing.Associativity.Left)
     {
         FullName = fullName;
         BaseFullName = baseFullName;
         IsAbstract = isAbstract;
         Constructors = constructors;
+        PrecedencePriority = precedencePriority;
+        PrecedenceAssoc = precedenceAssoc;
     }
 
     public bool Equals(NodeModel? other) =>
         other is not null && FullName == other.FullName && BaseFullName == other.BaseFullName
-        && IsAbstract == other.IsAbstract && Constructors.SequenceEqual(other.Constructors);
+        && IsAbstract == other.IsAbstract && Constructors.SequenceEqual(other.Constructors)
+        && PrecedencePriority == other.PrecedencePriority && PrecedenceAssoc == other.PrecedenceAssoc;
     public override bool Equals(object? obj) => obj is NodeModel n && Equals(n);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(FullName);
 }
