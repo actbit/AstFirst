@@ -52,3 +52,24 @@ public abstract class SemanticContext
     public abstract ISymbolTable Symbols { get; }
     public abstract DiagnosticBag Diagnostics { get; }
 }
+
+/// <summary>ISymbolTable の単純な実装。BasicSemanticContext が使う。</summary>
+public sealed class SymbolTable : ISymbolTable
+{
+    private readonly Dictionary<string, object?> _symbols = new();
+
+    public bool Contains(string name) => _symbols.ContainsKey(name);
+    public void Declare(string name, object? value = null) => _symbols[name] = value;
+    public object? this[string name]
+    {
+        get => _symbols.TryGetValue(name, out var v) ? v : null;
+        set => _symbols[name] = value;
+    }
+}
+
+/// <summary>SemanticContext の標準実装。生成コードが既定で使う。</summary>
+public sealed class BasicSemanticContext : SemanticContext
+{
+    public override ISymbolTable Symbols { get; } = new SymbolTable();
+    public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag();
+}

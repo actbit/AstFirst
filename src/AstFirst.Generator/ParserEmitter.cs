@@ -75,9 +75,17 @@ public static class ParserEmitter
         sb.AppendLine("    public const int StateCount = " + stateCount + ";");
         sb.AppendLine("    public const int SymbolCount = " + symbolCount + ";");
 
+        // [Context] を使う規則があれば BasicSemanticContext を用意。
+        bool needsContext = false;
+        for (int pi = 0; pi < grammar.Productions.Count; pi++)
+            if (grammar.Productions[pi].Tag is ReduceActionModel am && am.Parameters.Any(p => p.IsContext))
+                { needsContext = true; break; }
+
         // Parse
         sb.AppendLine("    public static object? Parse(string input)");
         sb.AppendLine("    {");
+        if (needsContext)
+            sb.AppendLine("        var ctx = new AstFirst.BasicSemanticContext();");
         sb.AppendLine("        var tokens = " + lexerName + ".Tokenize(input);");
         sb.AppendLine("        var states = new Stack<int>();");
         sb.AppendLine("        var values = new Stack<object?>();");
