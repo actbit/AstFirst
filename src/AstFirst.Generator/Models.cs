@@ -9,17 +9,19 @@ namespace AstFirst.Generator;
 public sealed class GrammarModel : IEquatable<GrammarModel>
 {
     public string RootTypeFullName { get; }
+    public string? Mode { get; }                     // [Grammar(Mode=...)] の Mode
     public IReadOnlyList<NodeModel> Nodes { get; }
     public IReadOnlyList<TokenDefModel> TokenDefs { get; }
     public IReadOnlyList<string> SkipPatterns { get; }
 
     public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs,
-        IReadOnlyList<string>? skipPatterns = null)
+        IReadOnlyList<string>? skipPatterns = null, string? mode = null)
     {
         RootTypeFullName = rootTypeFullName;
         Nodes = nodes;
         TokenDefs = tokenDefs;
         SkipPatterns = skipPatterns ?? Array.Empty<string>();
+        Mode = mode;
     }
 
     public bool Equals(GrammarModel? other) =>

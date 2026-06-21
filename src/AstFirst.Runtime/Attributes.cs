@@ -27,7 +27,7 @@ public sealed class PatternAttribute(string regex) : Attribute
 public sealed class ContextAttribute : Attribute { }
 
 /// <summary>文法の開始記号 (ルート非終端) のクラスに付ける。Generator の抽出開始点。</summary>
-[AttributeUsage(AttributeTargets.Class)]
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class GrammarAttribute : Attribute
 {
     /// <summary>複数フォーマット/方言時のモード名 (フェーズ7)。</summary>

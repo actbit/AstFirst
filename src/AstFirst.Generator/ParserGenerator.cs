@@ -29,8 +29,9 @@ public sealed class ParserGenerator : IIncrementalGenerator
             foreach (var model in modelArray)
             {
                 var (ns, typeName) = CodeEmitter.SplitFullName(model.RootTypeFullName);
-                spc.AddSource(typeName + "Lexer.g.cs", CodeEmitter.EmitLexer(model, typeName + "Lexer", ns));
-                spc.AddSource(typeName + "Parser.g.cs", ParserEmitter.EmitParser(model, ns));
+                var suffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+                spc.AddSource(typeName + suffix + "Lexer.g.cs", CodeEmitter.EmitLexer(model, typeName + suffix + "Lexer", ns));
+                spc.AddSource(typeName + suffix + "Parser.g.cs", ParserEmitter.EmitParser(model, ns));
             }
         });
     }

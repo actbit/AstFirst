@@ -183,7 +183,8 @@ public static class ParserEmitter
     private static (string type, string lexer, string parser) Names(GrammarModel model)
     {
         var (ns, type) = CodeEmitter.SplitFullName(model.RootTypeFullName);
-        return (type, type + "Lexer", type + "Parser");
+        var suffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+        return (type + suffix, type + suffix + "Lexer", type + suffix + "Parser");
     }
 
     private static void EmitMatrixByte(StringBuilder sb, string name, LalrTable _, int rows, int cols,

@@ -51,7 +51,14 @@ public static class ModelExtraction
             if (a.AttributeClass?.Name == "SkipAttribute" && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
                 skipPatterns.Add(ss);
 
-        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns);
+        // [Grammar(Mode = "...")] の Mode を取得。
+        string? mode = null;
+        foreach (var a in rootType.GetAttributes())
+            if (a.AttributeClass?.Name == "GrammarAttribute")
+                foreach (var na in a.NamedArguments)
+                    if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
+
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode);
     }
 
     private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase)
