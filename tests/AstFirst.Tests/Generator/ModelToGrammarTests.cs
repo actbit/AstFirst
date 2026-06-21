@@ -1,0 +1,100 @@
+using System.Collections.Generic;
+using System.Linq;
+using AstFirst.Core.Parsing;
+using AstFirst.Generator;
+
+namespace AstFirst.Tests.Generator;
+
+public class ModelToGrammarTests
+{
+    private static Grammar BuildCalcGrammar()
+    {
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                })
+            }),
+            new NodeModel("AddExpr", "Expr", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("Expr", "left", null, false, 0),
+                    new ParamModel("AstFirst.Token", "op", "\\+", false, 0),
+                    new ParamModel("Expr", "right", null, false, 0)
+                })
+            }),
+        };
+        var tokenDefs = new List<TokenDefModel>
+        {
+            new TokenDefModel("AstFirst.Token", "[0-9]+", 0, false),
+            new TokenDefModel("AstFirst.Token", "\\+", 0, false),
+        };
+        var model = new GrammarModel("Expr", nodes, tokenDefs);
+        return ModelToGrammar.Build(model);
+    }
+
+    [Fact]
+    public void RootIsStartSymbol()
+    {
+        var g = BuildCalcGrammar();
+        Assert.Equal("Expr", g.StartSymbol.Name);
+        Assert.Equal("Expr'", g.AugmentedStart.Name);
+    }
+
+    [Fact]
+    public void ConcreteNodesBecomeProductions()
+    {
+        var g = BuildCalcGrammar();
+        // NumExpr -> [0-9]+, AddExpr -> Expr + Expr, 拡張 S' -> Expr $
+        Assert.Equal(3, g.Productions.Count);
+    }
+
+    [Fact]
+    public void TokenPatternsBecomeTerminals()
+    {
+        var g = BuildCalcGrammar();
+        Assert.Contains(g.Symbols, s => s.IsTerminal && s.Name == "token:[0-9]+");
+        Assert.Contains(g.Symbols, s => s.IsTerminal && s.Name == "token:\\+");
+    }
+
+    [Fact]
+    public void TableBuildsWithoutConflicts()
+    {
+        // 文法が LALR ならテーブル構築で衝突なし。
+        var g = BuildCalcGrammar();
+        var first = new FirstSet(g);
+        var auto = Lr0AutomatonBuilder.Build(g);
+        var la = new LalrLookahead(g, auto, first);
+        var table = LalrTableBuilder.Build(g, auto, la);
+        Assert.False(table.HasConflicts, string.Join("\n", table.Conflicts.Select(c => c.Description)));
+    }
+
+    [Fact]
+    public void TokenDerivedTypeResolvesToTerminal()
+    {
+        // Token 派生クラスの引数 ([Pattern] なし) は型名から解決。
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("NumToken", "num", null, false, 0)
+                })
+            }),
+        };
+        var tokenDefs = new List<TokenDefModel>
+        {
+            new TokenDefModel("NumToken", "[0-9]+", 0, false),
+        };
+        var model = new GrammarModel("Expr", nodes, tokenDefs);
+        var g = ModelToGrammar.Build(model);
+        Assert.Contains(g.Symbols, s => s.IsTerminal && s.Name == "token:[0-9]+");
+    }
+}
