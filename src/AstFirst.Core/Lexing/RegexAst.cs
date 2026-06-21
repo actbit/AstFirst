@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace AstFirst.Core.Lexing;
 
@@ -18,10 +17,10 @@ public abstract class RegexAst
     public abstract string ToCanonicalString();
 }
 
-/// <summary>空 (ε)。空文字列にマッチ。</summary>
+/// <summary>空 (epsilon)。空文字列にマッチ。表示は &lt;e&gt;。</summary>
 public sealed class EmptyAst : RegexAst
 {
-    public override string ToCanonicalString() => "ε"; // ε
+    public override string ToCanonicalString() => "<e>";
 }
 
 /// <summary>単一リテラル文字。</summary>

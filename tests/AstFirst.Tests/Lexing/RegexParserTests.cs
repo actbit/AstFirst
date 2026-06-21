@@ -58,7 +58,7 @@ public class RegexParserTests
     public void ComplexExpr() => Assert.Equal("((ab)*|c)", Canon("(ab)*|c"));
 
     [Fact]
-    public void EmptyPattern() => Assert.Equal("ε", Canon(""));
+    public void EmptyPattern() => Assert.Equal("<e>", Canon(""));
 
     [Fact]
     public void CharClassNegate()
