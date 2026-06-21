@@ -157,9 +157,8 @@ AstFirst.slnx
 - [x] フェーズ3: Source Generator（C# コードから抽出 → Lexer/Parser 生成）
 - [x] フェーズ4: reduce 時のコンストラクタ呼び出し + AST 構築 + `[Context]` 注入
 - [x] フェーズ5: エラー回復（panic mode + ParseResult / 診断リスト）
-- [x] フェーズ6 (一部): 優先度/結合性 (`[Precedence]`)、`{m,n}` 量指定子、`[Skip]`、レクサ優先度
-- [ ] フェーズ6 (残): テーブル圧縮、Unicode 補助面
-- [ ] フェーズ7: 複数フォーマット/方言対応 (`[Grammar(Mode=...)]`)
+- [x] フェーズ6: 優先度/結合性 (`[Precedence]`)、`{m,n}`、Unicode 補助面、テーブル圧縮、`[Skip]`、レクサ優先度
+- [x] フェーズ7: 複数フォーマット/方言対応 (`[Grammar(Mode=...)]`)
 
 ## テスト
 
