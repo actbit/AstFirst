@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace AstFirst.Core.Lexing;
@@ -5,16 +6,18 @@ namespace AstFirst.Core.Lexing;
 /// <summary>
 /// 部分集合構成法 (subset construction) で NFA を DFA に変換する。
 /// 文字は <see cref="AlphabetPartition"/> のクラス単位で扱う。
+/// <paramref name="resolveTokenId"/> で、複数受理状態を含む DFA 状態の
+/// トークンID を優先度で解決できる (レクサ統合用)。
 /// </summary>
 public static class DfaBuilder
 {
-    public static Dfa Build(Nfa nfa)
+    public static Dfa Build(Nfa nfa, Func<HashSet<int>, int>? resolveTokenId = null)
     {
         var alphabet = AlphabetPartition.Build(nfa);
-        return Build(nfa, alphabet);
+        return Build(nfa, alphabet, resolveTokenId);
     }
 
-    public static Dfa Build(Nfa nfa, AlphabetPartition alphabet)
+    public static Dfa Build(Nfa nfa, AlphabetPartition alphabet, Func<HashSet<int>, int>? resolveTokenId = null)
     {
         var setCmp = SetComparer.Instance;
         var stateMap = new Dictionary<HashSet<int>, int>(setCmp);
@@ -31,6 +34,8 @@ public static class DfaBuilder
             foreach (int s in set)
                 if (nfa.States[s].IsAccept) { accept = true; break; }
             ds.IsAccept = accept;
+            if (accept && resolveTokenId != null)
+                ds.AcceptTokenId = resolveTokenId(set);
             states.Add(ds);
             stateMap[set] = id;
             work.Enqueue(set);

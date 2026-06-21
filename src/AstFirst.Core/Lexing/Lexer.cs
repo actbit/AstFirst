@@ -1,0 +1,86 @@
+using System;
+using System.Collections.Generic;
+
+namespace AstFirst.Core.Lexing;
+
+/// <summary>レクサが生成したトークン。</summary>
+public readonly struct LexToken
+{
+    public int TokenId { get; }
+    public string Text { get; }
+    public int Start { get; }
+    public int End { get; }
+    public LexToken(int tokenId, string text, int start, int end)
+    {
+        TokenId = tokenId;
+        Text = text;
+        Start = start;
+        End = end;
+    }
+}
+
+public sealed class LexException : Exception
+{
+    public int Position { get; }
+    public LexException(string message, int position) : base(message) => Position = position;
+}
+
+/// <summary>
+/// 統合 DFA を駆動してソースをトークン化する。最長一致＋優先度でトークンを決定。
+/// <see cref="LexerRule.IsHidden"/> のトークンは結果から除外する。
+/// </summary>
+public sealed class Lexer
+{
+    private readonly Dfa _dfa;
+    private readonly HashSet<int> _hiddenTokens;
+    private readonly string _source;
+
+    public Lexer(Dfa dfa, IReadOnlyList<LexerRule> rules, string source)
+    {
+        _dfa = dfa;
+        _source = source;
+        _hiddenTokens = new HashSet<int>();
+        for (int i = 0; i < rules.Count; i++)
+            if (rules[i].IsHidden) _hiddenTokens.Add(rules[i].TokenId);
+    }
+
+    public List<LexToken> Tokenize()
+    {
+        var result = new List<LexToken>();
+        var src = _source.AsSpan();
+        var alphabet = _dfa.Alphabet;
+        var states = _dfa.States;
+        int pos = 0;
+        while (pos < src.Length)
+        {
+            int current = _dfa.Start;
+            int lastAcceptToken = -1;
+            int lastAcceptPos = pos;
+            int i = pos;
+            while (i < src.Length)
+            {
+                int cls = alphabet.ClassOf(src[i]);
+                int next = states[current].Transitions[cls];
+                if (next < 0) break;
+                current = next;
+                i++;
+                if (states[current].IsAccept)
+                {
+                    lastAcceptToken = states[current].AcceptTokenId;
+                    lastAcceptPos = i;
+                }
+            }
+
+            if (lastAcceptToken < 0)
+                throw new LexException($"未認識の文字 '{src[pos]}' があります (位置 {pos})", pos);
+
+            if (!_hiddenTokens.Contains(lastAcceptToken))
+            {
+                int len = lastAcceptPos - pos;
+                result.Add(new LexToken(lastAcceptToken, _source.Substring(pos, len), pos, lastAcceptPos));
+            }
+            pos = lastAcceptPos;
+        }
+        return result;
+    }
+}
