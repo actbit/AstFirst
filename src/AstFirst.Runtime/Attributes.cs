@@ -17,6 +17,9 @@ public sealed class PatternAttribute(string regex) : Attribute
 
     /// <summary>右結合 (代入 = や べき乗 ** 等)。既定は左結合。</summary>
     public bool IsRightAssociative { get; set; }
+
+    /// <summary>非結合 (比較 &lt; &gt; 等、a&lt;b&lt;c はエラー)。IsRightAssociative より優先。</summary>
+    public bool IsNonAssociative { get; set; }
 }
 
 /// <summary>コンストラクタ引数に意味解析コンテキストを注入することを示す。</summary>

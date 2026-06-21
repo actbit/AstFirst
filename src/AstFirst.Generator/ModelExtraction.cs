@@ -64,14 +64,13 @@ public static class ModelExtraction
         foreach (var p in parameters)
         {
             var isContext = contextBase is not null && InheritsFrom(p.Type, contextBase);
-            var (pattern, priority, isRight) = GetPattern(p);
-            var assoc = isRight ? AstFirst.Core.Parsing.Associativity.Right : AstFirst.Core.Parsing.Associativity.Left;
+            var (pattern, priority, assoc) = GetPattern(p);
             yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority, assoc);
         }
     }
 
     /// <summary>[Pattern] から (Regex, Priority, IsRightAssociative) を取得。未設定なら (null,0,false)。</summary>
-    private static (string? regex, int priority, bool isRight) GetPattern(ISymbol symbol)
+    private static (string? regex, int priority, AstFirst.Core.Parsing.Associativity assoc) GetPattern(ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
@@ -79,14 +78,19 @@ public static class ModelExtraction
             string? regex = a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string s ? s : null;
             int priority = 0;
             bool isRight = false;
+            bool isNon = false;
             foreach (var na in a.NamedArguments)
             {
                 if (na.Key == "Priority" && na.Value.Value is int pr) priority = pr;
                 if (na.Key == "IsRightAssociative" && na.Value.Value is bool ir) isRight = ir;
+                if (na.Key == "IsNonAssociative" && na.Value.Value is bool inn) isNon = inn;
             }
-            return (regex, priority, isRight);
+            var assoc = isNon ? AstFirst.Core.Parsing.Associativity.NonAssoc
+                       : isRight ? AstFirst.Core.Parsing.Associativity.Right
+                       : AstFirst.Core.Parsing.Associativity.Left;
+            return (regex, priority, assoc);
         }
-        return (null, 0, false);
+        return (null, 0, AstFirst.Core.Parsing.Associativity.Left);
     }
 
     private static IEnumerable<TokenDefModel> ExtractTokenDefsFromCtors(INamedTypeSymbol tokenType)
