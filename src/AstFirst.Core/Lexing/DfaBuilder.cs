@@ -37,7 +37,7 @@ public static class DfaBuilder
             return id;
         }
 
-        var startSet = NfaSimulator.EpsilonClosure(nfa, nfa.Start);
+        var startSet = NfaOperations.EpsilonClosure(nfa, nfa.Start);
         GetOrAdd(startSet);
 
         while (work.Count > 0)
@@ -60,7 +60,7 @@ public static class DfaBuilder
                     }
                 }
                 if (next.Count == 0) continue;
-                var closure = NfaSimulator.EpsilonClosure(nfa, next);
+                var closure = NfaOperations.EpsilonClosure(nfa, next);
                 int nextId = GetOrAdd(closure);
                 ds.Transitions[cls] = nextId;
             }
