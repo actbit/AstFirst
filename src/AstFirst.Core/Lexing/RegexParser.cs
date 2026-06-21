@@ -73,12 +73,33 @@ public sealed class RegexParser
         while (true)
         {
             char c = Peek();
-            if (c == '*') { Advance(); atom = new RepeatAst(atom, RepeatKind.Star); }
-            else if (c == '+') { Advance(); atom = new RepeatAst(atom, RepeatKind.Plus); }
-            else if (c == '?') { Advance(); atom = new RepeatAst(atom, RepeatKind.Optional); }
+            if (c == '*') { Advance(); atom = new RepeatAst(atom, 0, null); }
+            else if (c == '+') { Advance(); atom = new RepeatAst(atom, 1, null); }
+            else if (c == '?') { Advance(); atom = new RepeatAst(atom, 0, 1); }
+            else if (c == '{') atom = ParseRange(atom);
             else break;
         }
         return atom;
+    }
+
+    // {m} {m,} {m,n} {,n}
+    private RegexAst ParseRange(RegexAst atom)
+    {
+        Expect('{');
+        var sb1 = new System.Text.StringBuilder();
+        while (Peek() != ',' && Peek() != '}' && Peek() != '\0') sb1.Append(Advance());
+        int min = sb1.Length > 0 ? int.Parse(sb1.ToString()) : 0;
+        if (Peek() == '}')
+        {
+            Advance();
+            return new RepeatAst(atom, min, min); // {m}
+        }
+        Advance(); // ','
+        var sb2 = new System.Text.StringBuilder();
+        while (Peek() != '}' && Peek() != '\0') sb2.Append(Advance());
+        Expect('}');
+        int? max = sb2.Length > 0 ? int.Parse(sb2.ToString()) : (int?)null;
+        return new RepeatAst(atom, min, max);
     }
 
     // atom := '(' alternation ')' | '[' charclass ']' | '.' | escape | literal

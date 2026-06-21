@@ -63,17 +63,18 @@ public sealed class AlternateAst : RegexAst
         => "(" + string.Join("|", Options.Select(o => o.ToCanonicalString())) + ")";
 }
 
-public enum RepeatKind { Star, Plus, Optional }
-
-/// <summary>繰り返し (* + ?)。</summary>
+/// <summary>繰り返し: Inner を Min 回以上 Max 回以下 (Max=null は無限)。</summary>
 public sealed class RepeatAst : RegexAst
 {
     public RegexAst Inner { get; }
-    public RepeatKind Kind { get; }
-    public RepeatAst(RegexAst inner, RepeatKind kind) { Inner = inner; Kind = kind; }
+    public int Min { get; }
+    public int? Max { get; }
+    public RepeatAst(RegexAst inner, int min, int? max) { Inner = inner; Min = min; Max = max; }
     public override string ToCanonicalString()
     {
-        char s = Kind switch { RepeatKind.Star => '*', RepeatKind.Plus => '+', _ => '?' };
-        return Inner.ToCanonicalString() + s.ToString();
+        if (Min == 0 && Max is null) return Inner.ToCanonicalString() + "*";
+        if (Min == 1 && Max is null) return Inner.ToCanonicalString() + "+";
+        if (Min == 0 && Max == 1) return Inner.ToCanonicalString() + "?";
+        return Inner.ToCanonicalString() + "{" + Min + (Max is null ? ",}" : (Min == Max ? "}" : "," + Max + "}")) + "}";
     }
 }

@@ -91,12 +91,41 @@ public static class NfaBuilder
                     return (start, accept);
                 }
                 case RepeatAst rep:
-                    return rep.Kind switch
+                {
+                    int start = NewState(), cur = start;
+                    // min 回連接
+                    for (int i = 0; i < rep.Min; i++)
                     {
-                        RepeatKind.Star => Star(Fragment(rep.Inner)),
-                        RepeatKind.Plus => Plus(Fragment(rep.Inner)),
-                        _ => Optional(Fragment(rep.Inner)),
-                    };
+                        var f = Fragment(rep.Inner);
+                        AddEpsilon(cur, f.start);
+                        cur = f.accept;
+                    }
+                    if (rep.Max is null)
+                    {
+                        // 無限追加: A* 相当 (0回以上)
+                        var f = Fragment(rep.Inner);
+                        var after = NewState();
+                        AddEpsilon(cur, f.start);
+                        AddEpsilon(cur, after);
+                        AddEpsilon(f.accept, f.start);
+                        AddEpsilon(f.accept, after);
+                        cur = after;
+                    }
+                    else
+                    {
+                        // max - min 回 optional
+                        for (int i = rep.Min; i < rep.Max.Value; i++)
+                        {
+                            var f = Fragment(rep.Inner);
+                            var after = NewState();
+                            AddEpsilon(cur, f.start);
+                            AddEpsilon(cur, after);
+                            AddEpsilon(f.accept, after);
+                            cur = after;
+                        }
+                    }
+                    return (start, cur);
+                }
                 default:
                     throw new ArgumentException("不明な RegexAst ノードです: " + ast.GetType().Name);
             }
