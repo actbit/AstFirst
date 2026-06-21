@@ -75,6 +75,16 @@ public static class ParserEmitter
         sb.AppendLine("    public const int StateCount = " + stateCount + ";");
         sb.AppendLine("    public const int SymbolCount = " + symbolCount + ";");
 
+        // SymNames[symbolId]: 記号名 (エラーメッセージ用)
+        sb.Append("    public static readonly string?[] SymNames = new string?[] { ");
+        for (int si = 0; si < symbolCount; si++)
+        {
+            if (si > 0) sb.Append(", ");
+            var escaped = grammar.Symbols[si].Name.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            sb.Append("\"").Append(escaped).Append("\"");
+        }
+        sb.AppendLine(" };");
+
         // DefaultReduce[state]: デフォルト reduce (productionId、-1=なし)
         var dr = table.DefaultReduceTable;
         sb.Append("    public static readonly int[] DefaultReduce = new int[] { ");
@@ -99,6 +109,7 @@ public static class ParserEmitter
         sb.AppendLine("        object? result = null;");
         sb.AppendLine("        states.Push(0);");
         sb.AppendLine("        int i = 0;");
+        sb.AppendLine("        int lastErrorPos = -10; // 近接エラー抑制用");
         sb.AppendLine("        while (true)");
         sb.AppendLine("        {");
         sb.AppendLine("            int state = states.Peek();");
@@ -128,9 +139,34 @@ public static class ParserEmitter
         sb.AppendLine("            else // Error: panic mode");
         sb.AppendLine("            {");
         sb.AppendLine("                int pos = i < tokens.Count ? tokens[i].Start : (tokens.Count > 0 ? tokens[tokens.Count - 1].End : 0);");
-        sb.AppendLine("                errors.Add(new AstFirst.ParseError(\"状態 \" + state + \" で予期しないトークン\", pos));");
-        sb.AppendLine("                if (states.Count > 1) states.Pop();");
-        sb.AppendLine("                if (i < tokens.Count) i++; else break;");
+        sb.AppendLine("                // 近接エラー抑制 (3トークン以内は新エラーを抑止)");
+        sb.AppendLine("                if (i - lastErrorPos >= 3)");
+        sb.AppendLine("                {");
+        sb.AppendLine("                    // 期待トークンを計算");
+        sb.AppendLine("                    var exp = new System.Text.StringBuilder();");
+        sb.AppendLine("                    for (int e = 0; e < SymbolCount; e++)");
+        sb.AppendLine("                    {");
+        sb.AppendLine("                        if (ActionKind[state, e] == 0) continue;");
+        sb.AppendLine("                        if (exp.Length > 0) exp.Append(\", \");");
+        sb.AppendLine("                        exp.Append(e == EofSym ? \"EOF\" : e < SymNames.Length ? SymNames[e] : \"#\" + e);");
+        sb.AppendLine("                    }");
+        sb.AppendLine("                    errors.Add(new AstFirst.ParseError(\"予期しないトークン\" + (exp.Length > 0 ? \" (期待: \" + exp + \")\" : \"\"), pos));");
+        sb.AppendLine("                    lastErrorPos = i;");
+        sb.AppendLine("                }");
+        sb.AppendLine("                // スタックを戻して shift 可能な状態を探す");
+        sb.AppendLine("                bool recovered = false;");
+        sb.AppendLine("                while (states.Count > 1 && i < tokens.Count)");
+        sb.AppendLine("                {");
+        sb.AppendLine("                    states.Pop(); values.Pop();");
+        sb.AppendLine("                    int topState = states.Peek();");
+        sb.AppendLine("                    int curSym = TokenIdToSym[tokens[i].TokenId];");
+        sb.AppendLine("                    if (curSym >= 0 && ActionKind[topState, curSym] != 0) { recovered = true; break; }");
+        sb.AppendLine("                }");
+        sb.AppendLine("                if (!recovered)");
+        sb.AppendLine("                {");
+        sb.AppendLine("                    if (states.Count <= 1) { while (states.Count > 0) states.Pop(); while (values.Count > 0) values.Pop(); states.Push(0); }");
+        sb.AppendLine("                    if (i < tokens.Count) i++; else break;");
+        sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
         sb.AppendLine("        return new AstFirst.ParseResult(result, errors);");
