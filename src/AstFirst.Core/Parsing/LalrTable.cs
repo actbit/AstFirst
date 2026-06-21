@@ -151,9 +151,29 @@ public static class LalrTableBuilder
 
         bool shiftReduce = (existing.Kind == LrActionKind.Shift && newAction.Kind == LrActionKind.Reduce)
                         || (existing.Kind == LrActionKind.Reduce && newAction.Kind == LrActionKind.Shift);
+
+        // shift-reduce を優先度/結合性で解決 (yacc 互換)。
+        if (shiftReduce)
+        {
+            var shiftAction = existing.Kind == LrActionKind.Shift ? existing : newAction;
+            var reduceAction = existing.Kind == LrActionKind.Reduce ? existing : newAction;
+            var reduceProd = grammar.Productions[reduceAction.Value];
+            var tokenPrec = grammar.TerminalPrecedence.TryGetValue(symbolId, out var tp) ? (Precedence?)tp : null;
+            var rulePrec = RulePrecedence(grammar, reduceProd);
+            if (tokenPrec is { } tpv && rulePrec is { } rpv && !tpv.IsDefault && !rpv.IsDefault)
+            {
+                if (tpv.Priority > rpv.Priority) { action[state, symbolId] = shiftAction; return; }
+                if (rpv.Priority > tpv.Priority) return; // reduce 維持
+                // 同優先度 → 結合性
+                if (tpv.Associativity == Associativity.Left) return; // reduce
+                if (tpv.Associativity == Associativity.Right) { action[state, symbolId] = shiftAction; return; }
+                action[state, symbolId] = LrAction.Error; // NonAssoc
+                return;
+            }
+        }
+
         bool reduceReduce = existing.Kind == LrActionKind.Reduce && newAction.Kind == LrActionKind.Reduce;
         string kind = shiftReduce ? "shift-reduce" : reduceReduce ? "reduce-reduce" : "accept";
-
         var symName = grammar.Symbols[symbolId].Name;
         conflicts.Add(new LrConflict(state, symbolId, existing, newAction,
             $"{kind} conflict at state {state} on '{symName}' (existing {existing}, new {newAction}, rule {prod})"));
@@ -161,5 +181,14 @@ public static class LalrTableBuilder
         // デフォルト解決: shift を優先。reduce-reduce は既存(先の規則)を維持。
         if (newAction.Kind == LrActionKind.Shift)
             action[state, symbolId] = newAction;
+    }
+
+    /// <summary>規則の優先度 = 右辺の最後の終端の優先度 (設定されていなければ null)。</summary>
+    private static Precedence? RulePrecedence(Grammar grammar, Production prod)
+    {
+        for (int i = prod.Rhs.Length - 1; i >= 0; i--)
+            if (prod.Rhs[i].IsTerminal && grammar.TerminalPrecedence.TryGetValue(prod.Rhs[i].Id, out var p))
+                return p;
+        return null;
     }
 }

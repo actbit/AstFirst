@@ -12,6 +12,8 @@ public sealed class Grammar
     public Symbol AugmentedStart { get; }    // S'
     public Symbol EndOfFile { get; }         // $
     public Production AugmentedProduction { get; } // S' -> S $
+    /// <summary>終端の優先度/結合性 (終端 Symbol.Id -> Precedence)。</summary>
+    public IReadOnlyDictionary<int, Precedence> TerminalPrecedence { get; }
 
     public Grammar(
         IReadOnlyList<Production> productions,
@@ -19,7 +21,8 @@ public sealed class Grammar
         Symbol startSymbol,
         Symbol augmentedStart,
         Symbol endOfFile,
-        Production augmentedProduction)
+        Production augmentedProduction,
+        IReadOnlyDictionary<int, Precedence>? terminalPrecedence = null)
     {
         Productions = productions;
         Symbols = symbols;
@@ -27,6 +30,7 @@ public sealed class Grammar
         AugmentedStart = augmentedStart;
         EndOfFile = endOfFile;
         AugmentedProduction = augmentedProduction;
+        TerminalPrecedence = terminalPrecedence ?? new Dictionary<int, Precedence>();
     }
 }
 
@@ -39,7 +43,12 @@ public sealed class GrammarBuilder
     private readonly Dictionary<string, Symbol> _symbols = new Dictionary<string, Symbol>();
     private readonly List<Symbol> _symbolList = new List<Symbol>();
     private readonly List<Production> _productions = new List<Production>();
+    private readonly Dictionary<int, Precedence> _terminalPrecedence = new Dictionary<int, Precedence>();
     private int _nextSymbolId;
+
+    /// <summary>終端の優先度/結合性を設定 (shift-reduce 衝突の解決に使用)。</summary>
+    public void SetPrecedence(Symbol terminal, int priority, Associativity assoc)
+        => _terminalPrecedence[terminal.Id] = new Precedence(priority, assoc);
 
     public Symbol Terminal(string name) => GetOrAdd(name, isTerminal: true);
 
@@ -80,6 +89,6 @@ public sealed class GrammarBuilder
         var eof = GetOrAdd("$", isTerminal: true);
         var augProd = new Core.Parsing.Production(_productions.Count, augStart, new[] { startSymbol, eof });
         _productions.Add(augProd);
-        return new Grammar(_productions, _symbolList, startSymbol, augStart, eof, augProd);
+        return new Grammar(_productions, _symbolList, startSymbol, augStart, eof, augProd, _terminalPrecedence);
     }
 }
