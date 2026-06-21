@@ -75,6 +75,12 @@ public static class ParserEmitter
         sb.AppendLine("    public const int StateCount = " + stateCount + ";");
         sb.AppendLine("    public const int SymbolCount = " + symbolCount + ";");
 
+        // DefaultReduce[state]: デフォルト reduce (productionId、-1=なし)
+        var dr = table.DefaultReduceTable;
+        sb.Append("    public static readonly int[] DefaultReduce = new int[] { ");
+        for (int s = 0; s < stateCount; s++) { if (s > 0) sb.Append(", "); sb.Append(s < dr.Count ? dr[s] : -1); }
+        sb.AppendLine(" };");
+
         // [Context] を使う規則があれば BasicSemanticContext を用意。
         bool needsContext = false;
         for (int pi = 0; pi < grammar.Productions.Count; pi++)
@@ -106,29 +112,12 @@ public static class ParserEmitter
         sb.AppendLine("                states.Push(val);");
         sb.AppendLine("                i++;");
         sb.AppendLine("            }");
-        sb.AppendLine("            else if (kind == 2) // Reduce");
+        sb.AppendLine("            else if (kind == 2 || (kind == 0 && DefaultReduce[state] >= 0)) // Reduce (通常 or デフォルト)");
         sb.AppendLine("            {");
-        sb.AppendLine("                object? node;");
-        sb.AppendLine("                switch (val)");
-        sb.AppendLine("                {");
-        for (int pi = 0; pi < grammar.Productions.Count; pi++)
-        {
-            var prod = grammar.Productions[pi];
-            if (prod.Tag is not ReduceActionModel action) continue;
-            sb.Append("                    case ").Append(prod.Id).Append(": { var c = PopN(values, ").Append(prod.Rhs.Length).Append("); PopN(states, ").Append(prod.Rhs.Length).Append("); node = new ").Append(action.AstTypeName).Append("(");
-            for (int i = 0; i < action.Parameters.Count; i++)
-            {
-                if (i > 0) sb.Append(", ");
-                var p = action.Parameters[i];
-                if (p.IsContext) sb.Append("ctx");
-                else sb.Append("(").Append(p.CastTypeName).Append(")c[").Append(p.ChildIndex).Append("]");
-            }
-            sb.AppendLine("); break; }");
-        }
-        sb.AppendLine("                    default: { PopN(values, ProdLen[val]); PopN(states, ProdLen[val]); node = null; break; }");
-        sb.AppendLine("                }");
+        sb.AppendLine("                int prodId = (kind == 2) ? val : DefaultReduce[state];");
+        sb.AppendLine("                var node = ReduceNode(prodId, values, states" + (needsContext ? ", ctx" : ", null") + ");");
         sb.AppendLine("                values.Push(node);");
-        sb.AppendLine("                states.Push(Goto[states.Peek(), ProdLhs[val]]);");
+        sb.AppendLine("                states.Push(Goto[states.Peek(), ProdLhs[prodId]]);");
         sb.AppendLine("            }");
         sb.AppendLine("            else if (kind == 3) // Accept");
         sb.AppendLine("            {");
@@ -152,6 +141,29 @@ public static class ParserEmitter
         sb.AppendLine("        var a = new T[n];");
         sb.AppendLine("        for (int i = 0; i < n; i++) a[n - 1 - i] = s.Pop();");
         sb.AppendLine("        return a;");
+        sb.AppendLine("    }");
+
+        // ReduceNode: 規則 prodId で reduce。PopN + new AST_TYPE(args)。
+        sb.AppendLine("    private static object? ReduceNode(int val, Stack<object?> values, Stack<int> states, AstFirst.SemanticContext? ctx)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        switch (val)");
+        sb.AppendLine("        {");
+        for (int pi = 0; pi < grammar.Productions.Count; pi++)
+        {
+            var prod = grammar.Productions[pi];
+            if (prod.Tag is not ReduceActionModel action) continue;
+            sb.Append("            case ").Append(prod.Id).Append(": { var c = PopN(values, ").Append(prod.Rhs.Length).Append("); PopN(states, ").Append(prod.Rhs.Length).Append("); return new ").Append(action.AstTypeName).Append("(");
+            for (int j = 0; j < action.Parameters.Count; j++)
+            {
+                if (j > 0) sb.Append(", ");
+                var p = action.Parameters[j];
+                if (p.IsContext) sb.Append("ctx");
+                else sb.Append("(").Append(p.CastTypeName).Append(")c[").Append(p.ChildIndex).Append("]");
+            }
+            sb.AppendLine("); }");
+        }
+        sb.AppendLine("            default: { PopN(values, ProdLen[val]); PopN(states, ProdLen[val]); return null; }");
+        sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    private static AstFirst.Token ToToken(AstFirst.Core.Lexing.LexToken t)");

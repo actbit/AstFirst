@@ -57,13 +57,15 @@ public sealed class LalrTable
 {
     private readonly LrAction[,] _action;
     private readonly int[,] _goto;
+    private readonly int[] _defaultReduce;
 
     public Grammar Grammar { get; }
     public int StateCount { get; }
     public int SymbolCount { get; }
     public IReadOnlyList<LrConflict> Conflicts { get; }
 
-    public LalrTable(Grammar grammar, LrAction[,] action, int[,] gotoTable, IReadOnlyList<LrConflict> conflicts)
+    public LalrTable(Grammar grammar, LrAction[,] action, int[,] gotoTable, IReadOnlyList<LrConflict> conflicts,
+        int[]? defaultReduce = null)
     {
         Grammar = grammar;
         _action = action;
@@ -71,10 +73,14 @@ public sealed class LalrTable
         StateCount = action.GetLength(0);
         SymbolCount = action.GetLength(1);
         Conflicts = conflicts;
+        _defaultReduce = defaultReduce ?? System.Array.Empty<int>();
     }
 
     public LrAction Action(int state, int symbolId) => _action[state, symbolId];
     public int Goto(int state, int symbolId) => _goto[state, symbolId];
+    /// <summary>状態のデフォルト reduce (productionId)。-1 = なし。</summary>
+    public int DefaultReduce(int state) => state < _defaultReduce.Length ? _defaultReduce[state] : -1;
+    public IReadOnlyList<int> DefaultReduceTable => _defaultReduce;
     public bool HasConflicts => Conflicts.Count > 0;
 }
 
@@ -135,7 +141,27 @@ public static class LalrTableBuilder
             }
         }
 
-        return new LalrTable(grammar, action, gotoT, conflicts);
+        // 各状態の最頻 Reduce をデフォルト reduce に (テーブル圧縮用)。
+        var defaultReduce = new int[states];
+        for (int s = 0; s < states; s++)
+        {
+            var counts = new Dictionary<int, int>();
+            for (int c = 0; c < symbols; c++)
+            {
+                var a = action[s, c];
+                if (a.Kind == LrActionKind.Reduce)
+                {
+                    counts.TryGetValue(a.Value, out int cnt);
+                    counts[a.Value] = cnt + 1;
+                }
+            }
+            int bestProd = -1, bestCount = 0;
+            foreach (var kv in counts)
+                if (kv.Value > bestCount) { bestCount = kv.Value; bestProd = kv.Key; }
+            defaultReduce[s] = bestProd;
+        }
+
+        return new LalrTable(grammar, action, gotoT, conflicts, defaultReduce);
     }
 
     private static void SetAction(LrAction[,] action, List<LrConflict> conflicts, Grammar grammar,
