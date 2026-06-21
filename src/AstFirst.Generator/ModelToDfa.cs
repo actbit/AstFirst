@@ -18,6 +18,13 @@ public static class ModelToDfa
             list.Add(new LexerRule(td.Pattern, id, td.Priority, td.IsHidden));
             id++;
         }
+        // [Skip] パターンを IsHidden ルールとして追加。
+        foreach (var skip in model.SkipPatterns)
+        {
+            if (!seen.Add(skip)) continue;
+            list.Add(new LexerRule(skip, id, 0, isHidden: true));
+            id++;
+        }
         rules = list;
         return LexerBuilder.BuildDfa(list);
     }

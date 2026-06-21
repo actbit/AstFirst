@@ -20,13 +20,13 @@ public static class LexerBuilder
         int Resolve(HashSet<int> set)
         {
             int best = -1;
-            int bestPriority = int.MaxValue;
+            int bestPriority = -1;
             foreach (int s in set)
             {
                 if (!nfa.States[s].IsAccept) continue;
                 int tid = nfa.States[s].AcceptTokenId;
                 int pri = tokenIdPriority.TryGetValue(tid, out var p) ? p : int.MaxValue;
-                if (pri < bestPriority || (pri == bestPriority && (best < 0 || tid < best)))
+                if (pri > bestPriority || (pri == bestPriority && (best < 0 || tid < best)))
                 {
                     bestPriority = pri;
                     best = tid;

@@ -11,12 +11,15 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     public string RootTypeFullName { get; }
     public IReadOnlyList<NodeModel> Nodes { get; }
     public IReadOnlyList<TokenDefModel> TokenDefs { get; }
+    public IReadOnlyList<string> SkipPatterns { get; }
 
-    public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs)
+    public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs,
+        IReadOnlyList<string>? skipPatterns = null)
     {
         RootTypeFullName = rootTypeFullName;
         Nodes = nodes;
         TokenDefs = tokenDefs;
+        SkipPatterns = skipPatterns ?? Array.Empty<string>();
     }
 
     public bool Equals(GrammarModel? other) =>

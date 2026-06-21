@@ -44,7 +44,14 @@ public static class ModelExtraction
         }
 
         nodes.Sort((a, b) => a.FullName.CompareTo(b.FullName));
-        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs));
+
+        // [Skip] パターン ([Grammar] クラスまたはアセンブリ) を収集。
+        var skipPatterns = new List<string>();
+        foreach (var a in rootType.GetAttributes())
+            if (a.AttributeClass?.Name == "SkipAttribute" && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
+                skipPatterns.Add(ss);
+
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns);
     }
 
     private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase)

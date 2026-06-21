@@ -45,10 +45,10 @@ public class LexerTests
     [Fact]
     public void KeywordPriorityWins()
     {
-        // "if" をキーワード(2, 優先度高=0) が識別子(1, 優先度1) に勝つ。
+        // "if" をキーワード(2, 優先度高=1) が識別子(1, 優先度0) に勝つ。
         var toks = LexWithPriority("if",
-            new LexerRule("[a-z]+", 1, priority: 1),
-            new LexerRule("if", 2, priority: 0));
+            new LexerRule("[a-z]+", 1, priority: 0),
+            new LexerRule("if", 2, priority: 1));
         Assert.Single(toks);
         Assert.Equal(2, toks[0].TokenId);
     }
