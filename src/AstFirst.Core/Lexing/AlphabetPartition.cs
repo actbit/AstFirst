@@ -13,6 +13,16 @@ public sealed class AlphabetPartition
 
     private AlphabetPartition(int[] boundaries) => _boundaries = boundaries;
 
+    /// <summary>生成コードから境界配列から構築するファクトリ。</summary>
+    public static AlphabetPartition FromBoundaries(int[] boundaries)
+    {
+        if (boundaries == null || boundaries.Length < 2 || boundaries[0] != 0)
+            throw new ArgumentException("境界配列は 0 で始まる必要があります。", nameof(boundaries));
+        var copy = new int[boundaries.Length];
+        for (int i = 0; i < boundaries.Length; i++) copy[i] = boundaries[i];
+        return new AlphabetPartition(copy);
+    }
+
     /// <summary>クラス数 = 境界数 - 1。</summary>
     public int ClassCount => _boundaries.Length - 1;
 
