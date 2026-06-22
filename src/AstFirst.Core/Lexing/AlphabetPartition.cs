@@ -10,6 +10,7 @@ namespace AstFirst.Core.Lexing;
 public sealed class AlphabetPartition
 {
     private readonly int[] _boundaries; // ソート済み。先頭 0、末尾 0x10000。
+    private int[]? _classTable; // 文字→クラス のルックアップテーブル (遅延構築・キャッシュ)。
 
     private AlphabetPartition(int[] boundaries) => _boundaries = boundaries;
 
@@ -67,4 +68,23 @@ public sealed class AlphabetPartition
 
     /// <summary>クラス cls の代表文字 (下限)。同一クラスの文字は同じ遷移を持つ。</summary>
     public char RepresentativeChar(int cls) => (char)_boundaries[cls];
+
+    /// <summary>
+    /// 文字 → クラス のルックアップテーブル (長さ 0x10000)。遅延構築してキャッシュする。
+    /// <see cref="ClassOf"/> の2分探索を O(1) の配列参照に置き換え、トークン化の
+    /// 各文字アクセスを高速化する (Lexer.TokenizeCore が使用)。
+    /// </summary>
+    public int[] GetClassTable()
+    {
+        if (_classTable is { } cached) return cached;
+        var t = new int[0x10000];
+        int cls = 0;
+        for (int c = 0; c < 0x10000; c++)
+        {
+            while (cls + 1 < ClassCount && _boundaries[cls + 1] <= c) cls++;
+            t[c] = cls;
+        }
+        System.Threading.Interlocked.CompareExchange(ref _classTable, t, null);
+        return _classTable!;
+    }
 }

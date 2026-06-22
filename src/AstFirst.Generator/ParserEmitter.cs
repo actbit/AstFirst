@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text;
+using AstFirst.Core.Lexing;
 using AstFirst.Core.Parsing;
 
 namespace AstFirst.Generator;
@@ -13,11 +14,8 @@ namespace AstFirst.Generator;
 /// </summary>
 public static class ParserEmitter
 {
-    public static string EmitParser(GrammarModel model, string ns)
+    public static string EmitParser(GrammarModel model, Grammar grammar, LalrTable table, IReadOnlyList<LexerRule> rules, string ns)
     {
-        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
-        var dfa = ModelToDfa.Build(model, out var rules);
-
         int stateCount = table.StateCount;
         int symbolCount = table.SymbolCount;
         int prodCount = grammar.Productions.Count;
@@ -194,7 +192,7 @@ public static class ParserEmitter
                 if (j > 0) sb.Append(", ");
                 var p = action.Parameters[j];
                 if (p.IsContext) sb.Append("ctx");
-                else sb.Append("(").Append(p.CastTypeName).Append(")c[").Append(p.ChildIndex).Append("]");
+                else sb.Append("(").Append(p.CastTypeName).Append(")c[").Append(p.ChildIndex).Append("]!");
             }
             sb.AppendLine("); }");
         }
@@ -203,7 +201,7 @@ public static class ParserEmitter
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    private static AstFirst.Token ToToken(AstFirst.Core.Lexing.LexToken t)");
-        sb.AppendLine("        => new AstFirst.BasicToken(t.Text, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
+        sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
         sb.AppendLine("}");
         return sb.ToString();
     }

@@ -30,8 +30,17 @@ public sealed class ParserGenerator : IIncrementalGenerator
             {
                 var (ns, typeName) = CodeEmitter.SplitFullName(model.RootTypeFullName);
                 var suffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
-                spc.AddSource(typeName + suffix + "Lexer.g.cs", CodeEmitter.EmitLexer(model, typeName + suffix + "Lexer", ns));
-                spc.AddSource(typeName + suffix + "Parser.g.cs", ParserEmitter.EmitParser(model, ns));
+
+                // テーブルと DFA を1回だけ構築し、Lexer/Parser の生成で共有 (重複ビルドを避ける)。
+                var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+                var dfa = ModelToDfa.Build(model, out var rules);
+
+                // 優先度/結合性で解決できなかったコンフリクトを警告で報告 (構文的曖昧さの可視化)。
+                foreach (var conflict in table.Conflicts)
+                    spc.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.GrammarConflict, model.RootLocation, conflict.Description));
+
+                spc.AddSource(typeName + suffix + "Lexer.g.cs", CodeEmitter.EmitLexer(model, dfa, rules, typeName + suffix + "Lexer", ns));
+                spc.AddSource(typeName + suffix + "Parser.g.cs", ParserEmitter.EmitParser(model, grammar, table, rules, ns));
                 spc.AddSource(typeName + suffix + "Listener.g.cs", ListenerEmitter.EmitListener(model, ns));
             }
         });
