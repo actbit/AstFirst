@@ -8,4 +8,12 @@
   <Project Path="samples/JsonParser/JsonParser.csproj" />
   <Project Path="samples/MiniC/MiniC.csproj" />
   <Project Path="samples/MiniBasic/MiniBasic.csproj" />
+  <Project Path="samples/Perf/Perf.Grammars/Perf.Grammars.csproj" />
+  <Project Path="samples/Perf/Perf.Gen/Perf.Gen.csproj" />
+  <Project Path="samples/Perf/Perf.DeepPrec/Perf.DeepPrec.csproj" />
+  <Project Path="samples/Perf/Perf.WideRules/Perf.WideRules.csproj" />
+  <Project Path="samples/Perf/Perf.ManyTokens/Perf.ManyTokens.csproj" />
+  <Project Path="samples/Perf/Perf.DeepNest/Perf.DeepNest.csproj" />
+  <Project Path="samples/Perf/Perf.MegaLang/Perf.MegaLang.csproj" />
+  <Project Path="samples/Perf/Perf.Bench/Perf.Bench.csproj" />
 </Solution>
