@@ -11,9 +11,8 @@ namespace AstFirst.Generator;
 public static class CodeEmitter
 {
     /// <summary>レクサの C# コードを生成。DFA を static 配列に直列化し Lexer を駆動。</summary>
-    public static string EmitLexer(GrammarModel model, string className, string ns)
+    public static string EmitLexer(GrammarModel model, Dfa dfa, IReadOnlyList<LexerRule> rules, string className, string ns)
     {
-        var dfa = ModelToDfa.Build(model, out var rules);
         var boundaries = dfa.Alphabet.Boundaries;
         int stateCount = dfa.States.Count;
         int classCount = dfa.Alphabet.ClassCount;

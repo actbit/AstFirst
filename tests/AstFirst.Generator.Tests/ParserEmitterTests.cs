@@ -56,8 +56,10 @@ public class ParserEmitterTests
     public void EmitParserProducesCompilableCode()
     {
         var model = CalcModel();
-        var lexerSource = CodeEmitter.EmitLexer(model, "ExprLexer", "TestNs");
-        var parserSource = ParserEmitter.EmitParser(model, "TestNs");
+        var dfa = ModelToDfa.Build(model, out var rules);
+        var lexerSource = CodeEmitter.EmitLexer(model, dfa, rules, "ExprLexer", "TestNs");
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         var stubs = @"
 namespace AstFirst {
     public abstract class AstNode { }
@@ -85,7 +87,10 @@ public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) {
     [Fact]
     public void EmitParserContainsParseAndTables()
     {
-        var source = ParserEmitter.EmitParser(CalcModel(), "TestNs");
+        var model = CalcModel();
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        ModelToDfa.Build(model, out var rules);
+        var source = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         Assert.Contains("public static class ExprParser", source);
         Assert.Contains("public static AstFirst.ParseResult Parse(string input)", source);
         Assert.Contains("public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)", source);

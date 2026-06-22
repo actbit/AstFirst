@@ -46,7 +46,9 @@ public class CodeEmitterTests
     [Fact]
     public void EmitLexerProducesCompilableCode()
     {
-        var source = CodeEmitter.EmitLexer(CalcModel(), "CalcLexer", "TestNs");
+        var model = CalcModel();
+        var dfa = ModelToDfa.Build(model, out var rules);
+        var source = CodeEmitter.EmitLexer(model, dfa, rules, "CalcLexer", "TestNs");
         var comp = Compile(source);
         var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         Assert.False(errors.Count > 0, "生成コードのコンパイルエラー:\n" + string.Join("\n", errors.Select(e => e.ToString())));
@@ -55,7 +57,9 @@ public class CodeEmitterTests
     [Fact]
     public void EmitLexerContainsTokenizeAndDfa()
     {
-        var source = CodeEmitter.EmitLexer(CalcModel(), "CalcLexer", "TestNs");
+        var model = CalcModel();
+        var dfa = ModelToDfa.Build(model, out var rules);
+        var source = CodeEmitter.EmitLexer(model, dfa, rules, "CalcLexer", "TestNs");
         Assert.Contains("public static class CalcLexer", source);
         Assert.Contains("public static List<LexToken> Tokenize(string input)", source);
         Assert.Contains("Boundaries", source);
