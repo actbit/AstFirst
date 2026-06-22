@@ -1,20 +1,16 @@
 # AstFirst
 
-C# の**普通のクラスと属性**で文法を書くと、Source Generator がコンパイル時に Lexer と LALR(1) Parser を生成する、自作パーサジェネレータ。
-
-正規表現 → NFA → DFA、LR(0) → LALR(1) まで**すべて自前実装**（既成ライブラリ不使用）。
+C# の**クラスと属性**で文法を書くと、Source Generator がコンパイル時に Lexer と LALR(1) Parser を生成するパーサジェネレータ。生成された Parser は、構文解析後に意味解析（スコープ付きシンボル表）を乗せられる AST を返す。
 
 ## 特徴
 
-- **C# コードで文法定義**: クラスの継承ツリーで構文、コンストラクタ引数の `[Pattern]` で字句ルール、コンストラクタ本体で意味解析。特別な構文やファイルは不要。
-- **Source Generator (`IIncrementalGenerator`)**: コンパイル時に Lexer/Parser の C# コードを生成。
-- **自前レクサ**: 正規表現パーサ → Thompson 構成法 (NFA) → 部分集合構成法 (DFA) → Hopcroft 最小化、文字クラス圧縮、最長一致 + 優先度駆動。
-- **自前 LALR(1)**: LR(0) オートマトン → FIRST/NULLABLE → DeRemer-Pennello (1982) ルックアヘッド伝播 → ACTION/GOTO テーブル、衝突検出。
-- **優先度/結合性**: `[Precedence]` で演算子の優先度と左/右/非結合を指定（`*` > `+`、代入の右結合等）。yacc 互換の衝突解決。
-- **AST 構築**: reduce 時にユーザー定義クラスのコンストラクタを呼び、実値を格納。
-- **意味解析**: コンストラクタ = ノード確定時のメソッド。`[Context]` で `SemanticContext`（シンボル表 + 診断）を注入。
-- **エラー回復**: panic mode で構文エラー後も解析を継続。`ParseResult` で AST + エラーリストを返す。
-- **`{m,n}` 量指定子**: `\d{2,4}` 等の正規表現量指定子をサポート。
+- **C# コードで文法定義**: クラスの継承ツリーで構文、コンストラクタ引数の `[Pattern]` で字句ルール。特別な構文や DSL ファイルは不要。
+- **Source Generator (`IIncrementalGenerator`)**: コンパイル時に Lexer / Parser の C# コードを生成。実行時コード生成なし。
+- **正規表現ベースのレクサ**: 文字クラス圧縮、最長一致 + 優先度駆動、`{m,n}` 量指定子、Unicode 補助面に対応。
+- **LALR(1) 構文解析**: 優先度/結合性 (`[Precedence]`) で shift-reduce 衝突を解決（`*` > `+`、代入の右結合等）。
+- **AST 構築**: reduce 時にユーザー定義クラスのコンストラクタを呼び、実値を格納。コンストラクタ本体でノードの意味アクションを書ける。
+- **意味解析**: スコープ付きシンボル表 (`ScopedSymbolTable`) と診断 (`Diagnostic`) を提供。未宣言参照・二重宣言・スコープ外参照などを検出し、`ParseResult.Diagnostics` で取り出せる。
+- **エラー回復**: panic mode で構文エラー後も解析を継続し、`ParseResult` で AST + エラーリストを返す。
 
 ## クイックスタート
 
@@ -32,8 +28,8 @@ public sealed class NumExpr : Expr     // 規則: Expr -> [0-9]+
     public int Value { get; }
     public NumExpr([Pattern(@"[0-9]+")] Token num)
     {
-        Value = int.Parse(num.Text);   // コンストラクタ本体 = 意味解析
-        Span = num.Span;
+        Value = int.Parse(num.Text);
+        Span = num.Span;               // AST ノードにソース範囲を設定
     }
 }
 
@@ -72,25 +68,81 @@ public sealed class MulExpr : Expr     // 規則: Expr -> Expr * Expr
 
 ```csharp
 var result = ExprParser.Parse("1+2*3");
-// result.Ast    → MulExpr(AddExpr(NumExpr(1), +, NumExpr(2)), *, NumExpr(3))
-//                (* が + より優先度が高いので先に結合)
-// result.Errors → [] (エラーなし)
+// result.Ast      → MulExpr(AddExpr(NumExpr(1), +, NumExpr(2)), *, NumExpr(3))
+//                  (* が + より優先度が高いので先に結合)
+// result.Errors   → [] (構文エラーなし)
 // result.HasErrors → false
 
 var result2 = ExprParser.Parse("1+");
 // result2.HasErrors → true (panic mode で回復)
 ```
 
+## 意味解析
+
+AstFirst は構文解析（AST 構築）に加え、意味解析のための**スコープ付きシンボル表** (`ScopedSymbolTable`) と**診断** (`Diagnostic`) を提供する。
+
+### スコープ付きシンボル表
+
+`ScopedSymbolTable` はレキシカルスコープのスタック。宣言位置 (`SourceSpan`) を記録し、内側スコープ優先で名前を解決する。
+
+- `PushScope()` / `PopScope()` — スコープの開閉
+- `Lookup(name)` — 現在のスコープから外側へ探して最初に見つかった宣言を返す（未宣言は `null`）
+- `TryDeclare(name, span, value, out existing)` — 宣言。同一スコープの重複は拒否、外側スコープの同名（シャドウイング）は許可
+
+### 1パス vs 2パス（重要）
+
+LALR の reduce は**ボトムアップ**。親ノード（例: ブロック）のコンストラクタは子ノードの**後に**呼ばれるため、「ブロックに入る前にスコープを開く」をコンストラクタで実現できない。
+
+- **1パス（コンストラクタ内）**: `SemanticContext` 派生型の引数で `ctx` を受け取り、`ctx.Symbols` / `ctx.Diagnostics` を使う。宣言順の可視性チェックや二重宣言検出には使えるが、**ブロックスコープの Push/Pop は正確でない**。
+- **2パス（AST ウォーク） ★推奨**: `Parse` 後に AST をウォークし、`PushScope` / `PopScope` で正確なブロックスコープを管理する。
+
+### 診断の取得
+
+意味解析の診断（コンストラクタ内で `ctx.Diagnostics` に追加したもの、または2パスのウォークで集めたもの）は `ParseResult.Diagnostics` から取り出せる。
+
+```csharp
+var result = ProgramParser.Parse(code);
+// result.Errors      → 構文エラー (ParseError)
+// result.Diagnostics → 意味解析の診断 (Diagnostic)
+// result.HasErrors   → 構文エラーまたは意味解析の Error が1つでもあれば true
+```
+
+### 独自コンテキストの注入
+
+```csharp
+var ctx = new MySemanticContext();         // SemanticContext 派生
+var result = ProgramParser.Parse(code, ctx);
+```
+
+`Parse(string)` は `Parse(string, SemanticContext?)` に転送し、省略時は `BasicSemanticContext` を使う。独自のシンボル表や診断の集め方を差し替えられる。
+
+### 例: MiniC の意味解析
+
+`samples/MiniC/SemanticAnalyzer.cs` は2パスで AST をウォークし、未宣言参照・二重宣言・スコープ外参照を検出する。`dotnet run --project samples/MiniC` で実演。
+
+```
+--- 未宣言参照 ---
+  意味解析の診断:
+    Error: 変数 'x' は宣言されていません @ (0,0)-(0,0)
+
+--- シャドウイング (許容) ---
+  意味解析: 診断なし (OK)
+```
+
 ## 属性リファレンス
 
 | 属性 | 対象 | 役割 |
 |---|---|---|
-| `[Grammar]` | クラス | 文法の開始記号（ルート非終端）。Generator の抽出開始点。 |
+| `[Grammar]` | クラス | 文法の開始記号（ルート非終端）。Generator の抽出開始点。`Mode` で複数方言を切り替え。 |
 | `[Pattern(@"regex")]` | コンストラクタ引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度（大きいほど高優先）。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。`IsRightAssociative`/`IsNonAssociative` で結合性。 |
-| `[Context]` | コンストラクタ引数 | `SemanticContext`（シンボル表 + 診断）を注入。意味解析で使用。 |
 | `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
 | `[Expect(token)]` | コンストラクタ引数 | トークン種別の絞り込み。 |
+
+### コンストラクタ引数の特別な型
+
+- **`Token` 型** (`[Pattern]` 付き): 終端記号。`Token` 基底型または派生クラスを使う。字面 (`Text`) とソース範囲 (`Span`) を持つ。
+- **`SemanticContext` 派生型**: 右辺の子でなく、パーサから意味解析コンテキストが注入される。`ctx.Symbols` / `ctx.Diagnostics` で意味解析を行う（属性ではなく**型**で判定される）。
 
 ### `[Pattern]` の named プロパティ
 
@@ -115,25 +167,24 @@ var result2 = ExprParser.Parse("1+");
 - **継承ツリー = 構文**: `[Grammar] public abstract class Expr` が非終端。`sealed class NumExpr : Expr` が「`Expr -> [0-9]+`」の生成規則。
 - **コンストラクタ引数 = 右辺**: 引数の型と順序が生成規則の右辺を表す。`AddExpr(Expr left, [Pattern(@"\+")] Token op, Expr right)` は `Expr -> Expr + Expr`。
 - **複数コンストラクタ = 複数規則**: 同じクラスに複数のコンストラクタを書くと、それぞれが独立の生成規則になる。
-- **`[Context]` 引数**: 右辺の子でなく、パーサから `SemanticContext` が注入される。意味解析で `ctx.Symbols` / `ctx.Diagnostics` を使う。
-- **`Token` 型**: `[Pattern]` 付きの引数は終端。`Token` 基底型または派生クラスを使う。
+- **`SemanticContext` 派生型の引数**: 右辺の子でなく、パーサから注入される。
 
 ## サンプル
 
-### 電卓 (本体 `src/AstFirst/Calc/`)
+### 電卓 (`src/AstFirst/Calc/`)
 四則演算（`+` `*`、優先度付き）。`ExprParser.Parse("1+2")` → `AddExpr(NumExpr(1), NumExpr(2))`。
 
-### MiniLang (本体 `src/AstFirst/MiniLang/`)
+### MiniLang (`src/AstFirst/MiniLang/`)
 変数宣言（`let`）、`print`、四則演算のサンプル言語。`StmtParser.Parse("let x = 1+2*3;")` → `LetStmt { Name="x", Value=... }`。
 
 ### JSON パーサ (`samples/JsonParser/`)
 JSON の基本型（`null`/`true`/`false`/`number`/`string`）をパース。`[Skip(@"\s+")]`、キーワード優先度、正規表現数値をデモ。
 
-### 軽量C言語 (`samples/MiniC/`)
-変数宣言（`int x = expr;`）、代入、`print`、`if`/`while`、ブロック文、四則演算（優先度付き）。行コメントスキップ、ε規則による文リスト。
+### MiniC (`samples/MiniC/`) — 意味解析デモ
+変数宣言・代入・`print`・`if`/`while`・ブロック文・四則演算。`SemanticAnalyzer` が2パスで AST をウォークし、**スコープ付きシンボル表で未宣言参照・二重宣言・スコープ外参照を検出**する。`dotnet run --project samples/MiniC` で実演。
 
 ### MiniBASIC (`samples/MiniBasic/`)
-行番号付き BASIC（`PRINT`/`LET`/`IF-THEN-GOTO`/`GOTO`/`END`）。キーワード優先度、コンストラクタオーバーロード（`THEN GOTO N` / `THEN N`）。
+行番号付き BASIC（`PRINT`/`LET`/`IF-THEN-GOTO`/`GOTO`/`END`）。キーワード優先度、コンストラクタオーバーロード。
 
 ## アーキテクチャ
 
@@ -141,36 +192,24 @@ JSON の基本型（`null`/`true`/`false`/`number`/`string`）をパース。`[S
 AstFirst.slnx
 ├── src/
 │   ├── AstFirst.Core/        netstandard2.0  純粋ロジック (レクサ DFA / LALR)。Roslyn 非依存。
-│   ├── AstFirst.Runtime/     net10.0         属性・基底クラス ([Pattern]/[Precedence]/[Context]/AstNode/Token/SemanticContext)
+│   ├── AstFirst.Runtime/     net10.0         属性・基底クラス・意味解析 (ScopedSymbolTable / SemanticContext / AstNode / Token)
 │   ├── AstFirst.Generator/   netstandard2.0  IIncrementalGenerator。Core のソースを取り込み単一アセンブリ化。
 │   └── AstFirst/             net10.0         ユーザーコード (電卓・MiniLang サンプル)
-├── samples/
-│   ├── JsonParser/           net10.0         JSON パーサのサンプル
-│   ├── MiniC/                net10.0         軽量C言語パーサのサンプル
-│   └── MiniBasic/            net10.0         BASIC パーサのサンプル
-└── tests/
-    ├── AstFirst.Tests/             net10.0   Core/Runtime + EndToEnd
-    └── AstFirst.Generator.Tests/   net10.0   Generator の抽出・コード生成
+├── samples/                   net10.0         JsonParser / MiniC / MiniBasic
+└── tests/                     net10.0         AstFirst.Tests (Core/Runtime + EndToEnd) / AstFirst.Generator.Tests
 ```
 
-**設計のポイント**:
 - Generator は Roslyn で C# コードを読み、等価比較可能な POCO モデルに変換してから（キャッシュの生命線）、Core の純粋ロジックで DFA/LALR テーブルを構築し、C# コードを生成する。
-- 生成コードは Core（ランタイム）に依存。Lexer/Parser は DFA/LALR テーブルを `static readonly` 配列に埋め込み、shift/reduce を駆動。
+- 生成コードは Runtime に依存。Lexer/Parser は DFA/LALR テーブルを `static readonly` 配列に埋め込み、shift/reduce を駆動。
 - Generator は Core のソースを Compile Include して単一アセンブリ化（Analyzer 実行時の依存ロード問題を回避）。
 
-## 進捗
+## 制限
 
-- [x] フェーズ1: 自前レクサ（正規表現 → NFA → DFA → 最小化 → 最長一致駆動）
-- [x] フェーズ2: 自前 LALR（LR(0) → FIRST → DeRemer-Pennello → ACTION/GOTO + 衝突検出）
-- [x] フェーズ3: Source Generator（C# コードから抽出 → Lexer/Parser 生成）
-- [x] フェーズ4: reduce 時のコンストラクタ呼び出し + AST 構築 + `[Context]` 注入
-- [x] フェーズ5: エラー回復（panic mode + ParseResult / 診断リスト）
-- [x] フェーズ6: 優先度/結合性 (`[Precedence]`)、`{m,n}`、Unicode 補助面、テーブル圧縮、`[Skip]`、レクサ優先度
-- [x] フェーズ7: 複数フォーマット/方言対応 (`[Grammar(Mode=...)]`)
+- **`SourceSpan` の行・列は現在 `0,0`**: 字句解析がオフセットのみ計算するため、診断の `SourceSpan` はオフセットは正しいが行・列は `0` になる。将来の改善点。
 
 ## テスト
 
-142 テスト（AstFirst.Tests 121 + Generator.Tests 21）。レクサ/DFA/LALR の各段階と、エンドツーエンド（C# 文法定義 → 生成 → Parse → AST）、エラー回復を検証。
+162 テスト（AstFirst.Tests 141 + Generator.Tests 21）。レクサ/DFA/LALR の各段階、エンドツーエンド（C# 文法定義 → 生成 → Parse → AST）、エラー回復、意味解析（スコープ付きシンボル表）を検証。
 
 ## ライセンス
 
