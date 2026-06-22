@@ -56,13 +56,15 @@ public class ParserEmitterTests
     public void EmitParserProducesCompilableCode()
     {
         var model = CalcModel();
-        var lexerSource = CodeEmitter.EmitLexer(model, "ExprLexer", "TestNs");
-        var parserSource = ParserEmitter.EmitParser(model, "TestNs");
+        var dfa = ModelToDfa.Build(model, out var rules);
+        var lexerSource = CodeEmitter.EmitLexer(model, dfa, rules, "ExprLexer", "TestNs");
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         var stubs = @"
 namespace AstFirst {
     public abstract class AstNode { }
-    public abstract class Token { public Token(string t, SourceSpan s) { } }
-    public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } }
+    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
+    public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
     public readonly struct Position { public Position(int o, int l, int c) { } }
     public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
     public enum Severity { Error, Warning }
@@ -85,7 +87,10 @@ public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) {
     [Fact]
     public void EmitParserContainsParseAndTables()
     {
-        var source = ParserEmitter.EmitParser(CalcModel(), "TestNs");
+        var model = CalcModel();
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        ModelToDfa.Build(model, out var rules);
+        var source = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         Assert.Contains("public static class ExprParser", source);
         Assert.Contains("public static AstFirst.ParseResult Parse(string input)", source);
         Assert.Contains("public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)", source);

@@ -200,13 +200,20 @@ public static class LalrTableBuilder
 
         bool reduceReduce = existing.Kind == LrActionKind.Reduce && newAction.Kind == LrActionKind.Reduce;
         string kind = shiftReduce ? "shift-reduce" : reduceReduce ? "reduce-reduce" : "accept";
+        string kindJa = shiftReduce ? "シフト還元" : reduceReduce ? "還元還元" : "受け入れ";
         var symName = grammar.Symbols[symbolId].Name;
         conflicts.Add(new LrConflict(state, symbolId, existing, newAction,
-            $"{kind} conflict at state {state} on '{symName}' (existing {existing}, new {newAction}, rule {prod})"));
+            $"{kind} conflict at state {state} on '{symName}' (existing {existing}, new {newAction}, rule {prod}) | "
+            + $"{kindJa}コンフリクト: 状態 {state} の記号 '{symName}' (既存 {existing}, 新 {newAction}, 規則 {prod})"));
 
-        // デフォルト解決: shift を優先。reduce-reduce は既存(先の規則)を維持。
-        if (newAction.Kind == LrActionKind.Shift)
-            action[state, symbolId] = newAction;
+        // デフォルト解決: shift-reduce は reduce を優先 (左結合デフォルト)。
+        // 多くの演算子が左結合なので、優先度未設定時は reduce を選ぶ。
+        // reduce-reduce は既存 (先の規則) を維持。
+        if (shiftReduce)
+        {
+            var reduceAction = existing.Kind == LrActionKind.Reduce ? existing : newAction;
+            action[state, symbolId] = reduceAction;
+        }
     }
 
     /// <summary>規則の優先度 = 右辺の最後の終端の優先度 (設定されていなければ null)。</summary>

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 
 namespace AstFirst.Generator;
 
@@ -14,14 +15,18 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     public IReadOnlyList<TokenDefModel> TokenDefs { get; }
     public IReadOnlyList<string> SkipPatterns { get; }
 
+    /// <summary>[Grammar] ルートクラスのソース位置 (診断報告用)。Equals/GetHashCode には含めない (IncrementalGenerator のキャッシュ判定を壊さないため)。</summary>
+    public Location? RootLocation { get; }
+
     public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs,
-        IReadOnlyList<string>? skipPatterns = null, string? mode = null)
+        IReadOnlyList<string>? skipPatterns = null, string? mode = null, Location? rootLocation = null)
     {
         RootTypeFullName = rootTypeFullName;
         Nodes = nodes;
         TokenDefs = tokenDefs;
         SkipPatterns = skipPatterns ?? Array.Empty<string>();
         Mode = mode;
+        RootLocation = rootLocation;
     }
 
     public bool Equals(GrammarModel? other) =>

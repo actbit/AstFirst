@@ -18,10 +18,11 @@ public static class ModelExtraction
     public static GrammarModel? Extract(GeneratorAttributeSyntaxContext context)
     {
         if (context.TargetSymbol is not INamedTypeSymbol rootType) return null;
-        return Extract(context.SemanticModel.Compilation, rootType);
+        var location = context.TargetNode?.GetLocation();
+        return Extract(context.SemanticModel.Compilation, rootType, location);
     }
 
-    public static GrammarModel Extract(Compilation compilation, INamedTypeSymbol rootType)
+    public static GrammarModel Extract(Compilation compilation, INamedTypeSymbol rootType, Location? rootLocation = null)
     {
         var astNodeBase = compilation.GetTypeByMetadataName(AstNodeFullName);
         var tokenBase = compilation.GetTypeByMetadataName(TokenFullName);
@@ -59,7 +60,7 @@ public static class ModelExtraction
                 foreach (var na in a.NamedArguments)
                     if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
 
-        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode);
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation);
     }
 
     private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase)

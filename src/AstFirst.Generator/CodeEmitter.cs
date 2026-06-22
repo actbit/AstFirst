@@ -11,9 +11,8 @@ namespace AstFirst.Generator;
 public static class CodeEmitter
 {
     /// <summary>レクサの C# コードを生成。DFA を static 配列に直列化し Lexer を駆動。</summary>
-    public static string EmitLexer(GrammarModel model, string className, string ns)
+    public static string EmitLexer(GrammarModel model, Dfa dfa, IReadOnlyList<LexerRule> rules, string className, string ns)
     {
-        var dfa = ModelToDfa.Build(model, out var rules);
         var boundaries = dfa.Alphabet.Boundaries;
         int stateCount = dfa.States.Count;
         int classCount = dfa.Alphabet.ClassCount;
@@ -33,13 +32,13 @@ public static class CodeEmitter
         for (int i = 0; i < boundaries.Count; i++) { if (i > 0) sb.Append(", "); sb.Append(boundaries[i]); }
         sb.AppendLine(" };");
 
-        // Transitions[state, class]
-        sb.Append("    public static readonly int[,] Transitions = new int[");
-        sb.Append(stateCount).Append(", ").Append(classCount).AppendLine("]");
+        // Transitions[state][class]: ジャグ配列 (各状態の遷移が1次元配列)。
+        // 2次元配列 (int[,]) よりアクセスが速く、Lexer が static 配列を直接参照する。
+        sb.Append("    public static readonly int[][] Transitions = new int[").Append(stateCount).AppendLine("][]");
         sb.AppendLine("    {");
         for (int s = 0; s < stateCount; s++)
         {
-            sb.Append("        { ");
+            sb.Append("        new int[] { ");
             var tr = dfa.States[s].Transitions;
             for (int c = 0; c < classCount; c++) { if (c > 0) sb.Append(", "); sb.Append(tr[c]); }
             sb.Append(" }");
@@ -56,49 +55,27 @@ public static class CodeEmitter
         }
         sb.AppendLine(" };");
 
-        // Rules
-        sb.AppendLine("    public static IReadOnlyList<LexerRule> BuildRules()");
-        sb.AppendLine("    {");
-        sb.Append("        return new LexerRule[] {");
+        // Alphabet: アルファベット分割 (1回だけ構築してキャッシュ)。
+        sb.AppendLine("    public static readonly AlphabetPartition Alphabet = AlphabetPartition.FromBoundaries(Boundaries);");
+
+        // Rules: 字句規則 (1回だけ構築してキャッシュ)。
+        sb.Append("    public static readonly LexerRule[] Rules = new LexerRule[] {");
         for (int i = 0; i < rules.Count; i++)
         {
             var r = rules[i];
             sb.AppendLine();
-            sb.Append("            new LexerRule(\"").Append(Escape(r.Pattern)).Append("\", ")
+            sb.Append("        new LexerRule(\"").Append(Escape(r.Pattern)).Append("\", ")
               .Append(r.TokenId).Append(", ").Append(r.Priority).Append(", ").Append(r.IsHidden ? "true" : "false").Append("),");
         }
         sb.AppendLine();
-        sb.AppendLine("        };");
-        sb.AppendLine("    }");
+        sb.AppendLine("    };");
 
-        // BuildDfa
-        sb.AppendLine("    public static Dfa BuildDfa()");
-        sb.AppendLine("    {");
-        sb.AppendLine("        var alphabet = AlphabetPartition.FromBoundaries(Boundaries);");
-        sb.Append("        var states = new DfaState[").Append(stateCount).AppendLine("];");
-        sb.Append("        for (int i = 0; i < ").Append(stateCount).AppendLine("; i++)");
-        sb.AppendLine("        {");
-        sb.Append("            states[i] = new DfaState(i, ").Append(classCount).AppendLine(");");
-        sb.AppendLine("            if (AcceptTokenIds[i] != 0)");
-        sb.AppendLine("            {");
-        sb.AppendLine("                states[i].IsAccept = true;");
-        sb.AppendLine("                states[i].AcceptTokenId = AcceptTokenIds[i];");
-        sb.AppendLine("            }");
-        sb.AppendLine("        }");
-        sb.Append("        for (int s = 0; s < ").Append(stateCount).AppendLine("; s++)");
-        sb.Append("            for (int c = 0; c < ").Append(classCount).AppendLine("; c++)");
-        sb.AppendLine("                states[s].Transitions[c] = Transitions[s, c];");
-        sb.AppendLine("        return new Dfa(states, 0, alphabet);");
-        sb.AppendLine("    }");
-
-        // Tokenize
+        // Tokenize: static 配列 (Transitions/AcceptTokenIds) とキャッシュ済みの Alphabet/Rules を
+        // 直接 Lexer.Tokenize に渡す。Dfa/DfaState オブジェクトの毎回の構築・コピーを回避する。
         sb.AppendLine("    /// <summary>Tokenizes the input into a list of tokens.</summary>");
-        sb.AppendLine("    /// <remarks>入力をトークン列に分割します。</remarks>");
+        sb.AppendLine("    /// <remarks>入力をトークン列に分割します (DFA テーブルは static 配列を直接参照)。</remarks>");
         sb.AppendLine("    public static List<LexToken> Tokenize(string input)");
-        sb.AppendLine("        => new Lexer(BuildDfa(), BuildRules(), input).Tokenize();");
-
-        sb.AppendLine("    private static string TokenText(string input, int start, int end)");
-        sb.AppendLine("        => input.Substring(start, end - start);");
+        sb.AppendLine("        => Lexer.Tokenize(Transitions, AcceptTokenIds, Alphabet, 0, Rules, input);");
         sb.AppendLine("}");
 
         return sb.ToString();
