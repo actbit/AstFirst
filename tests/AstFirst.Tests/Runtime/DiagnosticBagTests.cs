@@ -38,4 +38,17 @@ public class DiagnosticBagTests
         bag.Warning("w1", Span);
         Assert.Equal(2, bag.Items.Count);
     }
+
+    [Fact]
+    public void Items_PreserveInsertionOrder()
+    {
+        var bag = new DiagnosticBag();
+        bag.Error("first", Span);
+        bag.Error("second", Span);
+        bag.Warning("third", Span);
+        Assert.Equal(3, bag.Items.Count);
+        Assert.Equal("first", bag.Items[0].Message);
+        Assert.Equal("second", bag.Items[1].Message);
+        Assert.Equal(Severity.Warning, bag.Items[2].Severity);
+    }
 }

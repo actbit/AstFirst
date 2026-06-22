@@ -85,4 +85,99 @@ public class ScopedSymbolTableTests
         t.PushScope();
         Assert.Equal(2, t.Current.Depth);
     }
+
+    // --- 境界・エッジケース ---
+
+    [Fact]
+    public void SiblingScopes_Independent()
+    {
+        // 兄弟スコープは互いに独立: A で宣言 → Pop → B で同名宣言が可能
+        var t = new ScopedSymbolTable();
+        t.PushScope();
+        t.TryDeclare("x", Span(0), "A", out _);
+        t.PopScope();
+        t.PushScope(); // 兄弟スコープ
+        Assert.True(t.TryDeclare("x", Span(1), "B", out _)); // 同名 OK
+        Assert.Equal("B", t.Lookup("x")!.Value);
+    }
+
+    [Fact]
+    public void DeepNesting_LookupReturnsInnermost()
+    {
+        // 3層ネスト: 同名が複数スコープにあるとき最内を返す
+        var t = new ScopedSymbolTable();
+        t.TryDeclare("x", Span(0), "root", out _);
+        t.PushScope();
+        t.TryDeclare("x", Span(1), "mid", out _);
+        t.PushScope();
+        t.TryDeclare("x", Span(2), "inner", out _);
+        Assert.Equal("inner", t.Lookup("x")!.Value);
+        Assert.Equal(2, t.Lookup("x")!.Depth);
+    }
+
+    [Fact]
+    public void TryDeclare_ExistingHasOriginalSpan()
+    {
+        // 二重宣言の existing は「先に」宣言された方の位置を返す
+        var t = new ScopedSymbolTable();
+        t.TryDeclare("x", Span(5), null, out _);
+        Assert.False(t.TryDeclare("x", Span(9), null, out var existing));
+        Assert.NotNull(existing);
+        Assert.Equal(5, existing!.Span.Start.Offset);
+    }
+
+    [Fact]
+    public void SymbolValue_StoredAndUpdatable()
+    {
+        // SymbolEntry.Value は格納され、Lookup 経由で更新できる
+        var t = new ScopedSymbolTable();
+        t.TryDeclare("x", Span(0), 10, out _);
+        var sym = t.Lookup("x");
+        Assert.Equal(10, sym!.Value);
+        sym.Value = 20;
+        Assert.Equal(20, t.Lookup("x")!.Value); // 同じ SymbolEntry インスタンス
+    }
+
+    [Fact]
+    public void Lookup_ReturnsIntermediateScope()
+    {
+        // 内側に無ければ中間スコープを返す (外側まで一気に飛ばない)
+        var t = new ScopedSymbolTable();
+        t.TryDeclare("x", Span(0), "root", out _);
+        t.PushScope();
+        t.PushScope();
+        Assert.Equal("root", t.Lookup("x")!.Value); // 内側2層どちらにも無い → root
+
+        t.PopScope();
+        t.TryDeclare("x", Span(1), "mid", out _); // 中間スコープに追加
+        t.PushScope();
+        Assert.Equal("mid", t.Lookup("x")!.Value); // 中間が勝つ (root を飛ばす)
+    }
+
+    [Fact]
+    public void ScopeSymbols_ContainsOnlyLocal()
+    {
+        // Scope.Symbols は当該スコープの宣言のみ (外側を含まない)
+        var t = new ScopedSymbolTable();
+        t.TryDeclare("a", Span(0), null, out _);
+        t.PushScope();
+        t.TryDeclare("b", Span(1), null, out _);
+        var localNames = t.Current.Symbols.Select(s => s.Name).ToArray();
+        Assert.Equal(new[] { "b" }, localNames);
+    }
+
+    [Fact]
+    public void PushPop_CycleReusable()
+    {
+        // Pop 後に新しく Push したスコープは、前のサイクルの宣言を引き継がない
+        var t = new ScopedSymbolTable();
+        t.PushScope();
+        t.TryDeclare("tmp", Span(0), null, out _);
+        t.PopScope();
+        Assert.Null(t.Lookup("tmp"));
+
+        t.PushScope();
+        Assert.Null(t.Lookup("tmp")); // 前サイクルの残滓なし
+        Assert.True(t.TryDeclare("tmp", Span(1), null, out _)); // 同名 OK
+    }
 }
