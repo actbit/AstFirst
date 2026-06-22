@@ -129,6 +129,12 @@ var result2 = ExprParser.Parse("1+");
 ### JSON パーサ (`samples/JsonParser/`)
 JSON の基本型（`null`/`true`/`false`/`number`/`string`）をパース。`[Skip(@"\s+")]`、キーワード優先度、正規表現数値をデモ。
 
+### 軽量C言語 (`samples/MiniC/`)
+変数宣言（`int x = expr;`）、代入、`print`、`if`/`while`、ブロック文、四則演算（優先度付き）。行コメントスキップ、ε規則による文リスト。
+
+### MiniBASIC (`samples/MiniBasic/`)
+行番号付き BASIC（`PRINT`/`LET`/`IF-THEN-GOTO`/`GOTO`/`END`）。キーワード優先度、コンストラクタオーバーロード（`THEN GOTO N` / `THEN N`）。
+
 ## アーキテクチャ
 
 ```
@@ -139,7 +145,9 @@ AstFirst.slnx
 │   ├── AstFirst.Generator/   netstandard2.0  IIncrementalGenerator。Core のソースを取り込み単一アセンブリ化。
 │   └── AstFirst/             net10.0         ユーザーコード (電卓・MiniLang サンプル)
 ├── samples/
-│   └── JsonParser/           net10.0         JSON パーサのサンプル
+│   ├── JsonParser/           net10.0         JSON パーサのサンプル
+│   ├── MiniC/                net10.0         軽量C言語パーサのサンプル
+│   └── MiniBasic/            net10.0         BASIC パーサのサンプル
 └── tests/
     ├── AstFirst.Tests/             net10.0   Core/Runtime + EndToEnd
     └── AstFirst.Generator.Tests/   net10.0   Generator の抽出・コード生成
@@ -162,7 +170,7 @@ AstFirst.slnx
 
 ## テスト
 
-129 テスト（AstFirst.Tests 108 + Generator.Tests 21）。レクサ/DFA/LALR の各段階と、エンドツーエンド（C# 文法定義 → 生成 → Parse → AST）を検証。
+142 テスト（AstFirst.Tests 121 + Generator.Tests 21）。レクサ/DFA/LALR の各段階と、エンドツーエンド（C# 文法定義 → 生成 → Parse → AST）、エラー回復を検証。
 
 ## ライセンス
 
