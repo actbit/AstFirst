@@ -22,10 +22,6 @@ public sealed class PatternAttribute(string regex) : Attribute
     public bool IsNonAssociative { get; set; }
 }
 
-/// <summary>コンストラクタ引数に意味解析コンテキストを注入することを示す。</summary>
-[AttributeUsage(AttributeTargets.Parameter)]
-public sealed class ContextAttribute : Attribute { }
-
 /// <summary>文法の開始記号 (ルート非終端) のクラスに付ける。Generator の抽出開始点。</summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class GrammarAttribute : Attribute

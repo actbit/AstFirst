@@ -8,7 +8,7 @@ public sealed class ReduceActionModel
     /// <summary>AST クラスの完全修飾名 (new の対象)。</summary>
     public string AstTypeName { get; }
 
-    /// <summary>コンストラクタ引数 (右辺の子 or [Context])。</summary>
+    /// <summary>コンストラクタ引数 (右辺の子 or SemanticContext 派生型)。</summary>
     public IReadOnlyList<ReduceParamModel> Parameters { get; }
 
     public ReduceActionModel(string astTypeName, IReadOnlyList<ReduceParamModel> parameters)
@@ -21,7 +21,7 @@ public sealed class ReduceActionModel
 /// <summary>reduce 時のコンストラクタ引数。</summary>
 public sealed class ReduceParamModel
 {
-    /// <summary>[Context] 付きなら SemanticContext を注入。</summary>
+    /// <summary>SemanticContext 派生型の引数なら ctx を注入。</summary>
     public bool IsContext { get; }
 
     /// <summary>キャスト先の型名。</summary>

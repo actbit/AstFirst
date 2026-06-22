@@ -89,7 +89,7 @@ public sealed class ParamModel : IEquatable<ParamModel>
     public string TypeFullName { get; }
     public string? Name { get; }
     public string? Pattern { get; }     // [Pattern]
-    public bool IsContext { get; }      // [Context]
+    public bool IsContext { get; }      // SemanticContext 派生型の引数
     public int Priority { get; }        // [Priority]
     public AstFirst.Core.Parsing.Associativity Associativity { get; } // [Left]/[Right]/[NonAssoc]
 
