@@ -25,8 +25,8 @@ public sealed class DeclStmt : Stmt
 {
     public string Name { get; }
     public Expr? Init { get; }
-    public DeclStmt([Pattern(@"int", Priority = 1)] Token kw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { Name = name.Text; }
-    public DeclStmt([Pattern(@"int", Priority = 1)] Token kw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expr init, [Pattern(@";")] Token semi) { Name = name.Text; Init = init; }
+    public DeclStmt([Pattern(@"int", Priority = 1)] Token kw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { Name = name.Text; Span = name.Span; }
+    public DeclStmt([Pattern(@"int", Priority = 1)] Token kw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expr init, [Pattern(@";")] Token semi) { Name = name.Text; Init = init; Span = name.Span; }
 }
 
 // x = expr;
@@ -34,7 +34,7 @@ public sealed class AssignStmt : Stmt
 {
     public string Name { get; }
     public Expr Value { get; }
-    public AssignStmt([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expr value, [Pattern(@";")] Token semi) { Name = name.Text; Value = value; }
+    public AssignStmt([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expr value, [Pattern(@";")] Token semi) { Name = name.Text; Value = value; Span = name.Span; }
 }
 
 // print(expr);
@@ -64,7 +64,7 @@ public sealed class WhileStmt : Stmt
 public sealed class BlockStmt : Stmt
 {
     public Program Body { get; }
-    public BlockStmt([Pattern(@"\{")] Token lb, Program body, [Pattern(@"\}")] Token rb) { Body = body; }
+    public BlockStmt([Pattern(@"\{")] Token lb, Program body, [Pattern(@"\}")] Token rb) { Body = body; Span = SourceSpan.Merge(lb.Span, rb.Span); }
 }
 
 // --- 式 ---
@@ -79,7 +79,7 @@ public sealed class NumExpr : Expr
 public sealed class VarExpr : Expr
 {
     public string Name { get; }
-    public VarExpr([Pattern(@"[A-Za-z_]\w*")] Token name) { Name = name.Text; }
+    public VarExpr([Pattern(@"[A-Za-z_]\w*")] Token name) { Name = name.Text; Span = name.Span; }
 }
 
 [Precedence(1)]
