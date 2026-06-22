@@ -35,7 +35,7 @@ public static class ModelExtraction
             if (type.TypeKind != TypeKind.Class) continue;
 
             if (astNodeBase is not null && InheritsFrom(type, astNodeBase))
-                nodes.Add(ExtractNode(type, contextBase));
+                nodes.Add(ExtractNode(type, contextBase, astNodeBase));
 
             if (tokenBase is not null && InheritsFrom(type, tokenBase))
                 foreach (var td in ExtractTokenDefsFromCtors(type)) tokenDefs.Add(td);
@@ -61,7 +61,7 @@ public static class ModelExtraction
         return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode);
     }
 
-    private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase)
+    private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase)
     {
         var ctors = new List<CtorModel>();
         foreach (var ctor in type.Constructors)
@@ -83,7 +83,8 @@ public static class ModelExtraction
                 else if (na.Key == "IsRightAssociative" && na.Value.Value is bool ir && ir) precAssoc = AstFirst.Core.Parsing.Associativity.Right;
             }
         }
-        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, ctors, precPriority, precAssoc);
+        var children = astNodeBase is not null ? ExtractChildren(type, astNodeBase) : System.Array.Empty<ChildModel>();
+        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, ctors, children, precPriority, precAssoc);
     }
 
     private static IEnumerable<ParamModel> ExtractParams(IEnumerable<IParameterSymbol> parameters, INamedTypeSymbol? contextBase)
@@ -180,6 +181,24 @@ public static class ModelExtraction
     {
         if (SymbolEqualityComparer.Default.Equals(type, baseType)) return true;
         return InheritsFrom(type, baseType);
+    }
+
+    /// <summary>ノードの public プロパティから AstNode 派生の子を収集する (Listener 生成で子の再帰ウォークに使う)。</summary>
+    private static IReadOnlyList<ChildModel> ExtractChildren(INamedTypeSymbol type, INamedTypeSymbol astNodeBase)
+    {
+        var children = new List<ChildModel>();
+        foreach (var member in type.GetMembers())
+        {
+            if (member is not IPropertySymbol prop) continue;
+            var get = prop.GetMethod;
+            if (get is null || get.DeclaredAccessibility != Accessibility.Public) continue;
+            if (prop.Type is not INamedTypeSymbol nt) continue;
+            if (!InheritsFromOrEquals(nt, astNodeBase)) continue;
+            bool isNullable = nt.NullableAnnotation == NullableAnnotation.Annotated;
+            children.Add(new ChildModel(prop.Name, nt.ToDisplayString(), isNullable));
+        }
+        children.Sort((a, b) => string.CompareOrdinal(a.PropertyName, b.PropertyName));
+        return children;
     }
 
     private static bool InheritsFrom(ITypeSymbol type, INamedTypeSymbol baseType)

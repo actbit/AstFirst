@@ -51,23 +51,26 @@ public sealed class NodeModel : IEquatable<NodeModel>
     public string BaseFullName { get; }       // 直接の基底 (非終端)
     public bool IsAbstract { get; }
     public IReadOnlyList<CtorModel> Constructors { get; }
+    public IReadOnlyList<ChildModel> Children { get; }   // AstNode 派生の子プロパティ (Listener 生成用)
     public int PrecedencePriority { get; }    // [Precedence] の Priority (0=未設定)
     public AstFirst.Core.Parsing.Associativity PrecedenceAssoc { get; }
 
     public NodeModel(string fullName, string baseFullName, bool isAbstract, IReadOnlyList<CtorModel> constructors,
+        IReadOnlyList<ChildModel>? children = null,
         int precedencePriority = 0, AstFirst.Core.Parsing.Associativity precedenceAssoc = AstFirst.Core.Parsing.Associativity.Left)
     {
         FullName = fullName;
         BaseFullName = baseFullName;
         IsAbstract = isAbstract;
         Constructors = constructors;
+        Children = children ?? Array.Empty<ChildModel>();
         PrecedencePriority = precedencePriority;
         PrecedenceAssoc = precedenceAssoc;
     }
 
     public bool Equals(NodeModel? other) =>
         other is not null && FullName == other.FullName && BaseFullName == other.BaseFullName
-        && IsAbstract == other.IsAbstract && Constructors.SequenceEqual(other.Constructors)
+        && IsAbstract == other.IsAbstract && Constructors.SequenceEqual(other.Constructors) && Children.SequenceEqual(other.Children)
         && PrecedencePriority == other.PrecedencePriority && PrecedenceAssoc == other.PrecedenceAssoc;
     public override bool Equals(object? obj) => obj is NodeModel n && Equals(n);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(FullName);
@@ -133,4 +136,25 @@ public sealed class TokenDefModel : IEquatable<TokenDefModel>
         && Priority == other.Priority && IsHidden == other.IsHidden;
     public override bool Equals(object? obj) => obj is TokenDefModel t && Equals(t);
     public override int GetHashCode() => (Key, Pattern).GetHashCode();
+}
+
+/// <summary>AST ノードの子 (AstNode 派生の public プロパティ)。Listener 生成で子の再帰ウォークに使う。</summary>
+public sealed class ChildModel : IEquatable<ChildModel>
+{
+    public string PropertyName { get; }
+    public string TypeFullName { get; }
+    public bool IsNullable { get; }
+
+    public ChildModel(string propertyName, string typeFullName, bool isNullable)
+    {
+        PropertyName = propertyName;
+        TypeFullName = typeFullName;
+        IsNullable = isNullable;
+    }
+
+    public bool Equals(ChildModel? other) =>
+        other is not null && PropertyName == other.PropertyName
+        && TypeFullName == other.TypeFullName && IsNullable == other.IsNullable;
+    public override bool Equals(object? obj) => obj is ChildModel c && Equals(c);
+    public override int GetHashCode() => (PropertyName, TypeFullName).GetHashCode();
 }

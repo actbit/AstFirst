@@ -32,6 +32,7 @@ public sealed class ParserGenerator : IIncrementalGenerator
                 var suffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
                 spc.AddSource(typeName + suffix + "Lexer.g.cs", CodeEmitter.EmitLexer(model, typeName + suffix + "Lexer", ns));
                 spc.AddSource(typeName + suffix + "Parser.g.cs", ParserEmitter.EmitParser(model, ns));
+                spc.AddSource(typeName + suffix + "Listener.g.cs", ListenerEmitter.EmitListener(model, ns));
             }
         });
     }
