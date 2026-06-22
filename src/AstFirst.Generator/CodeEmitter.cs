@@ -92,6 +92,8 @@ public static class CodeEmitter
         sb.AppendLine("    }");
 
         // Tokenize
+        sb.AppendLine("    /// <summary>Tokenizes the input into a list of tokens.</summary>");
+        sb.AppendLine("    /// <remarks>入力をトークン列に分割します。</remarks>");
         sb.AppendLine("    public static List<LexToken> Tokenize(string input)");
         sb.AppendLine("        => new Lexer(BuildDfa(), BuildRules(), input).Tokenize();");
 

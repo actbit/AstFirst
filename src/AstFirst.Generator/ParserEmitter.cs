@@ -92,7 +92,13 @@ public static class ParserEmitter
         sb.AppendLine(" };");
 
         // Parse: SemanticContext をユーザーが指定可能。省略時は BasicSemanticContext。
+        sb.AppendLine("    /// <summary>Parses the input; uses a default BasicSemanticContext.</summary>");
+        sb.AppendLine("    /// <remarks>入力を解析します (意味解析コンテキストは BasicSemanticContext)。</remarks>");
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input) => Parse(input, null);");
+        sb.AppendLine("    /// <summary>Parses the input with the given semantic context.</summary>");
+        sb.AppendLine("    /// <param name=\"input\">Source text.</param>");
+        sb.AppendLine("    /// <param name=\"context\">Semantic context. If null, a BasicSemanticContext is used.</param>");
+        sb.AppendLine("    /// <remarks>指定の意味解析コンテキストで入力を解析します (null なら BasicSemanticContext)。</remarks>");
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)");
         sb.AppendLine("    {");
         sb.AppendLine("        var ctx = context ?? new AstFirst.BasicSemanticContext();");

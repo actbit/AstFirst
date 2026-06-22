@@ -3,9 +3,13 @@ using System.Collections.Generic;
 namespace AstFirst;
 
 /// <summary>
-/// AST ノードの基底。非終端記号の具象形 (= 1つの生成規則) はこれを継承する。
-/// ノードの構築 (コンストラクタ) が還元時のアクション＋意味解析を兼ねる。
+/// Base class for AST nodes. A concrete nonterminal (one production) derives from this.
+/// The constructor is the reduce action and may perform semantic analysis.
 /// </summary>
+/// <remarks>
+/// AST ノードの基底。非終端記号の具象形 (= 1つの生成規則) はこれを継承します。
+/// ノードの構築 (コンストラクタ) が還元時のアクション＋意味解析を兼ねます。
+/// </remarks>
 public abstract class AstNode
 {
     /// <summary>このノードが覆うソース範囲。コンストラクタで子から計算して設定する。</summary>
@@ -49,10 +53,13 @@ public sealed class DiagnosticBag
 }
 
 /// <summary>
-/// 意味解析コンテキスト。<see cref="SemanticContext"/> 派生型のコンストラクタ引数として宣言すると、
-/// Generator がパーサからインスタンスを注入する (<see cref="ScopedSymbolTable"/> と
-/// <see cref="DiagnosticBag"/> を提供)。
+/// Semantic analysis context. Declare a constructor parameter of a <see cref="SemanticContext"/>-derived type
+/// and the generator injects an instance from the parser (providing a <see cref="ScopedSymbolTable"/> and <see cref="DiagnosticBag"/>).
 /// </summary>
+/// <remarks>
+/// 意味解析コンテキスト。<see cref="SemanticContext"/> 派生型のコンストラクタ引数として宣言すると、
+/// Generator がパーサからインスタンスを注入します (<see cref="ScopedSymbolTable"/> と <see cref="DiagnosticBag"/> を提供)。
+/// </remarks>
 public abstract class SemanticContext
 {
     public abstract ScopedSymbolTable Symbols { get; }

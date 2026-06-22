@@ -3,11 +3,13 @@ using System.Collections.Generic;
 namespace AstFirst;
 
 /// <summary>
-/// 型を表すシンボル。参照等価 (同一インスタンスが同一型)。
-/// 言語固有の型システムはユーザーが TypeSymbol のインスタンスを生成して運用する
-/// (例: 整数型・真偽型を単一インスタンスで共有)。継承関係は <see cref="BaseType"/> で表現し、
-/// <see cref="IsAssignableFrom"/> で代入可能性を判定する。
+/// A type symbol (reference equality: same instance = same type). Use <see cref="IsAssignableFrom"/> for assignability across the <see cref="BaseType"/> chain.
 /// </summary>
+/// <remarks>
+/// 型を表すシンボル。参照等価 (同一インスタンスが同一型)。
+/// 言語固有の型システムはユーザーが TypeSymbol のインスタンスを生成して運用します
+/// (例: 整数型・真偽型を単一インスタンスで共有)。継承関係は <see cref="BaseType"/> で表現します。
+/// </remarks>
 public sealed class TypeSymbol
 {
     public string Name { get; }

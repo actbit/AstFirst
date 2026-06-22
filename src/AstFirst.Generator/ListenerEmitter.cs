@@ -28,7 +28,8 @@ public static class ListenerEmitter
         sb.AppendLine("{");
 
         // Walk: EnterEach → 子を再帰 Walk → ExitEach
-        sb.AppendLine("    /// <summary>ノードを訪問: EnterEach → 子を再帰 Walk → ExitEach。</summary>");
+        sb.AppendLine("    /// <summary>Walks a node: EnterEach, then recurses children, then ExitEach.</summary>");
+        sb.AppendLine("    /// <remarks>ノードを訪問します: EnterEach → 子を再帰 Walk → ExitEach。</remarks>");
         sb.AppendLine("    public virtual void Walk(AstFirst.AstNode node)");
         sb.AppendLine("    {");
         sb.AppendLine("        if (node is null) return;");
@@ -58,6 +59,8 @@ public static class ListenerEmitter
         sb.AppendLine();
 
         // EnterEach
+        sb.AppendLine("    /// <summary>Dispatches to the EnterXxx override matching the node's type.</summary>");
+        sb.AppendLine("    /// <remarks>ノードの型に応じた EnterXxx を呼び出します。</remarks>");
         sb.AppendLine("    public virtual void EnterEach(AstFirst.AstNode node)");
         sb.AppendLine("    {");
         sb.AppendLine("        switch (node)");
@@ -69,6 +72,8 @@ public static class ListenerEmitter
         sb.AppendLine();
 
         // ExitEach
+        sb.AppendLine("    /// <summary>Dispatches to the ExitXxx override matching the node's type.</summary>");
+        sb.AppendLine("    /// <remarks>ノードの型に応じた ExitXxx を呼び出します。</remarks>");
         sb.AppendLine("    public virtual void ExitEach(AstFirst.AstNode node)");
         sb.AppendLine("    {");
         sb.AppendLine("        switch (node)");
@@ -83,7 +88,11 @@ public static class ListenerEmitter
         {
             var sn = SimpleName(n.FullName);
             sb.AppendLine();
+            sb.AppendLine("    /// <summary>Called when entering a " + n.FullName + " node. Override to handle it.</summary>");
+            sb.AppendLine("    /// <remarks>" + sn + " ノードに入る時に呼ばれます。オーバーライドして処理します。</remarks>");
             sb.AppendLine("    public virtual void Enter" + sn + "(" + n.FullName + " node) { }");
+            sb.AppendLine("    /// <summary>Called when leaving a " + n.FullName + " node. Override to handle it.</summary>");
+            sb.AppendLine("    /// <remarks>" + sn + " ノードを出る時に呼ばれます。オーバーライドして処理します。</remarks>");
             sb.AppendLine("    public virtual void Exit" + sn + "(" + n.FullName + " node) { }");
         }
 

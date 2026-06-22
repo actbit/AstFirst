@@ -52,13 +52,13 @@ public sealed class Scope
 }
 
 /// <summary>
-/// スコープ付きシンボル表。<see cref="PushScope"/>/<see cref="PopScope"/> でスコープスタックを操作し、
-/// <see cref="Lookup"/> は内側スコープ優先で解決する。意味解析で使用。
-/// <para>
-/// LALR のボトムアップ reduce では親スコープを子ノードに伝えられない (親のコンストラクタは
-/// 子の後に呼ばれる) ため、正確なブロックスコープには Parse 後の AST ウォーク (2パス) を推奨する。
-/// </para>
+/// A scoped symbol table. Push/pop a scope stack; <see cref="Lookup"/> resolves innermost-first.
 /// </summary>
+/// <remarks>
+/// スコープ付きシンボル表。<see cref="PushScope"/>/<see cref="PopScope"/> でスコープスタックを操作し、
+/// <see cref="Lookup"/> は内側スコープ優先で解決します。意味解析で使用。
+/// LALR のボトムアップ reduce では親スコープを子ノードに伝えられないため、正確なブロックスコープには Parse 後の AST ウォーク (2パス) を推奨します。
+/// </remarks>
 public sealed class ScopedSymbolTable
 {
     /// <summary>現在の (最も内側の) スコープ。</summary>
