@@ -180,4 +180,28 @@ public class ScopedSymbolTableTests
         Assert.Null(t.Lookup("tmp")); // 前サイクルの残滓なし
         Assert.True(t.TryDeclare("tmp", Span(1), null, out _)); // 同名 OK
     }
+
+    // --- ResolveOrError (シンボル解決ヘルパー) ---
+
+    [Fact]
+    public void ResolveOrError_Declared_ReturnsSymbol_NoDiagnostic()
+    {
+        var t = new ScopedSymbolTable();
+        t.TryDeclare("x", Span(0), null, out _);
+        var bag = new DiagnosticBag();
+        var sym = t.ResolveOrError("x", Span(1), bag);
+        Assert.NotNull(sym);
+        Assert.False(bag.HasErrors);
+    }
+
+    [Fact]
+    public void ResolveOrError_Undeclared_AddsDiagnostic_ReturnsNull()
+    {
+        var t = new ScopedSymbolTable();
+        var bag = new DiagnosticBag();
+        var sym = t.ResolveOrError("missing", Span(0), bag);
+        Assert.Null(sym);
+        Assert.True(bag.HasErrors);
+        Assert.Equal(1, bag.Items.Count);
+    }
 }

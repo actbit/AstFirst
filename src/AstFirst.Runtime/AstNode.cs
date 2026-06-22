@@ -10,6 +10,19 @@ public abstract class AstNode
 {
     /// <summary>このノードが覆うソース範囲。コンストラクタで子から計算して設定する。</summary>
     public SourceSpan Span { get; protected set; }
+
+    private Dictionary<string, object?>? _annotations;
+
+    /// <summary>ノードに任意の注釈 (解決したシンボル、型など) を紐付ける。束縛解析で使用。</summary>
+    public void SetAnnotation(string key, object? value)
+        => (_annotations ??= new Dictionary<string, object?>())[key] = value;
+
+    /// <summary>注釈を取得 (未設定や型不一致なら null)。</summary>
+    public T? GetAnnotation<T>(string key) where T : class
+    {
+        if (_annotations is null || !_annotations.TryGetValue(key, out var v)) return null;
+        return v as T;
+    }
 }
 
 public enum Severity { Error, Warning }

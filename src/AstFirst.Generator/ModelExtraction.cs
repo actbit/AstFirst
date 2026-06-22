@@ -33,6 +33,7 @@ public static class ModelExtraction
         foreach (var type in GetAllTypes(compilation.Assembly.GlobalNamespace))
         {
             if (type.TypeKind != TypeKind.Class) continue;
+            if (type.DeclaredAccessibility != Accessibility.Public) continue;
 
             if (astNodeBase is not null && InheritsFrom(type, astNodeBase))
                 nodes.Add(ExtractNode(type, contextBase, astNodeBase));

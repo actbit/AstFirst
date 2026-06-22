@@ -101,4 +101,15 @@ public sealed class ScopedSymbolTable
         Current.Add(symbol);
         return true;
     }
+
+    /// <summary>
+    /// 名前を解決し、未宣言なら <paramref name="bag"/> に Error 診断を追加して null を返す。
+    /// シンボル解決の標準ヘルパー (意味解析で参照の都度呼ぶ)。
+    /// </summary>
+    public SymbolEntry? ResolveOrError(string name, SourceSpan span, DiagnosticBag bag)
+    {
+        var symbol = Lookup(name);
+        if (symbol is null) bag.Error("'" + name + "' は宣言されていません", span);
+        return symbol;
+    }
 }
