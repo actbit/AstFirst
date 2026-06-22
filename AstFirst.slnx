@@ -7,4 +7,5 @@
   <Project Path="tests/AstFirst.Generator.Tests/AstFirst.Generator.Tests.csproj" />
   <Project Path="samples/JsonParser/JsonParser.csproj" />
   <Project Path="samples/MiniC/MiniC.csproj" />
+  <Project Path="samples/MiniBasic/MiniBasic.csproj" />
 </Solution>
