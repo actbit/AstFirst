@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Generator のモデル変換ソースを取り込み、GrammarModel → LALR テーブル構築を
+       Generator プロセス外 (Perf.Bench) で直接呼べるようにする。
+       Generator アセンブリを通常参照する代わりのアプローチ (Generator が Core を
+       Compile Include して単一化しているのと同じ手法)。 -->
+  <ItemGroup>
+    <Compile Include="..\..\..\src\AstFirst.Generator\ModelToTable.cs" />
+    <Compile Include="..\..\..\src\AstFirst.Generator\ModelToGrammar.cs" />
+    <Compile Include="..\..\..\src\AstFirst.Generator\Models.cs" />
+    <Compile Include="..\..\..\src\AstFirst.Generator\ReduceActionModel.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\AstFirst.Core\AstFirst.Core.csproj" />
+  </ItemGroup>
+
+</Project>
