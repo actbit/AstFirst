@@ -201,7 +201,7 @@ public static class ParserEmitter
         sb.AppendLine("    }");
         sb.AppendLine();
         sb.AppendLine("    private static AstFirst.Token ToToken(AstFirst.Core.Lexing.LexToken t)");
-        sb.AppendLine("        => new AstFirst.BasicToken(t.Text, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
+        sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
         sb.AppendLine("}");
         return sb.ToString();
     }

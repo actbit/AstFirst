@@ -63,8 +63,8 @@ public class ParserEmitterTests
         var stubs = @"
 namespace AstFirst {
     public abstract class AstNode { }
-    public abstract class Token { public Token(string t, SourceSpan s) { } }
-    public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } }
+    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
+    public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
     public readonly struct Position { public Position(int o, int l, int c) { } }
     public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
     public enum Severity { Error, Warning }
