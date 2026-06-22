@@ -50,8 +50,9 @@ public sealed class LexException : Exception
 /// 統合 DFA を駆動してソースをトークン化する。最長一致＋優先度でトークンを決定。
 /// <see cref="LexerRule.IsHidden"/> のトークンは結果から除外する。
 /// 各トークンの開始/終了の行・列 (1 ベース) も計算する。
-/// トークン化のコア (<see cref="TokenizeCore"/>) は配列を直接受け取り、
+/// トークン化のコア (<see cref="TokenizeCore"/>) はジャグ配列 (int[][]) を直接受け取り、
 /// 生成コードは Dfa/DfaState オブジェクトを構築せずに static 配列を渡せる。
+/// ジャグ配列は各状態の遷移が1次元配列 (int[]) なので、2次元配列 (int[,]) よりアクセスが速い。
 /// </summary>
 public sealed class Lexer
 {
@@ -70,14 +71,13 @@ public sealed class Lexer
     public List<LexToken> Tokenize()
     {
         int stateCount = _dfa.States.Count;
-        int classCount = _dfa.Alphabet.ClassCount;
-        var transitions = new int[stateCount, classCount];
+        // 各 DfaState.Transitions (int[]) をそのまま参照で集める (コピーなし)。
+        var transitions = new int[stateCount][];
         var accept = new int[stateCount];
         for (int s = 0; s < stateCount; s++)
         {
             var st = _dfa.States[s];
-            var tr = st.Transitions;
-            for (int c = 0; c < classCount; c++) transitions[s, c] = tr[c];
+            transitions[s] = st.Transitions;
             accept[s] = st.IsAccept ? st.AcceptTokenId : 0;
         }
         return TokenizeCore(transitions, accept, _dfa.Alphabet, _dfa.Start, _hiddenTokens, _source);
@@ -88,7 +88,7 @@ public sealed class Lexer
     /// 生成コードは static 配列とキャッシュ済みの AlphabetPartition/rules を渡す
     /// (Dfa/DfaState オブジェクトの構築・コピーを毎回行わない)。
     /// </summary>
-    public static List<LexToken> Tokenize(int[,] transitions, int[] acceptTokenIds, AlphabetPartition alphabet,
+    public static List<LexToken> Tokenize(int[][] transitions, int[] acceptTokenIds, AlphabetPartition alphabet,
         int startState, IReadOnlyList<LexerRule> rules, string source)
         => TokenizeCore(transitions, acceptTokenIds, alphabet, startState, BuildHidden(rules), source);
 
@@ -104,7 +104,7 @@ public sealed class Lexer
     /// トークン化のコア。最長一致＋優先度でトークンを決定し、hidden を除外し、
     /// 各トークンの行・列 (1 ベース) を計算する。
     /// </summary>
-    private static List<LexToken> TokenizeCore(int[,] transitions, int[] acceptTokenIds, AlphabetPartition alphabet,
+    private static List<LexToken> TokenizeCore(int[][] transitions, int[] acceptTokenIds, AlphabetPartition alphabet,
         int startState, HashSet<int> hiddenTokens, string source)
     {
         var result = new List<LexToken>();
@@ -117,12 +117,14 @@ public sealed class Lexer
             int lastAcceptToken = -1;
             int lastAcceptPos = pos;
             int i = pos;
+            int[] curTransitions = transitions[startState];
             while (i < src.Length)
             {
                 int cls = alphabet.ClassOf(src[i]);
-                int next = transitions[current, cls];
+                int next = curTransitions[cls];
                 if (next < 0) break;
                 current = next;
+                curTransitions = transitions[next];
                 i++;
                 int acceptId = acceptTokenIds[current];
                 if (acceptId != 0)

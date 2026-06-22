@@ -32,13 +32,13 @@ public static class CodeEmitter
         for (int i = 0; i < boundaries.Count; i++) { if (i > 0) sb.Append(", "); sb.Append(boundaries[i]); }
         sb.AppendLine(" };");
 
-        // Transitions[state, class]
-        sb.Append("    public static readonly int[,] Transitions = new int[");
-        sb.Append(stateCount).Append(", ").Append(classCount).AppendLine("]");
+        // Transitions[state][class]: ジャグ配列 (各状態の遷移が1次元配列)。
+        // 2次元配列 (int[,]) よりアクセスが速く、Lexer が static 配列を直接参照する。
+        sb.Append("    public static readonly int[][] Transitions = new int[").Append(stateCount).AppendLine("][]");
         sb.AppendLine("    {");
         for (int s = 0; s < stateCount; s++)
         {
-            sb.Append("        { ");
+            sb.Append("        new int[] { ");
             var tr = dfa.States[s].Transitions;
             for (int c = 0; c < classCount; c++) { if (c > 0) sb.Append(", "); sb.Append(tr[c]); }
             sb.Append(" }");
