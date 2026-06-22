@@ -91,17 +91,11 @@ public static class ParserEmitter
         for (int s = 0; s < stateCount; s++) { if (s > 0) sb.Append(", "); sb.Append(s < dr.Count ? dr[s] : -1); }
         sb.AppendLine(" };");
 
-        // [Context] を使う規則があれば BasicSemanticContext を用意。
-        bool needsContext = false;
-        for (int pi = 0; pi < grammar.Productions.Count; pi++)
-            if (grammar.Productions[pi].Tag is ReduceActionModel am && am.Parameters.Any(p => p.IsContext))
-                { needsContext = true; break; }
-
-        // Parse
-        sb.AppendLine("    public static AstFirst.ParseResult Parse(string input)");
+        // Parse: SemanticContext をユーザーが指定可能。省略時は BasicSemanticContext。
+        sb.AppendLine("    public static AstFirst.ParseResult Parse(string input) => Parse(input, null);");
+        sb.AppendLine("    public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)");
         sb.AppendLine("    {");
-        if (needsContext)
-            sb.AppendLine("        var ctx = new AstFirst.BasicSemanticContext();");
+        sb.AppendLine("        var ctx = context ?? new AstFirst.BasicSemanticContext();");
         sb.AppendLine("        var tokens = " + lexerName + ".Tokenize(input);");
         sb.AppendLine("        var states = new Stack<int>();");
         sb.AppendLine("        var values = new Stack<object?>();");
@@ -126,7 +120,7 @@ public static class ParserEmitter
         sb.AppendLine("            else if (kind == 2 || (kind == 0 && DefaultReduce[state] >= 0)) // Reduce (通常 or デフォルト)");
         sb.AppendLine("            {");
         sb.AppendLine("                int prodId = (kind == 2) ? val : DefaultReduce[state];");
-        sb.AppendLine("                var node = ReduceNode(prodId, values, states" + (needsContext ? ", ctx" : ", null") + ");");
+        sb.AppendLine("                var node = ReduceNode(prodId, values, states, ctx);");
         sb.AppendLine("                values.Push(node);");
         sb.AppendLine("                states.Push(Goto[states.Peek(), ProdLhs[prodId]]);");
         sb.AppendLine("            }");
@@ -169,7 +163,7 @@ public static class ParserEmitter
         sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
-        sb.AppendLine("        return new AstFirst.ParseResult(result, errors);");
+        sb.AppendLine("        return new AstFirst.ParseResult(result, errors, ctx.Diagnostics.Items);");
         sb.AppendLine("    }");
 
         sb.AppendLine("    private static T[] PopN<T>(Stack<T> s, int n)");
@@ -180,7 +174,7 @@ public static class ParserEmitter
         sb.AppendLine("    }");
 
         // ReduceNode: 規則 prodId で reduce。PopN + new AST_TYPE(args)。
-        sb.AppendLine("    private static object? ReduceNode(int val, Stack<object?> values, Stack<int> states, AstFirst.SemanticContext? ctx)");
+        sb.AppendLine("    private static object? ReduceNode(int val, Stack<object?> values, Stack<int> states, AstFirst.SemanticContext ctx)");
         sb.AppendLine("    {");
         sb.AppendLine("        switch (val)");
         sb.AppendLine("        {");

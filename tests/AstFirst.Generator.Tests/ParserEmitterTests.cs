@@ -65,6 +65,13 @@ namespace AstFirst {
     public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } }
     public readonly struct Position { public Position(int o, int l, int c) { } }
     public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
+    public enum Severity { Error, Warning }
+    public sealed class Diagnostic { public Severity Severity { get; } public Diagnostic(string m, SourceSpan s, Severity v) { Severity = v; } }
+    public sealed class DiagnosticBag { public System.Collections.Generic.IReadOnlyList<Diagnostic> Items { get; } = new System.Collections.Generic.List<Diagnostic>(); }
+    public sealed class ParseError { public ParseError(string m, int p) { } }
+    public sealed class ParseResult { public ParseResult(object? a, System.Collections.Generic.IReadOnlyList<ParseError> e, System.Collections.Generic.IReadOnlyList<Diagnostic>? d) { } }
+    public abstract class SemanticContext { public abstract DiagnosticBag Diagnostics { get; } }
+    public sealed class BasicSemanticContext : SemanticContext { public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag(); }
 }
 public class Expr : AstFirst.AstNode { }
 public class NumExpr : Expr { public NumExpr(AstFirst.Token t) { } }
@@ -81,6 +88,7 @@ public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) {
         var source = ParserEmitter.EmitParser(CalcModel(), "TestNs");
         Assert.Contains("public static class ExprParser", source);
         Assert.Contains("public static AstFirst.ParseResult Parse(string input)", source);
+        Assert.Contains("public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)", source);
         Assert.Contains("ActionKind", source);
         Assert.Contains("Goto", source);
         Assert.Contains("ProdLhs", source);
