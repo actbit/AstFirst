@@ -209,7 +209,7 @@ AstFirst.slnx
 
 ## テスト
 
-162 テスト（AstFirst.Tests 141 + Generator.Tests 21）。レクサ/DFA/LALR の各段階、エンドツーエンド（C# 文法定義 → 生成 → Parse → AST）、エラー回復、意味解析（スコープ付きシンボル表）を検証。
+187 テスト（AstFirst.Tests 166 + Generator.Tests 21）。レクサ/DFA/LALR の各段階、エンドツーエンド（C# 文法定義 → 生成 → Parse → AST）、エラー回復、意味解析（スコープ付きシンボル表、ctx → ParseResult.Diagnostics の統合）を検証。
 
 ## ライセンス
 
