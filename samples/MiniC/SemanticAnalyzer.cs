@@ -4,86 +4,93 @@ using AstFirst;
 namespace MiniC;
 
 /// <summary>
-/// MiniC の意味解析 (2パス目)。Parse 済みの AST をウォークし、スコープ付きシンボル表で
-/// 未宣言参照・二重宣言・スコープ外参照を検出する。
-/// <para>
-/// LALR のボトムアップ reduce では親スコープを子ノードに伝えられない (親のコンストラクタは
-/// 子の後に呼ばれる) ため、正確なブロックスコープには Parse 後のこのウォークが必要。
-/// </para>
+/// MiniC の意味解析。Generator が生成した <see cref="ProgramListener"/> を継承し、
+/// Enter/Exit でスコープ管理・シンボル解決・型チェックを行う。<see cref="ProgramListener.Walk"/>
+/// を呼ぶと Enter→子再帰→Exit の順に回り、式の型伝播 (Exit) → 条件/代入の型チェック (Exit) が正しく順序付く。
 /// </summary>
-public sealed class SemanticAnalyzer
+public sealed class SemanticAnalyzer : ProgramListener
 {
     private readonly ScopedSymbolTable _symbols = new();
-    private readonly List<Diagnostic> _diagnostics = new();
+    private readonly DiagnosticBag _diagnostics = new();
+    private readonly TypeContext _types = new();
 
-    /// <summary>AST を解析し、検出した診断を返す。</summary>
+    private static readonly TypeSymbol Int = new("int");
+    private static readonly TypeSymbol Bool = new("bool");
+
     public IReadOnlyList<Diagnostic> Analyze(MiniC.Program? program)
     {
-        if (program is not null) WalkProgram(program);
-        return _diagnostics;
+        if (program is not null) Walk(program);
+        return _diagnostics.Items;
     }
 
-    private void WalkProgram(MiniC.Program p)
+    // --- スコープ ---
+    public override void EnterBlockStmt(BlockStmt node) => _symbols.PushScope();
+    public override void ExitBlockStmt(BlockStmt node) => _symbols.PopScope();
+
+    // --- 宣言 ---
+    public override void EnterDeclStmt(DeclStmt node)
     {
-        while (p is ConsStmt cons)
+        if (!_symbols.TryDeclare(node.Name, node.Span, null, out _))
+            _diagnostics.Error($"変数 '{node.Name}' は既に宣言されています", node.Span);
+    }
+    public override void ExitDeclStmt(DeclStmt node)
+    {
+        // MiniC の変数は int 型。初期化式も int が必要。
+        if (node.Init is not null)
+            CheckAssignable(node.Init, Int, $"int 変数 '{node.Name}' に ", node.Span);
+    }
+
+    // --- 代入 ---
+    public override void EnterAssignStmt(AssignStmt node)
+    {
+        var sym = _symbols.ResolveOrError(node.Name, node.Span, _diagnostics);
+        if (sym is not null) node.SetAnnotation("symbol", sym); // 束縛: ノードにシンボルを紐付け
+    }
+    public override void ExitAssignStmt(AssignStmt node)
+        => CheckAssignable(node.Value, Int, $"int 変数 '{node.Name}' に ", node.Span);
+
+    // --- 変数参照 ---
+    public override void EnterVarExpr(VarExpr node)
+    {
+        var sym = _symbols.ResolveOrError(node.Name, node.Span, _diagnostics);
+        if (sym is not null)
         {
-            WalkStmt(cons.First);
-            p = cons.Rest;
+            node.SetAnnotation("symbol", sym); // 束縛
+            _types.SetType(node, Int);          // MiniC の変数は int
         }
     }
 
-    private void WalkStmt(Stmt s)
+    // --- リテラル ---
+    public override void ExitNumExpr(NumExpr node) => _types.SetType(node, Int);
+    public override void ExitBoolExpr(BoolExpr node) => _types.SetType(node, Bool);
+
+    // --- 算術 (簡易: 子が int なら結果も int) ---
+    public override void ExitAddExpr(AddExpr node) => _types.SetType(node, Int);
+    public override void ExitSubExpr(SubExpr node) => _types.SetType(node, Int);
+    public override void ExitMulExpr(MulExpr node) => _types.SetType(node, Int);
+    public override void ExitDivExpr(DivExpr node) => _types.SetType(node, Int);
+    public override void ExitNegExpr(NegExpr node)
     {
-        switch (s)
-        {
-            case DeclStmt d:
-                // 宣言を先に登録してから初期化式を評価する (C 風: 右辺には自分を含む宣言が見える)。
-                if (!_symbols.TryDeclare(d.Name, d.Span, null, out _))
-                    Error($"変数 '{d.Name}' は既に宣言されています", d.Span);
-                if (d.Init is not null) WalkExpr(d.Init);
-                break;
-            case AssignStmt a:
-                if (_symbols.Lookup(a.Name) is null)
-                    Error($"変数 '{a.Name}' は宣言されていません", a.Span);
-                WalkExpr(a.Value);
-                break;
-            case PrintStmt pr:
-                WalkExpr(pr.Value);
-                break;
-            case IfStmt i:
-                WalkExpr(i.Cond);
-                WalkStmt(i.Body);
-                break;
-            case WhileStmt w:
-                WalkExpr(w.Cond);
-                WalkStmt(w.Body);
-                break;
-            case BlockStmt b:
-                _symbols.PushScope();
-                WalkProgram(b.Body);
-                _symbols.PopScope();
-                break;
-        }
+        if (_types.TypeOf(node.Inner) is { } t) _types.SetType(node, t);
+    }
+    public override void ExitParenExpr(ParenExpr node)
+    {
+        if (_types.TypeOf(node.Inner) is { } t) _types.SetType(node, t);
     }
 
-    private void WalkExpr(Expr e)
+    // --- 条件の型チェック ---
+    public override void ExitIfStmt(IfStmt node) => CheckCondition(node.Cond, node.Span, "if");
+    public override void ExitWhileStmt(WhileStmt node) => CheckCondition(node.Cond, node.Span, "while");
+
+    private void CheckCondition(Expr cond, SourceSpan span, string construct)
     {
-        switch (e)
-        {
-            case VarExpr v:
-                if (_symbols.Lookup(v.Name) is null)
-                    Error($"変数 '{v.Name}' は宣言されていません", v.Span);
-                break;
-            case AddExpr a: WalkExpr(a.Left); WalkExpr(a.Right); break;
-            case SubExpr a: WalkExpr(a.Left); WalkExpr(a.Right); break;
-            case MulExpr a: WalkExpr(a.Left); WalkExpr(a.Right); break;
-            case DivExpr a: WalkExpr(a.Left); WalkExpr(a.Right); break;
-            case NegExpr n: WalkExpr(n.Inner); break;
-            case ParenExpr pe: WalkExpr(pe.Inner); break;
-            case NumExpr: break;
-        }
+        if (_types.TypeOf(cond) is { } t && !Bool.IsAssignableFrom(t))
+            _diagnostics.Error($"{construct} の条件は bool が必要です (実際: {t.Name})", span);
     }
 
-    private void Error(string message, SourceSpan span)
-        => _diagnostics.Add(new Diagnostic(message, span, Severity.Error));
+    private void CheckAssignable(Expr value, TypeSymbol expected, string prefix, SourceSpan span)
+    {
+        if (_types.TypeOf(value) is { } t && !expected.IsAssignableFrom(t))
+            _diagnostics.Error($"{prefix}{t.Name} を代入できません", span);
+    }
 }

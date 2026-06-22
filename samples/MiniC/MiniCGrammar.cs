@@ -73,7 +73,13 @@ public abstract class Expr : AstNode { }
 public sealed class NumExpr : Expr
 {
     public int Value { get; }
-    public NumExpr([Pattern(@"[0-9]+")] Token num) { Value = int.Parse(num.Text); }
+    public NumExpr([Pattern(@"[0-9]+")] Token num) { Value = int.Parse(num.Text); Span = num.Span; }
+}
+
+public sealed class BoolExpr : Expr
+{
+    public bool Value { get; }
+    public BoolExpr([Pattern(@"true|false", Priority = 1)] Token kw) { Value = kw.Text == "true"; Span = kw.Span; }
 }
 
 public sealed class VarExpr : Expr

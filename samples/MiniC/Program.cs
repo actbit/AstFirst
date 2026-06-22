@@ -1,6 +1,6 @@
 using MiniC;
 
-// 軽量C言語サンプル: Parse + 意味解析 (スコープ付きシンボル表で未宣言/二重宣言/スコープ外を検出)
+// 軽量C言語サンプル: Parse + 意味解析 (スコープ管理 + シンボル解決 + 型チェック)
 Console.WriteLine("=== AstFirst MiniC Sample (Parse + Meaning Analysis) ===\n");
 
 Run("正常系", """
@@ -30,6 +30,12 @@ Run("シャドウイング (許容)", """
         print(x);
     }
 """);
+
+Run("型エラー: if の条件が int", "if (1) print(1);");
+
+Run("型エラー: int 変数に bool を代入", "int x; x = true;");
+
+Run("型OK: if の条件が bool", "if (true) print(1);");
 
 Console.WriteLine("=== Done ===");
 

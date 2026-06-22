@@ -83,7 +83,6 @@ public class SemanticAnalysisTests
     {
         var diags = Analyze("print(x);");
         Assert.Single(diags);
-        // 宣言位置の offset は token 化で設定される (行・列は現在 0,0)
         Assert.True(diags[0].Span.Start.Offset >= 0);
     }
 
@@ -92,9 +91,8 @@ public class SemanticAnalysisTests
     [Fact]
     public void NestedBlock_DeclarationScopedToBlock()
     {
-        // if 本体のブロック内で宣言した変数は、ブロック外では見えない
         Assert.Equal(1, ErrorCount("""
-            if (1) {
+            if (true) {
                 int y;
             }
             print(y);
@@ -104,9 +102,8 @@ public class SemanticAnalysisTests
     [Fact]
     public void NestedBlock_ReferenceInsideBlock_OK()
     {
-        // ブロック内で宣言してブロック内で使うのは OK
         Assert.Equal(0, ErrorCount("""
-            if (1) {
+            if (true) {
                 int y;
                 print(y);
             }
@@ -116,7 +113,6 @@ public class SemanticAnalysisTests
     [Fact]
     public void SiblingBlocks_SameNameAllowed()
     {
-        // 兄弟ブロックで同名宣言は各スコープ独立 → エラーなし
         Assert.Equal(0, ErrorCount("""
             {
                 int x;
@@ -130,7 +126,6 @@ public class SemanticAnalysisTests
     [Fact]
     public void MultipleErrors_Accumulated()
     {
-        // 1パースで複数の未宣言参照を取りこぼさず検出する
         Assert.Equal(2, ErrorCount("""
             print(a);
             print(b);
@@ -138,9 +133,9 @@ public class SemanticAnalysisTests
     }
 
     [Fact]
-    public void IfCondition_UndeclaredReference()
+    public void UndeclaredReference_InIfCondition()
     {
-        // if / while の条件式の変数も未宣言チェックの対象
+        // if (x) の x は未宣言 → 1エラー。型チェックは (型がないので) スキップ。
         Assert.Equal(1, ErrorCount("if (x) print(1);"));
         Assert.Equal(1, ErrorCount("while (x) print(1);"));
     }
@@ -148,14 +143,52 @@ public class SemanticAnalysisTests
     [Fact]
     public void Initializer_UndeclaredReference()
     {
-        // 初期化式で未宣言変数を参照 → エラー
         Assert.Equal(1, ErrorCount("int x = y;"));
     }
 
     [Fact]
     public void Initializer_SelfReference_Allowed()
     {
-        // int x = x; は C 風に「宣言後に初期化式を評価」→ x は見える (エラーにならない)
         Assert.Equal(0, ErrorCount("int x = x;"));
+    }
+
+    // --- 型チェック ---
+
+    [Fact]
+    public void TypeCheck_IfConditionMustBeBool()
+    {
+        // if (1) の条件は int → 型エラー
+        Assert.Equal(1, ErrorCount("if (1) print(1);"));
+        Assert.Equal(1, ErrorCount("while (1) print(1);"));
+    }
+
+    [Fact]
+    public void TypeCheck_IfConditionBool_OK()
+    {
+        Assert.Equal(0, ErrorCount("if (true) print(1);"));
+    }
+
+    [Fact]
+    public void TypeCheck_AssignBoolToInt_Error()
+    {
+        // int 変数に bool を代入 → 型エラー
+        Assert.Equal(1, ErrorCount("""
+            int x;
+            x = true;
+        """));
+    }
+
+    [Fact]
+    public void TypeCheck_DeclInitBoolToInt_Error()
+    {
+        // int 変数の初期化式に bool → 型エラー
+        Assert.Equal(1, ErrorCount("int x = true;"));
+    }
+
+    [Fact]
+    public void TypeCheck_ArithmeticIsInt_OK()
+    {
+        // 算術結果は int。int 変数への代入は OK。
+        Assert.Equal(0, ErrorCount("int x = 1 + 2 * 3;"));
     }
 }
