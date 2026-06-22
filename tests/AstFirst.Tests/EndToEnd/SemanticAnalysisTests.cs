@@ -191,4 +191,16 @@ public class SemanticAnalysisTests
         // 算術結果は int。int 変数への代入は OK。
         Assert.Equal(0, ErrorCount("int x = 1 + 2 * 3;"));
     }
+
+    // --- 位置情報 (行・列) ---
+
+    [Fact]
+    public void Diagnostic_HasCorrectLineColumn()
+    {
+        // 2 行目の x が未宣言 → 診断の位置は行 2 (これまでは常に 0 だった)
+        var diags = Analyze("int a;\nprint(x);");
+        Assert.Single(diags);
+        Assert.Equal(2, diags[0].Span.Start.Line);
+        Assert.True(diags[0].Span.Start.Column > 0);
+    }
 }

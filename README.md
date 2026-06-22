@@ -203,13 +203,9 @@ AstFirst.slnx
 - 生成コードは Runtime に依存。Lexer/Parser は DFA/LALR テーブルを `static readonly` 配列に埋め込み、shift/reduce を駆動。
 - Generator は Core のソースを Compile Include して単一アセンブリ化（Analyzer 実行時の依存ロード問題を回避）。
 
-## 制限
-
-- **`SourceSpan` の行・列は現在 `0,0`**: 字句解析がオフセットのみ計算するため、診断の `SourceSpan` はオフセットは正しいが行・列は `0` になる。将来の改善点。
-
 ## テスト
 
-187 テスト（AstFirst.Tests 166 + Generator.Tests 21）。レクサ/DFA/LALR の各段階、エンドツーエンド（C# 文法定義 → 生成 → Parse → AST）、エラー回復、意味解析（スコープ付きシンボル表、ctx → ParseResult.Diagnostics の統合）を検証。
+213 テスト（AstFirst.Tests 189 + Generator.Tests 24）。レクサ/DFA/LALR の各段階、エンドツーエンド（C# 文法定義 → 生成 → Parse → AST）、エラー回復、意味解析（スコープ付きシンボル表、ctx → ParseResult.Diagnostics の統合、型チェック）、位置情報（行・列）を検証。
 
 ## ライセンス
 

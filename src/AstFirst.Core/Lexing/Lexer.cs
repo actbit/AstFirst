@@ -6,6 +6,7 @@ namespace AstFirst.Core.Lexing;
 /// <summary>
 /// レクサが生成したトークン。字面は元ソースのスライスで持ち、
 /// <see cref="Text"/> は必要な時だけ生成する (トークン化時のアロケーションなし)。
+/// 行・列 (<see cref="StartLine"/> 等) は 1 ベース。
 /// </summary>
 public readonly struct LexToken
 {
@@ -13,6 +14,10 @@ public readonly struct LexToken
     public string Source { get; }
     public int Start { get; }
     public int End { get; }
+    public int StartLine { get; }
+    public int StartColumn { get; }
+    public int EndLine { get; }
+    public int EndColumn { get; }
     public int Length => End - Start;
 
     /// <summary>トークンの字面のスライス。コピーなし。</summary>
@@ -21,12 +26,17 @@ public readonly struct LexToken
     /// <summary>字面の文字列表現 (必要な時だけ生成)。</summary>
     public string Text => Source.Substring(Start, Length);
 
-    public LexToken(int tokenId, string source, int start, int end)
+    public LexToken(int tokenId, string source, int start, int end,
+        int startLine = 1, int startColumn = 1, int endLine = 1, int endColumn = 1)
     {
         TokenId = tokenId;
         Source = source;
         Start = start;
         End = end;
+        StartLine = startLine;
+        StartColumn = startColumn;
+        EndLine = endLine;
+        EndColumn = endColumn;
     }
 }
 
@@ -39,6 +49,7 @@ public sealed class LexException : Exception
 /// <summary>
 /// 統合 DFA を駆動してソースをトークン化する。最長一致＋優先度でトークンを決定。
 /// <see cref="LexerRule.IsHidden"/> のトークンは結果から除外する。
+/// 各トークンの開始/終了の行・列 (1 ベース) も計算する。
 /// </summary>
 public sealed class Lexer
 {
@@ -62,6 +73,7 @@ public sealed class Lexer
         var alphabet = _dfa.Alphabet;
         var states = _dfa.States;
         int pos = 0;
+        int line = 1, column = 1; // 現在位置の行・列 (1 ベース)
         while (pos < src.Length)
         {
             int current = _dfa.Start;
@@ -85,10 +97,20 @@ public sealed class Lexer
             if (lastAcceptToken < 0)
                 throw new LexException($"未認識の文字 '{src[pos]}' があります (位置 {pos})", pos);
 
+            int startLine = line, startColumn = column;
+            // トークン範囲 [pos, lastAcceptPos) の文字で行・列を進める。
+            // '\n' で改行、'\r' は列に数えない (\r\n の \r を無視)。
+            for (int j = pos; j < lastAcceptPos; j++)
+            {
+                if (src[j] == '\n') { line++; column = 1; }
+                else if (src[j] != '\r') column++;
+            }
+            int endLine = line, endColumn = column;
+
             if (!_hiddenTokens.Contains(lastAcceptToken))
             {
-                // Substring せず、元ソースの (Start, End) だけ保持。Text は遅延生成。
-                result.Add(new LexToken(lastAcceptToken, _source, pos, lastAcceptPos));
+                // Substring せず、元ソースの (Start, End) と行・列だけ保持。Text は遅延生成。
+                result.Add(new LexToken(lastAcceptToken, _source, pos, lastAcceptPos, startLine, startColumn, endLine, endColumn));
             }
             pos = lastAcceptPos;
         }

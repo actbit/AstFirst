@@ -24,6 +24,27 @@ public class LexerTests
     }
 
     [Fact]
+    public void LineColumn_SingleLine()
+    {
+        var toks = Lex("1+2", ("[0-9]+", 1), ("\\+", 2));
+        Assert.Equal((1, 1), (toks[0].StartLine, toks[0].StartColumn));
+        Assert.Equal((1, 2), (toks[1].StartLine, toks[1].StartColumn));
+        Assert.Equal((1, 3), (toks[2].StartLine, toks[2].StartColumn));
+    }
+
+    [Fact]
+    public void LineColumn_MultiLine()
+    {
+        var toks = LexWithPriority("1 2\n3",
+            new LexerRule("[0-9]+", 1),
+            new LexerRule("[ \n]+", 2, isHidden: true));
+        // "1"(1,1), "2"(1,3), "3"(2,1) — hidden の空白/改行も行・列を進める
+        Assert.Equal((1, 1), (toks[0].StartLine, toks[0].StartColumn));
+        Assert.Equal((1, 3), (toks[1].StartLine, toks[1].StartColumn));
+        Assert.Equal((2, 1), (toks[2].StartLine, toks[2].StartColumn));
+    }
+
+    [Fact]
     public void LongestMatch()
     {
         // "123" は [0-9]+ 全体で1トークン ([0-9] 単発より最長一致)。
