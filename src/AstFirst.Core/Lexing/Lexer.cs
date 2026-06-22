@@ -107,8 +107,10 @@ public sealed class Lexer
     private static List<LexToken> TokenizeCore(int[][] transitions, int[] acceptTokenIds, AlphabetPartition alphabet,
         int startState, HashSet<int> hiddenTokens, string source)
     {
-        var result = new List<LexToken>();
+        // 入力長からトークン数を概算して初期容量を確保 (List の拡張コピーを抑える)。
+        var result = new List<LexToken>(source.Length / 4 + 16);
         var src = source.AsSpan();
+        var classTable = alphabet.GetClassTable(); // 文字→クラス を O(1) 参照 (2分探索を回避)
         int pos = 0;
         int line = 1, column = 1; // 現在位置の行・列 (1 ベース)
         while (pos < src.Length)
@@ -120,7 +122,7 @@ public sealed class Lexer
             int[] curTransitions = transitions[startState];
             while (i < src.Length)
             {
-                int cls = alphabet.ClassOf(src[i]);
+                int cls = classTable[src[i]];
                 int next = curTransitions[cls];
                 if (next < 0) break;
                 current = next;
