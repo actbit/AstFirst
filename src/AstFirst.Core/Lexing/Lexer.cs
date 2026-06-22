@@ -50,6 +50,8 @@ public sealed class LexException : Exception
 /// 統合 DFA を駆動してソースをトークン化する。最長一致＋優先度でトークンを決定。
 /// <see cref="LexerRule.IsHidden"/> のトークンは結果から除外する。
 /// 各トークンの開始/終了の行・列 (1 ベース) も計算する。
+/// トークン化のコア (<see cref="TokenizeCore"/>) は配列を直接受け取り、
+/// 生成コードは Dfa/DfaState オブジェクトを構築せずに static 配列を渡せる。
 /// </summary>
 public sealed class Lexer
 {
@@ -61,35 +63,71 @@ public sealed class Lexer
     {
         _dfa = dfa;
         _source = source;
-        _hiddenTokens = new HashSet<int>();
-        for (int i = 0; i < rules.Count; i++)
-            if (rules[i].IsHidden) _hiddenTokens.Add(rules[i].TokenId);
+        _hiddenTokens = BuildHidden(rules);
     }
 
+    /// <summary>DFA オブジェクト経由でトークン化 (手書き DFA 等のユースケース)。</summary>
     public List<LexToken> Tokenize()
     {
+        int stateCount = _dfa.States.Count;
+        int classCount = _dfa.Alphabet.ClassCount;
+        var transitions = new int[stateCount, classCount];
+        var accept = new int[stateCount];
+        for (int s = 0; s < stateCount; s++)
+        {
+            var st = _dfa.States[s];
+            var tr = st.Transitions;
+            for (int c = 0; c < classCount; c++) transitions[s, c] = tr[c];
+            accept[s] = st.IsAccept ? st.AcceptTokenId : 0;
+        }
+        return TokenizeCore(transitions, accept, _dfa.Alphabet, _dfa.Start, _hiddenTokens, _source);
+    }
+
+    /// <summary>
+    /// 事前直列化した配列 (遷移テーブル/受理トークン) を直接参照してトークン化。
+    /// 生成コードは static 配列とキャッシュ済みの AlphabetPartition/rules を渡す
+    /// (Dfa/DfaState オブジェクトの構築・コピーを毎回行わない)。
+    /// </summary>
+    public static List<LexToken> Tokenize(int[,] transitions, int[] acceptTokenIds, AlphabetPartition alphabet,
+        int startState, IReadOnlyList<LexerRule> rules, string source)
+        => TokenizeCore(transitions, acceptTokenIds, alphabet, startState, BuildHidden(rules), source);
+
+    private static HashSet<int> BuildHidden(IReadOnlyList<LexerRule> rules)
+    {
+        var hidden = new HashSet<int>();
+        for (int i = 0; i < rules.Count; i++)
+            if (rules[i].IsHidden) hidden.Add(rules[i].TokenId);
+        return hidden;
+    }
+
+    /// <summary>
+    /// トークン化のコア。最長一致＋優先度でトークンを決定し、hidden を除外し、
+    /// 各トークンの行・列 (1 ベース) を計算する。
+    /// </summary>
+    private static List<LexToken> TokenizeCore(int[,] transitions, int[] acceptTokenIds, AlphabetPartition alphabet,
+        int startState, HashSet<int> hiddenTokens, string source)
+    {
         var result = new List<LexToken>();
-        var src = _source.AsSpan();
-        var alphabet = _dfa.Alphabet;
-        var states = _dfa.States;
+        var src = source.AsSpan();
         int pos = 0;
         int line = 1, column = 1; // 現在位置の行・列 (1 ベース)
         while (pos < src.Length)
         {
-            int current = _dfa.Start;
+            int current = startState;
             int lastAcceptToken = -1;
             int lastAcceptPos = pos;
             int i = pos;
             while (i < src.Length)
             {
                 int cls = alphabet.ClassOf(src[i]);
-                int next = states[current].Transitions[cls];
+                int next = transitions[current, cls];
                 if (next < 0) break;
                 current = next;
                 i++;
-                if (states[current].IsAccept)
+                int acceptId = acceptTokenIds[current];
+                if (acceptId != 0)
                 {
-                    lastAcceptToken = states[current].AcceptTokenId;
+                    lastAcceptToken = acceptId;
                     lastAcceptPos = i;
                 }
             }
@@ -107,10 +145,10 @@ public sealed class Lexer
             }
             int endLine = line, endColumn = column;
 
-            if (!_hiddenTokens.Contains(lastAcceptToken))
+            if (!hiddenTokens.Contains(lastAcceptToken))
             {
                 // Substring せず、元ソースの (Start, End) と行・列だけ保持。Text は遅延生成。
-                result.Add(new LexToken(lastAcceptToken, _source, pos, lastAcceptPos, startLine, startColumn, endLine, endColumn));
+                result.Add(new LexToken(lastAcceptToken, source, pos, lastAcceptPos, startLine, startColumn, endLine, endColumn));
             }
             pos = lastAcceptPos;
         }
