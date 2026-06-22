@@ -90,7 +90,7 @@ public static class ModelExtraction
     {
         foreach (var p in parameters)
         {
-            var isContext = contextBase is not null && InheritsFrom(p.Type, contextBase);
+            var isContext = contextBase is not null && InheritsFromOrEquals(p.Type, contextBase);
             var (pattern, priority, assoc) = GetPattern(p);
             yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority, assoc);
         }
