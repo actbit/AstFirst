@@ -71,8 +71,14 @@ public static class ModelToGrammar
             if (n.IsAbstract) continue;
             // 左辺は直接の親 (非終端)。NumExpr : Expr → 規則 Expr -> ... (AST は NumExpr)。
             // 継承ツリーで具象クラスが親非終端の生成規則を表す。
+            // 親が非終端でない (AstNode 直系の具象クラス等) 場合は、
+            // そのクラス自身を非終端の左辺にする (他の規則から引数型で参照されるケース)。
+            // 例: JsonMember : AstNode (cons 引数 JsonMember head) → 規則 JsonMember -> STRING : Json。
             if (!nonTerminals.TryGetValue(n.BaseFullName, out var lhs))
-                continue; // 親が非終端でない (AstNode 等) は対象外
+            {
+                if (!nonTerminals.TryGetValue(n.FullName, out lhs))
+                    continue; // 自身も非終端でなければ文法記号にならない (念のため)
+            }
             foreach (var ctor in n.Constructors)
             {
                 var rhs = new List<Symbol>();

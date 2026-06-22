@@ -98,4 +98,56 @@ public class ModelToGrammarTests
         var g = ModelToGrammar.Build(model);
         Assert.Contains(g.Symbols, s => s.IsTerminal && s.Name == "token:[0-9]+");
     }
+
+    [Fact]
+    public void AstNodeDirectConcreteClassBecomesNonterminal()
+    {
+        // AstNode 直系の具象クラス (親が非終端でない) を cons 引数で参照したとき、
+        // そのクラス自身が非終端の左辺として規則を生成する。
+        // 過去のバグ回帰: 以前は BaseFullName が非終端でないと continue され、
+        // JsonMember のような葉クラスの規則が欠落して到達不能非終端になっていた。
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("SampleJson.JsonNumber", "SampleJson.Json", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                })
+            }),
+            // ★ AstNode 直系の具象 (葉) クラス。cons 引数から参照される。
+            new NodeModel("SampleJson.JsonMember", "AstFirst.AstNode", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("AstFirst.Token", "key", "\"[^\"]*\"", false, 0),
+                    new ParamModel("AstFirst.Token", "colon", ":", false, 0),
+                    new ParamModel("SampleJson.Json", "value", null, false, 0),
+                })
+            }),
+            new NodeModel("SampleJson.JsonMembers", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("SampleJson.ConsMembers", "SampleJson.JsonMembers", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("SampleJson.JsonMember", "head", null, false, 0),
+                })
+            }),
+        };
+        var tokenDefs = new List<TokenDefModel>
+        {
+            new TokenDefModel("AstFirst.Token", "[0-9]+", 0, false),
+            new TokenDefModel("AstFirst.Token", "\"[^\"]*\"", 0, false),
+            new TokenDefModel("AstFirst.Token", ":", 0, false),
+        };
+        var model = new GrammarModel("SampleJson.Json", nodes, tokenDefs);
+        var grammar = ModelToGrammar.Build(model);
+
+        // JsonMember が非終端の左辺として規則を持つ (バグ前は欠落)。
+        Assert.Contains(grammar.Productions, p => p.Lhs.Name == "SampleJson.JsonMember");
+        var memberProd = grammar.Productions.First(p => p.Lhs.Name == "SampleJson.JsonMember");
+        // 右辺は key (STRING) : Json の 3 記号。
+        Assert.Equal(3, memberProd.Rhs.Length);
+    }
 }
