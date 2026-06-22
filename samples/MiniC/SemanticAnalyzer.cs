@@ -79,8 +79,8 @@ public sealed class SemanticAnalyzer : ProgramListener
     }
 
     // --- 条件の型チェック ---
-    public override void ExitIfStmt(IfStmt node) => CheckCondition(node.Cond, node.Span, "if");
-    public override void ExitWhileStmt(WhileStmt node) => CheckCondition(node.Cond, node.Span, "while");
+    public override void ExitIfStmt(IfStmt node) => CheckCondition(node.Cond, node.Cond.Span, "if");
+    public override void ExitWhileStmt(WhileStmt node) => CheckCondition(node.Cond, node.Cond.Span, "while");
 
     private void CheckCondition(Expr cond, SourceSpan span, string construct)
     {
