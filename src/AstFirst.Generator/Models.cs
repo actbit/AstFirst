@@ -14,12 +14,15 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     public IReadOnlyList<NodeModel> Nodes { get; }
     public IReadOnlyList<TokenDefModel> TokenDefs { get; }
     public IReadOnlyList<string> SkipPatterns { get; }
+    /// <summary>(string) コンストラクタを持たない Token 派生型 (G7 で new DerivedType(token.Text) を生成できない)。診断用。</summary>
+    public IReadOnlyList<string> TokenDerivedWarnings { get; }
 
     /// <summary>[Grammar] ルートクラスのソース位置 (診断報告用)。Equals/GetHashCode には含めない (IncrementalGenerator のキャッシュ判定を壊さないため)。</summary>
     public Location? RootLocation { get; }
 
     public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs,
-        IReadOnlyList<string>? skipPatterns = null, string? mode = null, Location? rootLocation = null)
+        IReadOnlyList<string>? skipPatterns = null, string? mode = null, Location? rootLocation = null,
+        IReadOnlyList<string>? tokenDerivedWarnings = null)
     {
         RootTypeFullName = rootTypeFullName;
         Nodes = nodes;
@@ -27,6 +30,7 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
         SkipPatterns = skipPatterns ?? Array.Empty<string>();
         Mode = mode;
         RootLocation = rootLocation;
+        TokenDerivedWarnings = tokenDerivedWarnings ?? Array.Empty<string>();
     }
 
     public bool Equals(GrammarModel? other) =>
@@ -99,23 +103,19 @@ public sealed class ParamModel : IEquatable<ParamModel>
     public string? Pattern { get; }     // [Pattern]
     public bool IsContext { get; }      // SemanticContext 派生型の引数
     public int Priority { get; }        // [Priority]
-    public AstFirst.Core.Parsing.Associativity Associativity { get; } // [Left]/[Right]/[NonAssoc]
 
-    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, int priority,
-        AstFirst.Core.Parsing.Associativity associativity = AstFirst.Core.Parsing.Associativity.Left)
+    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, int priority)
     {
         TypeFullName = typeFullName;
         Name = name;
         Pattern = pattern;
         IsContext = isContext;
         Priority = priority;
-        Associativity = associativity;
     }
 
     public bool Equals(ParamModel? other) =>
         other is not null && TypeFullName == other.TypeFullName && Name == other.Name
-        && Pattern == other.Pattern && IsContext == other.IsContext && Priority == other.Priority
-        && Associativity == other.Associativity;
+        && Pattern == other.Pattern && IsContext == other.IsContext && Priority == other.Priority;
     public override bool Equals(object? obj) => obj is ParamModel p && Equals(p);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(TypeFullName);
 }

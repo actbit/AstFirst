@@ -139,4 +139,9 @@ public class RegexParserTests
         // a{2}b{3} → Concat。
         Assert.Equal("(a{2}b{3})", Canon("a{2}b{3}"));
     }
+
+    [Fact]
+    public void RepeatRangeWithNonDigitThrows() =>
+        // {2,x} の x は数値でない → RegexParseException (FormatException でない)。
+        Assert.Throws<RegexParseException>(() => RegexParser.Parse("a{2,x}"));
 }

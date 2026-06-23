@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AstFirst.Core.Parsing;
 
@@ -15,6 +16,11 @@ public sealed class Grammar
     /// <summary>終端の優先度/結合性 (終端 Symbol.Id -> Precedence)。</summary>
     public IReadOnlyDictionary<int, Precedence> TerminalPrecedence { get; }
 
+    /// <summary>到達不能非終端 (規則はあるが開始記号から到達不能)。空なら正常。</summary>
+    public IReadOnlyList<Symbol> UnreachableNonTerminals { get; }
+    /// <summary>未定義非終端 (右辺で参照されるが LHS に規則がない)。空なら正常。</summary>
+    public IReadOnlyList<Symbol> UndefinedNonTerminals { get; }
+
     public Grammar(
         IReadOnlyList<Production> productions,
         IReadOnlyList<Symbol> symbols,
@@ -22,7 +28,9 @@ public sealed class Grammar
         Symbol augmentedStart,
         Symbol endOfFile,
         Production augmentedProduction,
-        IReadOnlyDictionary<int, Precedence>? terminalPrecedence = null)
+        IReadOnlyDictionary<int, Precedence>? terminalPrecedence = null,
+        IReadOnlyList<Symbol>? unreachableNonTerminals = null,
+        IReadOnlyList<Symbol>? undefinedNonTerminals = null)
     {
         Productions = productions;
         Symbols = symbols;
@@ -31,6 +39,8 @@ public sealed class Grammar
         EndOfFile = endOfFile;
         AugmentedProduction = augmentedProduction;
         TerminalPrecedence = terminalPrecedence ?? new Dictionary<int, Precedence>();
+        UnreachableNonTerminals = unreachableNonTerminals ?? Array.Empty<Symbol>();
+        UndefinedNonTerminals = undefinedNonTerminals ?? Array.Empty<Symbol>();
     }
 }
 
@@ -89,6 +99,42 @@ public sealed class GrammarBuilder
         var eof = GetOrAdd("$", isTerminal: true);
         var augProd = new Core.Parsing.Production(_productions.Count, augStart, new[] { startSymbol, eof });
         _productions.Add(augProd);
-        return new Grammar(_productions, _symbolList, startSymbol, augStart, eof, augProd, _terminalPrecedence);
+
+        // 到達不能/未定義非終端を検出。
+        var reachable = ComputeReachable(startSymbol);
+        var lhsNonTerminals = new HashSet<Symbol>();
+        foreach (var p in _productions) lhsNonTerminals.Add(p.Lhs);
+        // 到達不能 = LHS に現れるが開始記号から到達できない。拡張開始 S' は対象外。
+        var unreachable = lhsNonTerminals.Where(nt => !reachable.Contains(nt) && !nt.Equals(augStart)).ToList();
+        var rightSideNonTerminals = new HashSet<Symbol>();
+        foreach (var p in _productions)
+            foreach (var s in p.Rhs)
+                if (!s.IsTerminal) rightSideNonTerminals.Add(s);
+        var undefined = rightSideNonTerminals.Where(nt => !lhsNonTerminals.Contains(nt)).ToList();
+
+        return new Grammar(_productions, _symbolList, startSymbol, augStart, eof, augProd, _terminalPrecedence, unreachable, undefined);
+    }
+
+    /// <summary>開始記号から到達可能な非終端を BFS で集める。</summary>
+    private HashSet<Symbol> ComputeReachable(Symbol start)
+    {
+        var reachable = new HashSet<Symbol>();
+        var queue = new Queue<Symbol>();
+        queue.Enqueue(start);
+        reachable.Add(start);
+        while (queue.Count > 0)
+        {
+            var n = queue.Dequeue();
+            foreach (var p in _productions)
+            {
+                if (!p.Lhs.Equals(n)) continue;
+                foreach (var s in p.Rhs)
+                {
+                    if (!s.IsTerminal && reachable.Add(s))
+                        queue.Enqueue(s);
+                }
+            }
+        }
+        return reachable;
     }
 }

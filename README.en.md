@@ -198,7 +198,6 @@ See [docs/en/grammar-reference.md](docs/en/grammar-reference.md) for details.
 | `[Pattern(@"regex")]` | ctor param | Lexical rule (regex). `Priority` sets lexer priority (higher wins). |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. `IsRightAssociative`/`IsNonAssociative`. |
 | `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
-| `[Expect(token)]` | ctor param | Narrow token kind. |
 
 ### Special constructor parameter types
 
@@ -210,12 +209,11 @@ See [docs/en/grammar-reference.md](docs/en/grammar-reference.md) for details.
 ```csharp
 [Pattern(@"[A-Za-z_]\w*", Priority = 0)]    // identifier (low priority)
 [Pattern(@"if", Priority = 1)]               // keyword if (beats identifier)
-[Pattern(@"=", IsRightAssociative = true)]    // right-assoc (assignment)
-[Pattern(@"<", IsNonAssociative = true)]      // non-assoc (comparison)
 
-[Precedence(1)]                              // priority 1, left-assoc (default)
-[Precedence(2)]                              // priority 2 (higher)
-[Precedence(1, IsRightAssociative = true)]    // right-assoc (assignment =, power **)
+[Precedence(1)]                              // priority 1, left-assoc (e.g. + -)
+[Precedence(2)]                              // priority 2 (binds tighter than +; e.g. * /)
+[Precedence(3, IsRightAssociative = true)]    // priority 3, right-assoc (tighter than *; e.g. power **)
+[Precedence(1, IsNonAssociative = true)]      // priority 1, non-assoc (e.g. comparison < >; a<b<c is an error)
 ```
 
 ### Writing grammar

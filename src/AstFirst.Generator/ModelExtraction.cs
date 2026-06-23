@@ -30,17 +30,25 @@ public static class ModelExtraction
 
         var nodes = new List<NodeModel>();
         var tokenDefs = new List<TokenDefModel>();
+        var tokenDerivedWarnings = new List<string>();
 
         foreach (var type in GetAllTypes(compilation.Assembly.GlobalNamespace))
         {
             if (type.TypeKind != TypeKind.Class) continue;
             if (type.DeclaredAccessibility != Accessibility.Public) continue;
+            // rootType と同じ名前空間の型のみ収集 (別文法の混入を防ぎ、到達不能/未定義検知の誤検知を避ける)。
+            if (!SymbolEqualityComparer.Default.Equals(type.ContainingNamespace, rootType.ContainingNamespace)) continue;
 
             if (astNodeBase is not null && InheritsFrom(type, astNodeBase))
                 nodes.Add(ExtractNode(type, contextBase, astNodeBase));
 
             if (tokenBase is not null && InheritsFrom(type, tokenBase))
+            {
                 foreach (var td in ExtractTokenDefsFromCtors(type)) tokenDefs.Add(td);
+                // G7: Token派生型に (string) コンストラクタが必要 (new DerivedType(token.Text) の生成)。
+                if (!HasStringConstructor(type))
+                    tokenDerivedWarnings.Add(type.ToDisplayString());
+            }
             else
                 foreach (var td in ExtractInlineTokenDefs(type, tokenBase)) tokenDefs.Add(td);
         }
@@ -60,7 +68,7 @@ public static class ModelExtraction
                 foreach (var na in a.NamedArguments)
                     if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
 
-        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation);
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings);
     }
 
     private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase)
@@ -94,33 +102,26 @@ public static class ModelExtraction
         foreach (var p in parameters)
         {
             var isContext = contextBase is not null && InheritsFromOrEquals(p.Type, contextBase);
-            var (pattern, priority, assoc) = GetPattern(p);
-            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority, assoc);
+            var (pattern, priority) = GetPattern(p);
+            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority);
         }
     }
 
-    /// <summary>[Pattern] から (Regex, Priority, IsRightAssociative) を取得。未設定なら (null,0,false)。</summary>
-    private static (string? regex, int priority, AstFirst.Core.Parsing.Associativity assoc) GetPattern(ISymbol symbol)
+    /// <summary>[Pattern] から (Regex, Priority) を取得。未設定なら (null,0)。</summary>
+    private static (string? regex, int priority) GetPattern(ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
             if (a.AttributeClass?.Name != "PatternAttribute") continue;
             string? regex = a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string s ? s : null;
             int priority = 0;
-            bool isRight = false;
-            bool isNon = false;
             foreach (var na in a.NamedArguments)
             {
                 if (na.Key == "Priority" && na.Value.Value is int pr) priority = pr;
-                if (na.Key == "IsRightAssociative" && na.Value.Value is bool ir) isRight = ir;
-                if (na.Key == "IsNonAssociative" && na.Value.Value is bool inn) isNon = inn;
             }
-            var assoc = isNon ? AstFirst.Core.Parsing.Associativity.NonAssoc
-                       : isRight ? AstFirst.Core.Parsing.Associativity.Right
-                       : AstFirst.Core.Parsing.Associativity.Left;
-            return (regex, priority, assoc);
+            return (regex, priority);
         }
-        return (null, 0, AstFirst.Core.Parsing.Associativity.Left);
+        return (null, 0);
     }
 
     private static IEnumerable<TokenDefModel> ExtractTokenDefsFromCtors(INamedTypeSymbol tokenType)
@@ -129,7 +130,7 @@ public static class ModelExtraction
         {
             foreach (var p in ctor.Parameters)
             {
-                var (pattern, priority, _) = GetPattern(p);
+                var (pattern, priority) = GetPattern(p);
                 if (pattern is null) continue;
                 yield return new TokenDefModel(tokenType.ToDisplayString(), pattern, priority, isHidden: false);
             }
@@ -142,7 +143,7 @@ public static class ModelExtraction
         {
             foreach (var p in ctor.Parameters)
             {
-                var (pattern, priority, _) = GetPattern(p);
+                var (pattern, priority) = GetPattern(p);
                 if (pattern is null) continue;
                 if (tokenBase is not null && !InheritsFromOrEquals(p.Type, tokenBase)) continue;
                 var key = p.Type.ToDisplayString();
@@ -207,6 +208,19 @@ public static class ModelExtraction
     {
         for (var t = type.BaseType; t is not null; t = t.BaseType)
             if (SymbolEqualityComparer.Default.Equals(t, baseType)) return true;
+        return false;
+    }
+
+    /// <summary>(string) を1つ取る public コンストラクタがあるか (G7: new DerivedType(token.Text) の生成に必要)。</summary>
+    private static bool HasStringConstructor(INamedTypeSymbol type)
+    {
+        foreach (var ctor in type.Constructors)
+        {
+            if (ctor.IsStatic || ctor.DeclaredAccessibility == Accessibility.Private) continue;
+            var parms = ctor.Parameters;
+            if (parms.Length == 1 && parms[0].Type.SpecialType == SpecialType.System_String)
+                return true;
+        }
         return false;
     }
 

@@ -12,7 +12,6 @@ In AstFirst you write the grammar in C# classes and attributes. The generator em
 | `[Pattern(@"regex")]` | ctor param | Lexical rule (regex). |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. |
 | `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern. |
-| `[Expect(token)]` | ctor param | Narrow token kind. |
 
 ## `[Grammar]`
 
@@ -36,14 +35,11 @@ public NumExpr([Pattern(@"[0-9]+")] Token num) { ... }
 
 Named properties:
 
-- `Priority` — lexer priority (higher wins). Used when multiple tokens accept the same input, and to resolve shift-reduce conflicts.
-- `IsRightAssociative` — right-associative (assignment `=`, power `**`).
-- `IsNonAssociative` — non-associative (comparison `<`; `a<b<c` is an error). Takes precedence over `IsRightAssociative`.
+- `Priority` — lexer priority (higher wins). Used when multiple tokens accept the same input.
 
 ```csharp
 [Pattern(@"[A-Za-z_]\w*", Priority = 0)]    // identifier (low priority)
 [Pattern(@"if", Priority = 1)]               // keyword if (beats identifier)
-[Pattern(@"=", IsRightAssociative = true)]    // right-assoc
 ```
 
 ## `[Precedence]`
@@ -70,10 +66,6 @@ A skip pattern (whitespace, comments). Put on the same class as `[Grammar]`. Mat
 ```csharp
 [Skip(@"(\s|//[^\n]*)+")]   // whitespace and line comments
 ```
-
-## `[Expect]`
-
-Narrows the token kind of a constructor parameter.
 
 ## Writing rules
 
