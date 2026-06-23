@@ -210,10 +210,10 @@ var result = ProgramParser.Parse(code, ctx);
 [Pattern(@"[A-Za-z_]\w*", Priority = 0)]    // 識別子（低優先）
 [Pattern(@"if", Priority = 1)]               // キーワード if（高優先）
 
-[Precedence(1)]                              // 優先度1・左結合（既定）
-[Precedence(2)]                              // 優先度2（高い）
-[Precedence(1, IsRightAssociative = true)]    // 右結合（代入 =、べき乗 **）
-[Precedence(1, IsNonAssociative = true)]      // 非結合（比較 <、>、a<b<c はエラー）
+[Precedence(1)]                              // 優先度1・左結合（例: + -）
+[Precedence(2)]                              // 優先度2（+ より強い、例: * /）
+[Precedence(3, IsRightAssociative = true)]    // 優先度3・右結合（* より強い、例: べき乗 **）
+[Precedence(1, IsNonAssociative = true)]      // 優先度1・非結合（例: 比較 < >、a<b<c はエラー）
 ```
 
 ### 文法の書き方
