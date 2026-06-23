@@ -9,7 +9,7 @@ public readonly struct Position(int offset, int line, int column) : IEquatable<P
 
     public bool Equals(Position other) => Offset == other.Offset && Line == other.Line && Column == other.Column;
     public override bool Equals(object? obj) => obj is Position p && Equals(p);
-    public override int GetHashCode() => System.HashCode.Combine(Offset, Line, Column);
+    public override int GetHashCode() => (Offset, Line, Column).GetHashCode();
     public override string ToString() => "(" + Line + "," + Column + ")";
 }
 
@@ -22,7 +22,7 @@ public readonly struct SourceSpan(Position start, Position end) : IEquatable<Sou
     public bool IsEmpty => Start.Equals(End);
     public bool Equals(SourceSpan other) => Start.Equals(other.Start) && End.Equals(other.End);
     public override bool Equals(object? obj) => obj is SourceSpan s && Equals(s);
-    public override int GetHashCode() => System.HashCode.Combine(Start, End);
+    public override int GetHashCode() => (Start, End).GetHashCode();
     public override string ToString() => Start + "-" + End;
 
     /// <summary>2 つの span を覆う最小の span。</summary>
