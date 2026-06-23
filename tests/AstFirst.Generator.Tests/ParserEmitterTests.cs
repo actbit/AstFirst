@@ -100,4 +100,102 @@ public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) {
         Assert.Contains("ProdLen", source);
         Assert.Contains("TokenIdToSym", source);
     }
+
+    private static GrammarModel TokenDerivedModel()
+    {
+        // NumExpr(NumToken) — Token派生型を ctor 引数に取る (G7)。
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("NumToken", "num", null, false, 0)   // Token派生型、Pattern なし
+                })
+            }),
+        };
+        var tokenDefs = new List<TokenDefModel>
+        {
+            new TokenDefModel("NumToken", "[0-9]+", 0, false),   // Key=NumToken (Token派生)
+        };
+        return new GrammarModel("Expr", nodes, tokenDefs);
+    }
+
+    [Fact]
+    public void EmitParserRegeneratesTokenDerivedType()
+    {
+        // G7: Token派生型 (NumToken) 引数は new NumToken(token.Text) で再生成 (キャストでない)。
+        var model = TokenDerivedModel();
+        ModelToDfa.Build(model, out var rules);
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        var source = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
+        Assert.Contains("new NumToken(", source);
+        Assert.DoesNotContain("(NumToken)c[", source);
+    }
+
+    [Fact]
+    public void EmitParserWithTokenDerivedParameterCompiles()
+    {
+        // 生成コード (new NumExpr(new NumToken(token.Text))) がコンパイル通り。
+        var model = TokenDerivedModel();
+        var dfa = ModelToDfa.Build(model, out var rules);
+        var lexerSource = CodeEmitter.EmitLexer(model, dfa, rules, "ExprLexer", "TestNs");
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
+        var stubs = @"
+namespace AstFirst {
+    public abstract class AstNode { }
+    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
+    public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
+    public readonly struct Position { public Position(int o, int l, int c) { } }
+    public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
+    public enum Severity { Error, Warning }
+    public sealed class Diagnostic { public Severity Severity { get; } public Diagnostic(string m, SourceSpan s, Severity v) { Severity = v; } }
+    public sealed class DiagnosticBag { public System.Collections.Generic.IReadOnlyList<Diagnostic> Items { get; } = new System.Collections.Generic.List<Diagnostic>(); }
+    public sealed class ParseError { public ParseError(string m, int p) { } }
+    public sealed class ParseResult { public ParseResult(object? a, System.Collections.Generic.IReadOnlyList<ParseError> e, System.Collections.Generic.IReadOnlyList<Diagnostic>? d) { } }
+    public abstract class SemanticContext { public abstract DiagnosticBag Diagnostics { get; } }
+    public sealed class BasicSemanticContext : SemanticContext { public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag(); }
+}
+public class NumToken : AstFirst.Token { public NumToken(string t) : base(t, default) { } }
+public class Expr : AstFirst.AstNode { }
+public class NumExpr : Expr { public NumExpr(NumToken n) { } }
+";
+        var comp = Compile(stubs, lexerSource, parserSource);
+        var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.False(errors.Count > 0, "Token派生型の生成コードのコンパイルエラー:\n" + string.Join("\n", errors.Select(e => e.ToString())));
+    }
+
+    private static GrammarModel SemanticContextModel()
+    {
+        // SemanticContext 派生引数 (IsContext) を持つ ctor。
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("DeclExpr", "Expr", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("AstFirst.Token", "name", "[a-z]+", false, 0),
+                    new ParamModel("AstFirst.SemanticContext", "ctx", null, true, 0),
+                })
+            }),
+        };
+        var tokenDefs = new List<TokenDefModel> { new TokenDefModel("AstFirst.Token", "[a-z]+", 0, false) };
+        return new GrammarModel("Expr", nodes, tokenDefs);
+    }
+
+    [Fact]
+    public void EmitParserInjectsSemanticContext()
+    {
+        // SemanticContext 派生引数は reduce ケースで ctx を注入する。
+        var model = SemanticContextModel();
+        ModelToDfa.Build(model, out var rules);
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        var source = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
+        // new DeclExpr(..., ctx) のように ctx が渡る。
+        Assert.Contains("new DeclExpr(", source);
+        Assert.Contains("ctx)", source);
+    }
 }

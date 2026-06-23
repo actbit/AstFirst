@@ -75,6 +75,6 @@ public sealed class RepeatAst : RegexAst
         if (Min == 0 && Max is null) return Inner.ToCanonicalString() + "*";
         if (Min == 1 && Max is null) return Inner.ToCanonicalString() + "+";
         if (Min == 0 && Max == 1) return Inner.ToCanonicalString() + "?";
-        return Inner.ToCanonicalString() + "{" + Min + (Max is null ? ",}" : (Min == Max ? "}" : "," + Max + "}")) + "}";
+        return Inner.ToCanonicalString() + "{" + Min + (Max is null ? ",}" : (Min == Max ? "}" : "," + Max + "}"));
     }
 }
