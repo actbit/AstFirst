@@ -86,4 +86,43 @@ public class GrammarTests
         Assert.Equal(99, p.Id);
         Assert.Equal(1, p.Length);
     }
+
+    [Fact]
+    public void UnreachableNonTerminalDetected()
+    {
+        // S -> a ; Unused -> b (Unused は S から到達不能)。
+        var b = new GrammarBuilder();
+        var S = b.NonTerminal("S");
+        var Unused = b.NonTerminal("Unused");
+        var a = b.Terminal("a");
+        var bb = b.Terminal("b");
+        b.Production(S, a);
+        b.Production(Unused, bb);
+        var g = b.Build(S);
+        Assert.Contains(g.UnreachableNonTerminals, nt => nt.Name == "Unused");
+        Assert.Empty(g.UndefinedNonTerminals);
+    }
+
+    [Fact]
+    public void UndefinedNonTerminalDetected()
+    {
+        // S -> X (X は参照されるが規則がない)。
+        var b = new GrammarBuilder();
+        var S = b.NonTerminal("S");
+        var X = b.NonTerminal("X");
+        var a = b.Terminal("a");
+        b.Production(S, X);
+        var g = b.Build(S);
+        Assert.Contains(g.UndefinedNonTerminals, nt => nt.Name == "X");
+        Assert.Empty(g.UnreachableNonTerminals);
+    }
+
+    [Fact]
+    public void CompleteGrammarHasNoUnreachableOrUndefined()
+    {
+        // 電卓文法は到達不能/未定義なし。
+        var g = BuildCalcGrammar(out _, out _, out _, out _, out _, out _, out _, out _);
+        Assert.Empty(g.UnreachableNonTerminals);
+        Assert.Empty(g.UndefinedNonTerminals);
+    }
 }

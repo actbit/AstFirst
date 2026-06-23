@@ -12,7 +12,6 @@ AstFirst では C# のクラスと属性で文法を書く。Generator がコン
 | `[Pattern(@"regex")]` | コンストラクタ引数 | 字句ルール（正規表現）。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。 |
 | `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン。 |
-| `[Expect(token)]` | コンストラクタ引数 | トークン種別の絞り込み。 |
 
 ## `[Grammar]`
 
@@ -36,14 +35,11 @@ public NumExpr([Pattern(@"[0-9]+")] Token num) { ... }
 
 名前付きプロパティ:
 
-- `Priority` — レクサ優先度（大きいほど高優先）。同じ入力で複数トークンが受理した際と shift-reduce 衝突解決に使う。
-- `IsRightAssociative` — 右結合（代入 `=`、べき乗 `**` 等）。
-- `IsNonAssociative` — 非結合（比較 `<` 等、`a<b<c` はエラー）。`IsRightAssociative` より優先。
+- `Priority` — レクサ優先度（大きいほど高優先）。同じ入力で複数トークンが受理した際の解決に使う。
 
 ```csharp
 [Pattern(@"[A-Za-z_]\w*", Priority = 0)]    // 識別子（低優先）
 [Pattern(@"if", Priority = 1)]               // キーワード if（高優先、識別子に勝つ）
-[Pattern(@"=", IsRightAssociative = true)]    // 右結合
 ```
 
 ## `[Precedence]`
@@ -70,10 +66,6 @@ public sealed class MulExpr : Expr { ... }
 ```csharp
 [Skip(@"(\s|//[^\n]*)+")]   // 空白と行コメント
 ```
-
-## `[Expect]`
-
-コンストラクタ引数のトークン種別を絞り込む。
 
 ## 規則の書き方
 

@@ -35,6 +35,8 @@ public static class ModelExtraction
         {
             if (type.TypeKind != TypeKind.Class) continue;
             if (type.DeclaredAccessibility != Accessibility.Public) continue;
+            // rootType と同じ名前空間の型のみ収集 (別文法の混入を防ぎ、到達不能/未定義検知の誤検知を避ける)。
+            if (!SymbolEqualityComparer.Default.Equals(type.ContainingNamespace, rootType.ContainingNamespace)) continue;
 
             if (astNodeBase is not null && InheritsFrom(type, astNodeBase))
                 nodes.Add(ExtractNode(type, contextBase, astNodeBase));
@@ -94,33 +96,26 @@ public static class ModelExtraction
         foreach (var p in parameters)
         {
             var isContext = contextBase is not null && InheritsFromOrEquals(p.Type, contextBase);
-            var (pattern, priority, assoc) = GetPattern(p);
-            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority, assoc);
+            var (pattern, priority) = GetPattern(p);
+            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority);
         }
     }
 
-    /// <summary>[Pattern] から (Regex, Priority, IsRightAssociative) を取得。未設定なら (null,0,false)。</summary>
-    private static (string? regex, int priority, AstFirst.Core.Parsing.Associativity assoc) GetPattern(ISymbol symbol)
+    /// <summary>[Pattern] から (Regex, Priority) を取得。未設定なら (null,0)。</summary>
+    private static (string? regex, int priority) GetPattern(ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
             if (a.AttributeClass?.Name != "PatternAttribute") continue;
             string? regex = a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string s ? s : null;
             int priority = 0;
-            bool isRight = false;
-            bool isNon = false;
             foreach (var na in a.NamedArguments)
             {
                 if (na.Key == "Priority" && na.Value.Value is int pr) priority = pr;
-                if (na.Key == "IsRightAssociative" && na.Value.Value is bool ir) isRight = ir;
-                if (na.Key == "IsNonAssociative" && na.Value.Value is bool inn) isNon = inn;
             }
-            var assoc = isNon ? AstFirst.Core.Parsing.Associativity.NonAssoc
-                       : isRight ? AstFirst.Core.Parsing.Associativity.Right
-                       : AstFirst.Core.Parsing.Associativity.Left;
-            return (regex, priority, assoc);
+            return (regex, priority);
         }
-        return (null, 0, AstFirst.Core.Parsing.Associativity.Left);
+        return (null, 0);
     }
 
     private static IEnumerable<TokenDefModel> ExtractTokenDefsFromCtors(INamedTypeSymbol tokenType)
@@ -129,7 +124,7 @@ public static class ModelExtraction
         {
             foreach (var p in ctor.Parameters)
             {
-                var (pattern, priority, _) = GetPattern(p);
+                var (pattern, priority) = GetPattern(p);
                 if (pattern is null) continue;
                 yield return new TokenDefModel(tokenType.ToDisplayString(), pattern, priority, isHidden: false);
             }
@@ -142,7 +137,7 @@ public static class ModelExtraction
         {
             foreach (var p in ctor.Parameters)
             {
-                var (pattern, priority, _) = GetPattern(p);
+                var (pattern, priority) = GetPattern(p);
                 if (pattern is null) continue;
                 if (tokenBase is not null && !InheritsFromOrEquals(p.Type, tokenBase)) continue;
                 var key = p.Type.ToDisplayString();
