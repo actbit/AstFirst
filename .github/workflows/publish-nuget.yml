@@ -44,6 +44,12 @@ jobs:
             echo "Tag ${{ steps.ver.outputs.tag }} not found — will publish"
           fi
 
+      # NuGet.config の local フィード (./artifacts/packages) は CI のクリーン環境では
+      # 未作成で NU1301 になるため、pack 前に作成する。空ディレクトリなら NuGet は許容。
+      - name: local フィード ディレクトリ作成
+        if: steps.check.outputs.published == 'false'
+        run: mkdir -p artifacts/packages
+
       # Runtime を先に pack し、local フィード (./artifacts/packages) に出力する。
       # Generator は Runtime へ PackageReference Version="$(Version)" で依存するため、
       # Generator の pack/restore 時に同フィードから Runtime の nupkg を解決できる。
