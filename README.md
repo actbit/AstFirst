@@ -213,6 +213,7 @@ var result = ProgramParser.Parse(code, ctx);
 [Precedence(1)]                              // 優先度1・左結合（既定）
 [Precedence(2)]                              // 優先度2（高い）
 [Precedence(1, IsRightAssociative = true)]    // 右結合（代入 =、べき乗 **）
+[Precedence(1, IsNonAssociative = true)]      // 非結合（比較 <、>、a<b<c はエラー）
 ```
 
 ### 文法の書き方

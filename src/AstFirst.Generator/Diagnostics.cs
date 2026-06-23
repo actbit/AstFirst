@@ -37,4 +37,14 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
         description: "A nonterminal is referenced in a RHS but has no productions. Often a sign of a generator rule-generation bug or a typo.");
+
+    /// <summary>Token派生型が (string) コンストラクタを持たない (G7: new DerivedType(token.Text) を生成できずコンパイルエラーになる)。</summary>
+    public static readonly DiagnosticDescriptor TokenDerivedNoStringCtor = new(
+        id: "ASTF004",
+        title: "Token-derived type without (string) ctor / (string) コンストラクタのない Token 派生型",
+        messageFormat: "{0}",
+        category: "AstFirst",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "A Token-derived type used as a ctor parameter lacks a (string) constructor. The generated parser does new DerivedType(token.Text), so compilation fails. Add a (string) constructor.");
 }

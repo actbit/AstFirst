@@ -114,4 +114,23 @@ public abstract class B : AstFirst.AstNode { }
         var diagnostics = RunGenerator(grammar);
         Assert.Contains(diagnostics, d => d.Id == "ASTF003");
     }
+
+    [Fact]
+    public void TokenDerivedWithoutStringCtorEmitsAstf004()
+    {
+        // IntToken は [Pattern] int を取り (string) コンストラクタがない →
+        // G7 (new IntToken(token.Text)) の生成でコンパイルエラーになる → ASTF004。
+        var grammar = @"
+[AstFirst.Grammar]
+public class RootExpr : AstFirst.AstNode { }
+public class Num : RootExpr {
+    public Num([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+}
+public class IntToken : AstFirst.Token {
+    public IntToken([AstFirst.Pattern(""[0-9]+"")] int n) { }
+}
+";
+        var diagnostics = RunGenerator(grammar);
+        Assert.Contains(diagnostics, d => d.Id == "ASTF004");
+    }
 }

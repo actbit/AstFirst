@@ -213,6 +213,7 @@ See [docs/en/grammar-reference.md](docs/en/grammar-reference.md) for details.
 [Precedence(1)]                              // priority 1, left-assoc (default)
 [Precedence(2)]                              // priority 2 (higher)
 [Precedence(1, IsRightAssociative = true)]    // right-assoc (assignment =, power **)
+[Precedence(1, IsNonAssociative = true)]      // non-assoc (comparison <, >; a<b<c is an error)
 ```
 
 ### Writing grammar

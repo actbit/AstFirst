@@ -30,6 +30,7 @@ public static class ModelExtraction
 
         var nodes = new List<NodeModel>();
         var tokenDefs = new List<TokenDefModel>();
+        var tokenDerivedWarnings = new List<string>();
 
         foreach (var type in GetAllTypes(compilation.Assembly.GlobalNamespace))
         {
@@ -42,7 +43,12 @@ public static class ModelExtraction
                 nodes.Add(ExtractNode(type, contextBase, astNodeBase));
 
             if (tokenBase is not null && InheritsFrom(type, tokenBase))
+            {
                 foreach (var td in ExtractTokenDefsFromCtors(type)) tokenDefs.Add(td);
+                // G7: Token派生型に (string) コンストラクタが必要 (new DerivedType(token.Text) の生成)。
+                if (!HasStringConstructor(type))
+                    tokenDerivedWarnings.Add(type.ToDisplayString());
+            }
             else
                 foreach (var td in ExtractInlineTokenDefs(type, tokenBase)) tokenDefs.Add(td);
         }
@@ -62,7 +68,7 @@ public static class ModelExtraction
                 foreach (var na in a.NamedArguments)
                     if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
 
-        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation);
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings);
     }
 
     private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase)
@@ -202,6 +208,19 @@ public static class ModelExtraction
     {
         for (var t = type.BaseType; t is not null; t = t.BaseType)
             if (SymbolEqualityComparer.Default.Equals(t, baseType)) return true;
+        return false;
+    }
+
+    /// <summary>(string) を1つ取る public コンストラクタがあるか (G7: new DerivedType(token.Text) の生成に必要)。</summary>
+    private static bool HasStringConstructor(INamedTypeSymbol type)
+    {
+        foreach (var ctor in type.Constructors)
+        {
+            if (ctor.IsStatic || ctor.DeclaredAccessibility == Accessibility.Private) continue;
+            var parms = ctor.Parameters;
+            if (parms.Length == 1 && parms[0].Type.SpecialType == SpecialType.System_String)
+                return true;
+        }
         return false;
     }
 
