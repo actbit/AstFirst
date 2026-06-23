@@ -1,0 +1,79 @@
+name: publish-nuget
+
+# Directory.Build.props の Version を上げて master にマージすると、
+# そのバージョンが未公開（対応する git タグ v<x.y.z> が未存在）なら
+# nuget.org へ自動公開する。バージョンの情報源は Directory.Build.props、
+# タグは「公開済み」のマーカーとして公開後に自動作成される。
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'Directory.Build.props'
+  workflow_dispatch: # 初回 (0.1.0) および再試行用手動実行
+
+permissions:
+  contents: write # 公開後のタグ作成用
+  id-token: write # Trusted Publishing (OIDC) — GitHub が nuget.org 検証用トークンを発行
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # タグ存在確認のため全履歴＋タグを取得
+
+      - uses: actions/setup-dotnet@v4
+
+      - name: Version を読み取り
+        id: ver
+        run: |
+          VERSION=$(grep -oP '<Version>\K[^<]+' Directory.Build.props)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Detected version: $VERSION (tag v$VERSION)"
+
+      - name: 既存タグ確認（公開済みならスキップ）
+        id: check
+        run: |
+          if git rev-parse "${{ steps.ver.outputs.tag }}" >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Tag ${{ steps.ver.outputs.tag }} exists — skipping (already published)"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            echo "Tag ${{ steps.ver.outputs.tag }} not found — will publish"
+          fi
+
+      # Runtime を先に pack し、local フィード (./artifacts/packages) に出力する。
+      # Generator は Runtime へ PackageReference Version="$(Version)" で依存するため、
+      # Generator の pack/restore 時に同フィードから Runtime の nupkg を解決できる。
+      - name: Pack Runtime
+        if: steps.check.outputs.published == 'false'
+        run: dotnet pack src/AstFirst.Runtime/AstFirst.Runtime.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -o artifacts/packages
+
+      - name: Pack Generator
+        if: steps.check.outputs.published == 'false'
+        run: dotnet pack src/AstFirst.Generator/AstFirst.Generator.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -o artifacts/packages
+
+      # Trusted Publishing (OIDC): nuget.org に事前登録したポリシー
+      # (owner=actbit, repo=AstFirst, workflow=publish-nuget.yml) と一致する
+      # トークンを交換して 1 時間有効な一時 API キーを得る。長期間 API キー不要。
+      # user は nuget.org のプロファイル名 (メールアドレスではない) → NUGET_USER Secret。
+      - name: NuGet login (OIDC → 一時 API キー)
+        if: steps.check.outputs.published == 'false'
+        uses: NuGet/login@v1
+        id: nuget-login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish to nuget.org
+        if: steps.check.outputs.published == 'false'
+        run: dotnet nuget push artifacts/packages/*.nupkg --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: 公開済みマーカーのタグを作成
+        if: steps.check.outputs.published == 'false'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.ver.outputs.tag }}
+          git push origin ${{ steps.ver.outputs.tag }}

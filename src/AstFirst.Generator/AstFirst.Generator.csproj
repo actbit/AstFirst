@@ -10,6 +10,9 @@
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <DevelopmentDependency>true</DevelopmentDependency>
     <IsPackable>true</IsPackable>
+    <!-- analyzer パッケージは lib/ を持たず analyzers/ のみのため、
+         NU5128 (依存グループの TFM と lib/ref の不一致) は無害。 -->
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
     <PackageId>AstFirst</PackageId>
     <Title>AstFirst</Title>
     <Description>C# のクラスと属性で文法を書くと、コンパイル時に Lexer / LALR(1) Parser / Listener を生成するパーサージェネレーター。</Description>
@@ -33,6 +36,13 @@
          生成コード側は本体が Core.dll を通常参照して使う。 -->
     <Compile Include="..\AstFirst.Core\Lexing\*.cs" />
     <Compile Include="..\AstFirst.Core\Parsing\*.cs" />
+  </ItemGroup>
+
+  <!-- analyzer DLL を analyzers/dotnet/cs に含める。
+       IncludeBuildOutput=false により lib/ には出力されないため、
+       Roslyn analyzer の慣行に従い analyzers フォルダへ明示的にパッキングする。 -->
+  <ItemGroup>
+    <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs" />
   </ItemGroup>
 
 </Project>
