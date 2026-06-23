@@ -79,4 +79,58 @@ public class Add : RootExpr {
         var diagnostics = RunGenerator(grammar);
         Assert.DoesNotContain(diagnostics, d => d.Id == "ASTF001");
     }
+
+    [Fact]
+    public void UnreachableNonTerminalEmitsAstf002()
+    {
+        // Unused は [Pattern] 付きで規則を持つが RootExpr から到達不能 → ASTF002。
+        var grammar = @"
+[AstFirst.Grammar]
+public class RootExpr : AstFirst.AstNode { }
+public class Num : RootExpr {
+    public Num([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+}
+public class Unused : AstFirst.AstNode {
+    public Unused([AstFirst.Pattern(""x"")] AstFirst.Token n) { }
+}
+";
+        var diagnostics = RunGenerator(grammar);
+        Assert.Contains(diagnostics, d => d.Id == "ASTF002");
+    }
+
+    [Fact]
+    public void UndefinedNonTerminalEmitsAstf003()
+    {
+        // A(B) で B は abstract・具象サブクラスなし → B は参照されるが規則がない → ASTF003。
+        // (直前の ModelToGrammar 規則欠落バグと同種を Core 段階で検出する仕組み)
+        var grammar = @"
+[AstFirst.Grammar]
+public abstract class Root : AstFirst.AstNode { }
+public class A : Root {
+    public A(B b) { }
+}
+public abstract class B : AstFirst.AstNode { }
+";
+        var diagnostics = RunGenerator(grammar);
+        Assert.Contains(diagnostics, d => d.Id == "ASTF003");
+    }
+
+    [Fact]
+    public void TokenDerivedWithoutStringCtorEmitsAstf004()
+    {
+        // IntToken は [Pattern] int を取り (string) コンストラクタがない →
+        // G7 (new IntToken(token.Text)) の生成でコンパイルエラーになる → ASTF004。
+        var grammar = @"
+[AstFirst.Grammar]
+public class RootExpr : AstFirst.AstNode { }
+public class Num : RootExpr {
+    public Num([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+}
+public class IntToken : AstFirst.Token {
+    public IntToken([AstFirst.Pattern(""[0-9]+"")] int n) { }
+}
+";
+        var diagnostics = RunGenerator(grammar);
+        Assert.Contains(diagnostics, d => d.Id == "ASTF004");
+    }
 }

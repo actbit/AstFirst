@@ -84,8 +84,6 @@ public sealed class GrammarSpec
                     {
                         attr = "[Pattern(@\"" + p.Pattern + "\"";
                         if (p.Priority != 0) attr += ", Priority = " + p.Priority;
-                        if (p.IsRightAssoc) attr += ", IsRightAssociative = true";
-                        if (p.IsNonAssoc) attr += ", IsNonAssociative = true";
                         attr += ")] ";
                     }
                     ps.Add(attr + p.CsType + " " + p.Name);
@@ -118,13 +116,13 @@ public sealed class GrammarSpec
                         if (p.Pattern is not null)
                         {
                             // Token 型の終端 ([Pattern] 付き)。
-                            ps.Add(new ParamModel("AstFirst.Token", p.Name, p.Pattern, isContext: false, p.Priority, ToAssoc(p)));
+                            ps.Add(new ParamModel("AstFirst.Token", p.Name, p.Pattern, isContext: false, p.Priority));
                             tokenDefs.Add(new TokenDefModel("AstFirst.Token", p.Pattern, p.Priority, isHidden: false));
                         }
                         else
                         {
                             // 非終端 (AstNode 派生クラス)。
-                            ps.Add(new ParamModel(Namespace + "." + p.CsType, p.Name, pattern: null, isContext: false, priority: 0, associativity: Associativity.Left));
+                            ps.Add(new ParamModel(Namespace + "." + p.CsType, p.Name, pattern: null, isContext: false, priority: 0));
                         }
                     }
                     ctors.Add(new CtorModel(ps));
@@ -152,8 +150,6 @@ public sealed class GrammarSpec
         return new GrammarModel(Namespace + "." + RootClass, nodes, dedupDefs, skipPatterns, mode: null);
     }
 
-    private static Associativity ToAssoc(ParamSpec p)
-        => p.IsNonAssoc ? Associativity.NonAssoc : p.IsRightAssoc ? Associativity.Right : Associativity.Left;
 }
 
 public sealed class NodeSpec

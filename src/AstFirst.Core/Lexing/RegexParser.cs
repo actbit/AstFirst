@@ -88,7 +88,7 @@ public sealed class RegexParser
         Expect('{');
         var sb1 = new System.Text.StringBuilder();
         while (Peek() != ',' && Peek() != '}' && Peek() != '\0') sb1.Append(Advance());
-        int min = sb1.Length > 0 ? int.Parse(sb1.ToString()) : 0;
+        int min = ParseRangeNumber(sb1);
         if (Peek() == '}')
         {
             Advance();
@@ -98,8 +98,17 @@ public sealed class RegexParser
         var sb2 = new System.Text.StringBuilder();
         while (Peek() != '}' && Peek() != '\0') sb2.Append(Advance());
         Expect('}');
-        int? max = sb2.Length > 0 ? int.Parse(sb2.ToString()) : (int?)null;
+        int? max = sb2.Length > 0 ? ParseRangeNumber(sb2) : (int?)null;
         return new RepeatAst(atom, min, max);
+    }
+
+    /// <summary>量指定子の数値をパース。空は 0、数値でなければ RegexParseException。</summary>
+    private int ParseRangeNumber(System.Text.StringBuilder sb)
+    {
+        if (sb.Length == 0) return 0;
+        if (!int.TryParse(sb.ToString(), out int v))
+            throw Error($"量指定子 {{m,n}} の数値が不正です: '{sb}'");
+        return v;
     }
 
     // atom := '(' alternation ')' | '[' charclass ']' | '.' | escape | literal
