@@ -91,4 +91,52 @@ public class RegexParserTests
     [Fact]
     public void UnclosedCharClassThrows() =>
         Assert.Throws<RegexParseException>(() => RegexParser.Parse("[abc"));
+
+    // --- 量指定子 {m} {m,} {m,n} (RegexParser.ParseRange) ---
+
+    [Fact]
+    public void RepeatExact() => Assert.Equal("a{2}", Canon("a{2}"));
+
+    [Fact]
+    public void RepeatAtLeast() => Assert.Equal("a{2,}", Canon("a{2,}"));
+
+    [Fact]
+    public void RepeatRange() => Assert.Equal("a{2,4}", Canon("a{2,4}"));
+
+    [Fact]
+    public void RepeatExactSameMinMax()
+    {
+        // {3} は Min=Max=3。
+        var ast = RegexParser.Parse("a{3}") as RepeatAst;
+        Assert.NotNull(ast);
+        Assert.Equal(3, ast!.Min);
+        Assert.Equal(3, ast.Max);
+    }
+
+    [Fact]
+    public void RepeatRangeCapturesMinMax()
+    {
+        // {2,5} は Min=2, Max=5。
+        var ast = RegexParser.Parse("[0-9]{2,5}") as RepeatAst;
+        Assert.NotNull(ast);
+        Assert.Equal(2, ast!.Min);
+        Assert.Equal(5, ast.Max);
+    }
+
+    [Fact]
+    public void RepeatAtLeastCapturesNullMax()
+    {
+        // {1,} は Min=1, Max=null。
+        var ast = RegexParser.Parse("a{1,}") as RepeatAst;
+        Assert.NotNull(ast);
+        Assert.Equal(1, ast!.Min);
+        Assert.Null(ast.Max);
+    }
+
+    [Fact]
+    public void RepeatCanBeChained()
+    {
+        // a{2}b{3} → Concat。
+        Assert.Equal("(a{2}b{3})", Canon("a{2}b{3}"));
+    }
 }

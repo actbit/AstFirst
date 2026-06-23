@@ -109,4 +109,77 @@ public class LalrLookaheadTests
         Assert.Contains(g.EndOfFile.Id, la);
         Assert.DoesNotContain(rparen.Id, la);
     }
+
+    // --- ε 規則を含む文法の lookahead (直前のバグクラスの Core 側検証) ---
+
+    private static (Grammar g, Symbol Elements, Symbol Tail, Symbol str, Symbol comma, Symbol rbracket)
+        BuildListGrammar()
+    {
+        // セパレータ付きリスト (JsonParser の JsonElements 構造):
+        //   S -> "[" Elements "]"   Elements -> ε | value Tail   Tail -> ε | "," value Tail   value -> "x"
+        var b = new GrammarBuilder();
+        var S = b.NonTerminal("S");
+        var Elements = b.NonTerminal("Elements");
+        var Tail = b.NonTerminal("Tail");
+        var value = b.NonTerminal("value");
+        var lbracket = b.Terminal("[");
+        var rbracket = b.Terminal("]");
+        var str = b.Terminal("\"x\"");
+        var comma = b.Terminal(",");
+        b.Production(S, lbracket, Elements, rbracket);
+        b.Production(Elements);                    // ε
+        b.Production(Elements, value, Tail);
+        b.Production(Tail);                        // ε
+        b.Production(Tail, comma, value, Tail);
+        b.Production(value, str);
+        return (b.Build(S), Elements, Tail, str, comma, rbracket);
+    }
+
+    [Fact]
+    public void EpsilonListLookaheadIsClosingBracketOnly()
+    {
+        // 要素リストの ε 規則 [Elements -> .] の lookahead は FOLLOW(Elements) = { "]" } のみ。
+        // "x" が含まれると "[x" で空リストへ還元してしまい (直前のバグ)、shift が消える。
+        var (g, Elements, Tail, str, comma, rbracket) = BuildListGrammar();
+        var auto = Lr0AutomatonBuilder.Build(g);
+        var lalr = Build(g);
+
+        var epsProd = g.Productions.First(p => p.Lhs.Name == "Elements" && p.Length == 0);
+        int state = FindState(g, auto, epsProd.Id, 0);
+        Assert.True(state >= 0);
+        var la = new HashSet<int>(lalr.Lookahead(state, new Lr0Item(epsProd.Id, 0)));
+        Assert.Contains(rbracket.Id, la);
+        Assert.DoesNotContain(str.Id, la);   // ★ 要素の先頭記号が ε の lookahead に漏れない
+    }
+
+    [Fact]
+    public void EpsilonListGrammarHasNoConflicts()
+    {
+        // セパレータ付きリスト (ε 規則 + Tail) は LR(1) でコンフリクトなし。
+        var (g, _, _, _, _, _) = BuildListGrammar();
+        var first = new FirstSet(g);
+        var auto = Lr0AutomatonBuilder.Build(g);
+        var la = new LalrLookahead(g, auto, first);
+        var table = LalrTableBuilder.Build(g, auto, la);
+        Assert.False(table.HasConflicts, string.Join("\n", table.Conflicts.Select(c => c.Description)));
+    }
+
+    [Fact]
+    public void TailEpsilonLookaheadIsClosingBracketOnly()
+    {
+        // [Tail -> .] の lookahead = FOLLOW(Tail) = { "]" } のみ。
+        // "," は Tail -> "," value Tail の派生の先頭記号で FOLLOW(Tail) には入らない
+        // ("," を見たら ε でなく "," value Tail を shift する)。
+        var (g, Elements, Tail, str, comma, rbracket) = BuildListGrammar();
+        var auto = Lr0AutomatonBuilder.Build(g);
+        var lalr = Build(g);
+
+        var epsProd = g.Productions.First(p => p.Lhs.Name == "Tail" && p.Length == 0);
+        int state = FindState(g, auto, epsProd.Id, 0);
+        Assert.True(state >= 0);
+        var la = new HashSet<int>(lalr.Lookahead(state, new Lr0Item(epsProd.Id, 0)));
+        Assert.Contains(rbracket.Id, la);
+        Assert.DoesNotContain(comma.Id, la);   // ★ "," は ε の lookahead に漏れない
+        Assert.DoesNotContain(str.Id, la);
+    }
 }

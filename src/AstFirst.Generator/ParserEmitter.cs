@@ -29,6 +29,13 @@ public static class ParserEmitter
             if (sym.Name.StartsWith("token:"))
                 patternToTerminalId[sym.Name.Substring("token:".Length)] = sym.Id;
         }
+
+        // Token 派生型 (Key != "AstFirst.Token")。reduce 時、スタックの BasicToken.Text から
+        // 派生型のインスタンスを再生成する (派生型は [Pattern] string コンストラクタを持つ前提)。
+        // shift 時は常に BasicToken を積むため、派生型をそのままキャストすると InvalidCastException になる。
+        var tokenDerivedTypes = new HashSet<string>();
+        foreach (var td in model.TokenDefs)
+            if (td.Key != "AstFirst.Token") tokenDerivedTypes.Add(td.Key);
         // tokenId -> terminal Symbol.Id
         int maxTokenId = 0;
         foreach (var r in rules) if (r.TokenId > maxTokenId) maxTokenId = r.TokenId;
@@ -192,6 +199,10 @@ public static class ParserEmitter
                 if (j > 0) sb.Append(", ");
                 var p = action.Parameters[j];
                 if (p.IsContext) sb.Append("ctx");
+                else if (tokenDerivedTypes.Contains(p.CastTypeName))
+                    // Token 派生型: BasicToken.Text から派生型を再生成 (new DerivedType(token.Text))。
+                    // c[Idx]! を (AstFirst.Token) にキャスト → .Text (string) → 派生型の [Pattern] string ctor。
+                    sb.Append("new ").Append(p.CastTypeName).Append("(((AstFirst.Token)c[").Append(p.ChildIndex).Append("]!).Text)");
                 else sb.Append("(").Append(p.CastTypeName).Append(")c[").Append(p.ChildIndex).Append("]!");
             }
             sb.AppendLine("); }");

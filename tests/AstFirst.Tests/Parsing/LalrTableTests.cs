@@ -122,4 +122,122 @@ public class LalrTableTests
         int gt = table.Goto(0, E.Id);
         Assert.True(gt > 0);
     }
+
+    // --- コンフリクト解決 (優先度/結合性)。yacc 互換 (LalrTable.cs:182-198) ---
+
+    private static (LalrTable table, Grammar g, Symbol E, Symbol plus, Lr0Automaton auto)
+        BuildAmbiguousPlus(Associativity assoc)
+    {
+        // E -> E + E | num (+ は指定の結合性、priority 1)。
+        var b = new GrammarBuilder();
+        var E = b.NonTerminal("E");
+        var plus = b.Terminal("+");
+        var num = b.Terminal("num");
+        b.SetPrecedence(plus, 1, assoc);
+        b.Production(E, E, plus, E);
+        b.Production(E, num);
+        var g = b.Build(E);
+        var first = new FirstSet(g);
+        var auto = Lr0AutomatonBuilder.Build(g);
+        var la = new LalrLookahead(g, auto, first);
+        return (LalrTableBuilder.Build(g, auto, la), g, E, plus, auto);
+    }
+
+    private static int ReduceDot3State(Lr0Automaton auto, Grammar g, Symbol op)
+    {
+        // [E -> E + E .] (dot=3) の状態を探す。
+        var prod = g.Productions.First(p => p.Length == 3 && p.Rhs[1].Equals(op));
+        return StateWith(auto, prod.Id, 3);
+    }
+
+    [Fact]
+    public void LeftAssociativeResolvesShiftReduceToReduce()
+    {
+        var (table, g, _, plus, auto) = BuildAmbiguousPlus(Associativity.Left);
+        Assert.False(table.HasConflicts);
+        // [E -> E + E .] で + を見たら Reduce (左結合)。
+        Assert.Equal(LrActionKind.Reduce, table.Action(ReduceDot3State(auto, g, plus), plus.Id).Kind);
+    }
+
+    [Fact]
+    public void RightAssociativeResolvesShiftReduceToShift()
+    {
+        var (table, g, _, plus, auto) = BuildAmbiguousPlus(Associativity.Right);
+        Assert.False(table.HasConflicts);
+        Assert.Equal(LrActionKind.Shift, table.Action(ReduceDot3State(auto, g, plus), plus.Id).Kind);
+    }
+
+    [Fact]
+    public void NonAssociativeResolvesShiftReduceToError()
+    {
+        var (table, g, _, plus, auto) = BuildAmbiguousPlus(Associativity.NonAssoc);
+        Assert.False(table.HasConflicts);
+        Assert.Equal(LrActionKind.Error, table.Action(ReduceDot3State(auto, g, plus), plus.Id).Kind);
+    }
+
+    [Fact]
+    public void HigherPrecedenceShiftsLowerReduces()
+    {
+        // * (priority 2) は + (priority 1) より強い: a+b*c, a*b+c。
+        var b = new GrammarBuilder();
+        var E = b.NonTerminal("E");
+        var plus = b.Terminal("+");
+        var star = b.Terminal("*");
+        var num = b.Terminal("num");
+        b.SetPrecedence(plus, 1, Associativity.Left);
+        b.SetPrecedence(star, 2, Associativity.Left);
+        b.Production(E, E, plus, E);
+        b.Production(E, E, star, E);
+        b.Production(E, num);
+        var g = b.Build(E);
+        var first = new FirstSet(g);
+        var auto = Lr0AutomatonBuilder.Build(g);
+        var la = new LalrLookahead(g, auto, first);
+        var table = LalrTableBuilder.Build(g, auto, la);
+        Assert.False(table.HasConflicts);
+        // [E -> E + E .] で * を見たら Shift (* が強い)。
+        Assert.Equal(LrActionKind.Shift, table.Action(ReduceDot3State(auto, g, plus), star.Id).Kind);
+        // [E -> E * E .] で + を見たら Reduce (+ が弱い)。
+        Assert.Equal(LrActionKind.Reduce, table.Action(ReduceDot3State(auto, g, star), plus.Id).Kind);
+    }
+
+    [Fact]
+    public void UnresolvedShiftReduceDefaultsToReduce()
+    {
+        // 優先度未設定の E -> E+E | num。衝突は残り (ASTF001)、デフォルト解決は reduce。
+        var b = new GrammarBuilder();
+        var E = b.NonTerminal("E");
+        var plus = b.Terminal("+");
+        var num = b.Terminal("num");
+        b.Production(E, E, plus, E);
+        b.Production(E, num);
+        var g = b.Build(E);
+        var first = new FirstSet(g);
+        var auto = Lr0AutomatonBuilder.Build(g);
+        var la = new LalrLookahead(g, auto, first);
+        var table = LalrTableBuilder.Build(g, auto, la);
+        Assert.Contains(table.Conflicts, c => c.Description.Contains("shift-reduce"));
+        Assert.Equal(LrActionKind.Reduce, table.Action(ReduceDot3State(auto, g, plus), plus.Id).Kind);
+    }
+
+    [Fact]
+    public void ReduceReduceConflictDetected()
+    {
+        // S -> A | B; A -> x; B -> x。x の状態で A->x と B->x が競合。
+        var b = new GrammarBuilder();
+        var S = b.NonTerminal("S");
+        var A = b.NonTerminal("A");
+        var B = b.NonTerminal("B");
+        var x = b.Terminal("x");
+        b.Production(S, A);
+        b.Production(S, B);
+        b.Production(A, x);
+        b.Production(B, x);
+        var g = b.Build(S);
+        var first = new FirstSet(g);
+        var auto = Lr0AutomatonBuilder.Build(g);
+        var la = new LalrLookahead(g, auto, first);
+        var table = LalrTableBuilder.Build(g, auto, la);
+        Assert.Contains(table.Conflicts, c => c.Description.Contains("reduce-reduce"));
+    }
 }

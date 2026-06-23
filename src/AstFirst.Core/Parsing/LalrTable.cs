@@ -189,9 +189,9 @@ public static class LalrTableBuilder
             if (tokenPrec is { } tpv && rulePrec is { } rpv && !tpv.IsDefault && !rpv.IsDefault)
             {
                 if (tpv.Priority > rpv.Priority) { action[state, symbolId] = shiftAction; return; }
-                if (rpv.Priority > tpv.Priority) return; // reduce 維持
+                if (rpv.Priority > tpv.Priority) { action[state, symbolId] = reduceAction; return; }
                 // 同優先度 → 結合性
-                if (tpv.Associativity == Associativity.Left) return; // reduce
+                if (tpv.Associativity == Associativity.Left) { action[state, symbolId] = reduceAction; return; }
                 if (tpv.Associativity == Associativity.Right) { action[state, symbolId] = shiftAction; return; }
                 action[state, symbolId] = LrAction.Error; // NonAssoc
                 return;

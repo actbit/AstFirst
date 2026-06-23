@@ -150,4 +150,95 @@ public class ModelToGrammarTests
         // 右辺は key (STRING) : Json の 3 記号。
         Assert.Equal(3, memberProd.Rhs.Length);
     }
+
+    [Fact]
+    public void EmptyConstructorBecomesEpsilonProduction()
+    {
+        // 引数なし ctor (NoElements) は右辺長 0 の ε 規則になる。
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("SampleJson.JsonNumber", "SampleJson.Json", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                })
+            }),
+            new NodeModel("SampleJson.JsonElements", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("SampleJson.NoElements", "SampleJson.JsonElements", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>())   // 引数なし = ε
+            }),
+        };
+        var tokenDefs = new List<TokenDefModel> { new TokenDefModel("AstFirst.Token", "[0-9]+", 0, false) };
+        var model = new GrammarModel("SampleJson.Json", nodes, tokenDefs);
+        var g = ModelToGrammar.Build(model);
+        var eps = g.Productions.FirstOrDefault(p => p.Lhs.Name == "SampleJson.JsonElements" && p.Length == 0);
+        Assert.NotNull(eps);   // ★ ε 規則が生成される (引数なし ctor)
+    }
+
+    [Fact]
+    public void MultipleConstructorsProduceMultipleProductions()
+    {
+        // JsonObject に 2 ctor ({} と { Members }) → 同一 LHS に 2 規則。
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("SampleJson.JsonObject", "SampleJson.Json", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("AstFirst.Token", "lb", "\\{", false, 0),
+                    new ParamModel("AstFirst.Token", "rb", "\\}", false, 0),
+                }),
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("AstFirst.Token", "lb", "\\{", false, 0),
+                    new ParamModel("SampleJson.JsonMembers", "members", null, false, 0),
+                    new ParamModel("AstFirst.Token", "rb", "\\}", false, 0),
+                }),
+            }),
+            new NodeModel("SampleJson.JsonMembers", "AstFirst.AstNode", true, new List<CtorModel>()),
+        };
+        var tokenDefs = new List<TokenDefModel>
+        {
+            new TokenDefModel("AstFirst.Token", "\\{", 0, false),
+            new TokenDefModel("AstFirst.Token", "\\}", 0, false),
+        };
+        var model = new GrammarModel("SampleJson.Json", nodes, tokenDefs);
+        var g = ModelToGrammar.Build(model);
+        var objProds = g.Productions.Where(p => p.Tag is ReduceActionModel ra && ra.AstTypeName == "SampleJson.JsonObject").ToList();
+        Assert.Equal(2, objProds.Count);   // ★ 2規則生成
+    }
+
+    [Fact]
+    public void UnresolvableParameterThrowsInvalidOperationException()
+    {
+        // [Pattern] も派生もない解決不能な引数型。
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("BadExpr", "Expr", false, new List<CtorModel>
+            {
+                new CtorModel(new List<ParamModel>
+                {
+                    new ParamModel("UnknownType", "x", null, false, 0)
+                })
+            }),
+        };
+        var model = new GrammarModel("Expr", nodes, new List<TokenDefModel>());
+        Assert.Throws<InvalidOperationException>(() => ModelToGrammar.Build(model));
+    }
+
+    [Fact]
+    public void MissingStartSymbolThrowsInvalidOperationException()
+    {
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
+        };
+        var model = new GrammarModel("Nonexistent", nodes, new List<TokenDefModel>());
+        Assert.Throws<InvalidOperationException>(() => ModelToGrammar.Build(model));
+    }
 }

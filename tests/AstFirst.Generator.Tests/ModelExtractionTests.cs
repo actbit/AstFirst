@@ -115,4 +115,50 @@ public sealed class NumToken : Token
         Assert.Equal(a, b);
         Assert.Equal(a.GetHashCode(), b.GetHashCode());
     }
+
+    private static GrammarModel ExtractSource(string source, string rootName)
+    {
+        var comp = CreateCompilation(source);
+        var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.False(errors.Count > 0, "コンパイルエラー:\n" + string.Join("\n", errors.Select(e => e.ToString())));
+        var root = comp.GetTypeByMetadataName(rootName);
+        return ModelExtraction.Extract(comp, root!);
+    }
+
+    [Fact]
+    public void SkipPatternCollected()
+    {
+        // [Skip(@"\s+")] は GrammarModel.SkipPatterns に収集される。
+        var source = @"
+using AstFirst;
+[Grammar]
+[Skip(""\\s+"")]
+public abstract class S : AstNode { }
+public sealed class A : S { public A([Pattern(""a"")] Token t) { } }
+";
+        var model = ExtractSource(source, "S");
+        Assert.Contains(model.SkipPatterns, p => p == "\\s+");
+    }
+
+    [Fact]
+    public void ModeExtracted()
+    {
+        // [Grammar(Mode = "V2")] は GrammarModel.Mode に抽出される。
+        var source = @"
+using AstFirst;
+[Grammar(Mode = ""V2"")]
+public abstract class M : AstNode { }
+public sealed class A : M { public A([Pattern(""a"")] Token t) { } }
+";
+        var model = ExtractSource(source, "M");
+        Assert.Equal("V2", model.Mode);
+    }
+
+    [Fact]
+    public void ModeDefaultsToNull()
+    {
+        // Mode 未指定時は null。
+        var model = Extract();
+        Assert.Null(model.Mode);
+    }
 }
