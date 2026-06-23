@@ -18,7 +18,7 @@ public sealed class NumExpr : Expr { ... }              // Expr -> [0-9]+
 
 ```csharp
 var result = ExprParser.Parse("1+2*3");
-// result.Ast -> MulExpr(AddExpr(1, +, 2), *, 3)
+// result.Ast -> AddExpr(1, +, MulExpr(2, *, 3))
 ```
 
 `ExprListener`（Generator 生成）も使える。AST のウォークは [docs/ja/semantic-analysis.md](../../../docs/ja/semantic-analysis.md) 参照。

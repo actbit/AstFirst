@@ -70,7 +70,7 @@ public sealed class MulExpr : Expr     // 規則: Expr -> Expr * Expr
 
 ```csharp
 var result = ExprParser.Parse("1+2*3");
-// result.Ast      → MulExpr(AddExpr(NumExpr(1), +, NumExpr(2)), *, NumExpr(3))
+// result.Ast      → AddExpr(NumExpr(1), +, MulExpr(NumExpr(2), *, NumExpr(3)))
 //                  (* が + より優先度が高いので先に結合)
 // result.Errors   → [] (構文エラーなし)
 // result.HasErrors → false

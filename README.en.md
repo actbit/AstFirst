@@ -70,7 +70,7 @@ public sealed class MulExpr : Expr     // rule: Expr -> Expr * Expr
 
 ```csharp
 var result = ExprParser.Parse("1+2*3");
-// result.Ast      -> MulExpr(AddExpr(NumExpr(1), +, NumExpr(2)), *, NumExpr(3))
+// result.Ast      -> AddExpr(NumExpr(1), +, MulExpr(NumExpr(2), *, NumExpr(3)))
 //                  (* binds tighter than +)
 // result.Errors   -> [] (no syntax errors)
 // result.HasErrors -> false
