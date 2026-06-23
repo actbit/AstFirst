@@ -198,7 +198,6 @@ var result = ProgramParser.Parse(code, ctx);
 | `[Pattern(@"regex")]` | コンストラクタ引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度（大きいほど高優先）。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。`IsRightAssociative`/`IsNonAssociative` で結合性。 |
 | `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
-| `[Expect(token)]` | コンストラクタ引数 | トークン種別の絞り込み。 |
 
 ### コンストラクタ引数の特別な型
 
@@ -210,8 +209,6 @@ var result = ProgramParser.Parse(code, ctx);
 ```csharp
 [Pattern(@"[A-Za-z_]\w*", Priority = 0)]    // 識別子（低優先）
 [Pattern(@"if", Priority = 1)]               // キーワード if（高優先）
-[Pattern(@"=", IsRightAssociative = true)]    // 右結合（代入）
-[Pattern(@"<", IsNonAssociative = true)]      // 非結合（比較）
 
 [Precedence(1)]                              // 優先度1・左結合（既定）
 [Precedence(2)]                              // 優先度2（高い）

@@ -84,8 +84,6 @@ public sealed class GrammarSpec
                     {
                         attr = "[Pattern(@\"" + p.Pattern + "\"";
                         if (p.Priority != 0) attr += ", Priority = " + p.Priority;
-                        if (p.IsRightAssoc) attr += ", IsRightAssociative = true";
-                        if (p.IsNonAssoc) attr += ", IsNonAssociative = true";
                         attr += ")] ";
                     }
                     ps.Add(attr + p.CsType + " " + p.Name);
