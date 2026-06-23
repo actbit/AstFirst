@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <Version>0.1.0</Version>
+    <Authors>actbit</Authors>
+    <PackageProjectUrl>https://github.com/actbit/AstFirst</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/actbit/AstFirst</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Copyright>Copyright (c) actbit</Copyright>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

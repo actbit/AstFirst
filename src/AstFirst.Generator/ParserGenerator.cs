@@ -37,15 +37,15 @@ public sealed class ParserGenerator : IIncrementalGenerator
 
                 // 優先度/結合性で解決できなかったコンフリクトを警告で報告 (構文的曖昧さの可視化)。
                 foreach (var conflict in table.Conflicts)
-                    spc.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.GrammarConflict, model.RootLocation, conflict.Description));
+                    spc.ReportDiagnostic(Microsoft.CodeAnalysis.Diagnostic.Create(DiagnosticDescriptors.GrammarConflict, model.RootLocation, conflict.Description));
 
                 // 到達不能/未定義非終端を警告で報告 (規則の過不足の可視化)。
                 foreach (var nt in grammar.UnreachableNonTerminals)
-                    spc.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.UnreachableNonTerminal, model.RootLocation, $"到達不能な非終端 '{nt.Name}' があります (開始記号から到達できません) / Unreachable nonterminal '{nt.Name}' (no path from the start symbol)"));
+                    spc.ReportDiagnostic(Microsoft.CodeAnalysis.Diagnostic.Create(DiagnosticDescriptors.UnreachableNonTerminal, model.RootLocation, $"到達不能な非終端 '{nt.Name}' があります (開始記号から到達できません) / Unreachable nonterminal '{nt.Name}' (no path from the start symbol)"));
                 foreach (var nt in grammar.UndefinedNonTerminals)
-                    spc.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.UndefinedNonTerminal, model.RootLocation, $"未定義の非終端 '{nt.Name}' があります (右辺で参照されていますが規則がありません) / Undefined nonterminal '{nt.Name}' (referenced in a RHS but has no productions)"));
+                    spc.ReportDiagnostic(Microsoft.CodeAnalysis.Diagnostic.Create(DiagnosticDescriptors.UndefinedNonTerminal, model.RootLocation, $"未定義の非終端 '{nt.Name}' があります (右辺で参照されていますが規則がありません) / Undefined nonterminal '{nt.Name}' (referenced in a RHS but has no productions)"));
                 foreach (var tdw in model.TokenDerivedWarnings)
-                    spc.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.TokenDerivedNoStringCtor, model.RootLocation, $"Token 派生型 '{tdw}' に (string) コンストラクタがありません (new DerivedType(token.Text) の生成に必要) / Token-derived type '{tdw}' has no (string) constructor"));
+                    spc.ReportDiagnostic(Microsoft.CodeAnalysis.Diagnostic.Create(DiagnosticDescriptors.TokenDerivedNoStringCtor, model.RootLocation, $"Token 派生型 '{tdw}' に (string) コンストラクタがありません (new DerivedType(token.Text) の生成に必要) / Token-derived type '{tdw}' has no (string) constructor"));
 
                 spc.AddSource(typeName + suffix + "Lexer.g.cs", CodeEmitter.EmitLexer(model, dfa, rules, typeName + suffix + "Lexer", ns));
                 spc.AddSource(typeName + suffix + "Parser.g.cs", ParserEmitter.EmitParser(model, grammar, table, rules, ns));
