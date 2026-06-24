@@ -96,7 +96,12 @@ public static class ModelToGrammar
                     childIndex++;
                 }
                 var action = new ReduceActionModel(n.FullName, reduceParams);
-                b.Production(lhs, rhs.ToArray(), action);
+                // [Precedence] を Production に直接設定（%prec 相当）。
+                // トークン経由でなく規則単位で precedence を持つことで、同じ終端を含む複数規則
+                // （generic の > と比較の > など）で別々の優先度を設定できる。
+                Precedence? rulePrec = n.PrecedencePriority == 0 ? null
+                    : new Precedence(n.PrecedencePriority, n.PrecedenceAssoc);
+                b.Production(lhs, rhs.ToArray(), action, rulePrec);
             }
         }
 

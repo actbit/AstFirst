@@ -7,13 +7,18 @@ public sealed class Production
     public Symbol Lhs { get; }
     public Symbol[] Rhs { get; }
     public object? Tag { get; }
+    /// <summary>規則に直接付けた優先度/結合性（%prec 相当）。
+    /// トークン経由でなく規則単位で precedence を持つことで、同じ終端（generic の &gt; と比較の &gt; など）
+    /// を含む複数規則で別々の優先度を設定できる。</summary>
+    public Precedence? RulePrecedence { get; }
 
-    public Production(int id, Symbol lhs, Symbol[] rhs, object? tag = null)
+    public Production(int id, Symbol lhs, Symbol[] rhs, object? tag = null, Precedence? rulePrecedence = null)
     {
         Id = id;
         Lhs = lhs;
         Rhs = rhs;
         Tag = tag;
+        RulePrecedence = rulePrecedence;
     }
 
     public int Length => Rhs.Length;
