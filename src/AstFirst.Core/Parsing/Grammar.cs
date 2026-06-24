@@ -82,12 +82,12 @@ public sealed class GrammarBuilder
         return p;
     }
 
-    /// <summary>Tag (AST クラス名等) 付きの生成規則。モデル→文法変換で使用。</summary>
-    public Production Production(Symbol lhs, Symbol[] rhs, object? tag)
+    /// <summary>Tag (AST クラス名等) と規則単位の優先度（%prec 相当）付きの生成規則。モデル→文法変換で使用。</summary>
+    public Production Production(Symbol lhs, Symbol[] rhs, object? tag, Precedence? rulePrecedence = null)
     {
         if (lhs.IsTerminal)
             throw new ArgumentException("生成規則の左辺は非終端である必要があります: " + lhs.Name, nameof(lhs));
-        var p = new Core.Parsing.Production(_productions.Count, lhs, rhs, tag);
+        var p = new Core.Parsing.Production(_productions.Count, lhs, rhs, tag, rulePrecedence);
         _productions.Add(p);
         return p;
     }

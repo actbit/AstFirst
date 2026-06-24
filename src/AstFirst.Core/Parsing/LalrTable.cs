@@ -120,12 +120,12 @@ public static class LalrTableBuilder
                     if (item.ProductionId == grammar.AugmentedProduction.Id)
                     {
                         // S' -> S $ の受け入れ ($ で Accept)。
-                        SetAction(action, conflicts, grammar, state, grammar.EndOfFile.Id, LrAction.Accept, prod);
+                        SetAction(action, conflicts, grammar, auto, state, grammar.EndOfFile.Id, LrAction.Accept, prod);
                     }
                     else
                     {
                         foreach (var a in lookahead.Lookahead(state, item))
-                            SetAction(action, conflicts, grammar, state, a, LrAction.Reduce(item.ProductionId), prod);
+                            SetAction(action, conflicts, grammar, auto, state, a, LrAction.Reduce(item.ProductionId), prod);
                     }
                 }
                 else
@@ -134,7 +134,7 @@ public static class LalrTableBuilder
                     int target = auto.Goto(state, sym.Id);
                     if (target < 0) continue;
                     if (sym.IsTerminal)
-                        SetAction(action, conflicts, grammar, state, sym.Id, LrAction.Shift(target), prod);
+                        SetAction(action, conflicts, grammar, auto, state, sym.Id, LrAction.Shift(target), prod);
                     else
                         gotoT[state, sym.Id] = target;
                 }
@@ -165,7 +165,7 @@ public static class LalrTableBuilder
     }
 
     private static void SetAction(LrAction[,] action, List<LrConflict> conflicts, Grammar grammar,
-        int state, int symbolId, LrAction newAction, Production prod)
+        Lr0Automaton auto, int state, int symbolId, LrAction newAction, Production prod)
     {
         var existing = action[state, symbolId];
         if (existing.Kind == LrActionKind.Error)
@@ -178,21 +178,29 @@ public static class LalrTableBuilder
         bool shiftReduce = (existing.Kind == LrActionKind.Shift && newAction.Kind == LrActionKind.Reduce)
                         || (existing.Kind == LrActionKind.Reduce && newAction.Kind == LrActionKind.Shift);
 
-        // shift-reduce を優先度/結合性で解決 (yacc 互換)。
+        // shift-reduce を優先度/結合性で解決。
+        // shift 側の優先度は「shift 後に完成する規則の precedence の最大」を優先（構文の優先度）。
+        // これにより同じトークン（generic の > と比較の >）を含む複数規則で、
+        // 規則ごとに別の優先度で shift/reduce を解決できる。
+        // なければ従来通りトークンの precedence。
         if (shiftReduce)
         {
             var shiftAction = existing.Kind == LrActionKind.Shift ? existing : newAction;
             var reduceAction = existing.Kind == LrActionKind.Reduce ? existing : newAction;
             var reduceProd = grammar.Productions[reduceAction.Value];
-            var tokenPrec = grammar.TerminalPrecedence.TryGetValue(symbolId, out var tp) ? (Precedence?)tp : null;
+            // shift 後の状態で完成する規则の precedence の最大（構文の優先度）
+            Precedence? shiftRulePrec = GetMaxReducePrecedence(grammar, auto, shiftAction.Value);
+            // fallback: shift 後に完成する規則がなければ、トークンの precedence
+            Precedence? shiftPrec = shiftRulePrec
+                ?? (grammar.TerminalPrecedence.TryGetValue(symbolId, out var tp) ? (Precedence?)tp : null);
             var rulePrec = RulePrecedence(grammar, reduceProd);
-            if (tokenPrec is { } tpv && rulePrec is { } rpv && !tpv.IsDefault && !rpv.IsDefault)
+            if (shiftPrec is { } spv && rulePrec is { } rpv && !spv.IsDefault && !rpv.IsDefault)
             {
-                if (tpv.Priority > rpv.Priority) { action[state, symbolId] = shiftAction; return; }
-                if (rpv.Priority > tpv.Priority) { action[state, symbolId] = reduceAction; return; }
+                if (spv.Priority > rpv.Priority) { action[state, symbolId] = shiftAction; return; }
+                if (rpv.Priority > spv.Priority) { action[state, symbolId] = reduceAction; return; }
                 // 同優先度 → 結合性
-                if (tpv.Associativity == Associativity.Left) { action[state, symbolId] = reduceAction; return; }
-                if (tpv.Associativity == Associativity.Right) { action[state, symbolId] = shiftAction; return; }
+                if (spv.Associativity == Associativity.Left) { action[state, symbolId] = reduceAction; return; }
+                if (spv.Associativity == Associativity.Right) { action[state, symbolId] = shiftAction; return; }
                 action[state, symbolId] = LrAction.Error; // NonAssoc
                 return;
             }
@@ -216,12 +224,42 @@ public static class LalrTableBuilder
         }
     }
 
-    /// <summary>規則の優先度 = 右辺の最後の終端の優先度 (設定されていなければ null)。</summary>
+    /// <summary>規則の優先度。
+    /// Production に直接設定された優先度（%prec 相当）があればそれを優先。
+    /// なければ従来通り右辺の最後の終端の優先度。</summary>
     private static Precedence? RulePrecedence(Grammar grammar, Production prod)
     {
+        if (prod.RulePrecedence.HasValue)
+            return prod.RulePrecedence;
         for (int i = prod.Rhs.Length - 1; i >= 0; i--)
             if (prod.Rhs[i].IsTerminal && grammar.TerminalPrecedence.TryGetValue(prod.Rhs[i].Id, out var p))
                 return p;
         return null;
+    }
+
+    /// <summary>指定状態の還元項目（完成した規則）の precedence の最大。
+    /// shift 後にどの規則が完成するかで、shift の「構文上の優先度」を決める。
+    /// 例: generic の &gt; を shift した後に GenericType が完成するなら、
+    /// GenericType の precedence を shift の優先度として使う。</summary>
+    private static Precedence? GetMaxReducePrecedence(Grammar grammar, Lr0Automaton auto, int state)
+    {
+        if (state < 0 || state >= auto.StateCount) return null;
+        Precedence? max = null;
+        var items = auto.States[state].Items;
+        for (int i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var prod = grammar.Productions[item.ProductionId];
+            if (item.Dot >= prod.Length) // 還元項目 [A -> α.]
+            {
+                var prec = RulePrecedence(grammar, prod);
+                if (prec is { } p && !p.IsDefault)
+                {
+                    if (max is null || p.Priority > max.Value.Priority)
+                        max = p;
+                }
+            }
+        }
+        return max;
     }
 }
