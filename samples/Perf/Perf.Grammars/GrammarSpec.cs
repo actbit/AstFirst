@@ -82,7 +82,7 @@ public sealed class GrammarSpec
                     var attr = "";
                     if (p.Pattern is not null)
                     {
-                        attr = "[Pattern(@\"" + p.Pattern + "\"";
+                        attr = "[Pattern(@\"" + p.Pattern.Replace("\"", "\"\"") + "\"";
                         if (p.Priority != 0) attr += ", Priority = " + p.Priority;
                         attr += ")] ";
                     }
@@ -138,12 +138,12 @@ public sealed class GrammarSpec
         // ModelExtraction と同じ順序 (FullName 昇順) に。テーブル構築は非順序依存だが整合性のため。
         nodes.Sort((a, b) => string.CompareOrdinal(a.FullName, b.FullName));
 
-        // TokenDefs を (Key, Pattern) で重複除去し、Key → Pattern の順でソート (ModelExtraction.Dedup 互換)。
+        // TokenDefs を (Key, Pattern) で重複除去し、Key → Pattern の順でソート (ModelExtraction.Dedup と完全一致: Ordinal)。
         var dedupDefs = tokenDefs
             .GroupBy(d => (d.Key, d.Pattern))
             .Select(g => g.First())
-            .OrderBy(d => d.Key)
-            .ThenBy(d => d.Pattern)
+            .OrderBy(d => d.Key, StringComparer.Ordinal)
+            .ThenBy(d => d.Pattern, StringComparer.Ordinal)
             .ToList();
 
         var skipPatterns = new List<string> { SkipRegex };

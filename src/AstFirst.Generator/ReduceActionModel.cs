@@ -16,6 +16,9 @@ public sealed class ReduceActionModel
         AstTypeName = astTypeName;
         Parameters = parameters;
     }
+
+    /// <summary>コンフリクト表示等で具象クラス名を示すため。</summary>
+    public override string ToString() => AstTypeName;
 }
 
 /// <summary>reduce 時のコンストラクタ引数。</summary>

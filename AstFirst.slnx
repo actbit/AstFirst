@@ -17,4 +17,6 @@
   <Project Path="samples/Perf/Perf.DeepNest/Perf.DeepNest.csproj" />
   <Project Path="samples/Perf/Perf.MegaLang/Perf.MegaLang.csproj" />
   <Project Path="samples/Perf/Perf.Bench/Perf.Bench.csproj" />
+  <Project Path="samples/Perf/Perf.CSharp/Perf.CSharp.csproj" />
+  <Project Path="samples/CSharpParser/CSharpParser.csproj" />
 </Solution>

@@ -52,26 +52,24 @@ public class ModelToTableTests
     }
 
     [Fact]
-    public void TableHasShiftReduceConflictFromLeftRecursion()
+    public void TableResolvesShiftReduceFromLeftRecursionToShift()
     {
-        // Expr -> Expr + Expr (左再帰・優先度なし) は shift-reduce 衝突。
-        // デフォルト reduce (左結合) で解決される (優先度/結合性未設定時)。
+        // Expr -> Expr + Expr (左再帰・優先度なし) の shift-reduce は
+        // bison 互換に shift 優先で解決される (報告なし)。
         var model = CalcModel();
         var (_, table) = ModelToTable.BuildWithGrammar(model);
-        Assert.Contains(table.Conflicts, c => c.Description.Contains("shift-reduce"));
+        Assert.DoesNotContain(table.Conflicts, c => c.Description.Contains("shift-reduce"));
     }
 
     [Fact]
-    public void UnresolvedShiftReduceDefaultsToLeftAssociative()
+    public void UnresolvedShiftReduceDefaultsToShift()
     {
-        // 優先度/結合性が未設定の shift-reduce は reduce (左結合) を選ぶ。
-        // (従来は shift 優先 = 右結合的だったが、左結合が直感的なので変更)。
+        // 優先度/結合性が未設定の shift-reduce は shift (bison 互換の既定) を選ぶ。
+        // (左結合にするには [Precedence] で明示的に設定する。case 2 で解決)。
         var model = CalcModel();
         var (_, table) = ModelToTable.BuildWithGrammar(model);
-        var shiftReduce = table.Conflicts.Where(c => c.Description.Contains("shift-reduce")).ToList();
-        Assert.NotEmpty(shiftReduce);
-        foreach (var c in shiftReduce)
-            Assert.Equal(LrActionKind.Reduce, table.Action(c.State, c.SymbolId).Kind);
+        // shift 優先で解決されるため shift-reduce コンフリクトは残らない。
+        Assert.DoesNotContain(table.Conflicts, c => c.Description.Contains("shift-reduce"));
     }
 
     [Fact]

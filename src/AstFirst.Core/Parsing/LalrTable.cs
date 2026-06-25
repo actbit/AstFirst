@@ -194,8 +194,17 @@ public static class LalrTableBuilder
             Precedence? shiftPrec = shiftRulePrec
                 ?? (grammar.TerminalPrecedence.TryGetValue(symbolId, out var tp) ? (Precedence?)tp : null);
             var rulePrec = RulePrecedence(grammar, reduceProd);
-            if (shiftPrec is { } spv && rulePrec is { } rpv && !spv.IsDefault && !rpv.IsDefault)
+            // reduce 規則に precedence がない場合は shift 優先 (yacc/bison 互換の既定)。
+            // リストの Nil/Single 等の基本要素の reduce と次要素の shift が衝突したら shift を選び、
+            // リストを継続させる (StatementList で次の文、引数リストで次の引数、等)。
+            if (rulePrec is null || rulePrec.Value.IsDefault)
             {
+                action[state, symbolId] = shiftAction;
+                return;
+            }
+            if (shiftPrec is { } spv && !spv.IsDefault)
+            {
+                var rpv = rulePrec.Value;
                 if (spv.Priority > rpv.Priority) { action[state, symbolId] = shiftAction; return; }
                 if (rpv.Priority > spv.Priority) { action[state, symbolId] = reduceAction; return; }
                 // 同優先度 → 結合性
@@ -204,6 +213,16 @@ public static class LalrTableBuilder
                 action[state, symbolId] = LrAction.Error; // NonAssoc
                 return;
             }
+            // reduce 規則に precedence があるが、shift 側 (lookahead トークン / shift 後に完成する規則)
+            // に precedence がない場合: yacc/bison 互換に shift を優先する (bison manual:
+            // "If either the rule or the lookahead token has no precedence, the default applies,
+            // and the conflict is resolved by shifting.")。
+            // 実用上の动机: "(Type) expr ;" の ; は precedence を持たず、CastExpr (PrecUnary) の reduce と
+            // 式文 ExpressionStatement の ; shift が衝突する。ここで reduce (CastExpr) を選ぶと、
+            // cast 構造でない通常の式文 "x = 1;" までを CastExpr に無理やり還元してパニックする。
+            // shift を選べば式文は正しく、cast "(T) e;" は式文との本質的曖昧性として制限になる。
+            action[state, symbolId] = shiftAction;
+            return;
         }
 
         bool reduceReduce = existing.Kind == LrActionKind.Reduce && newAction.Kind == LrActionKind.Reduce;
@@ -211,8 +230,8 @@ public static class LalrTableBuilder
         string kindJa = shiftReduce ? "シフト還元" : reduceReduce ? "還元還元" : "受け入れ";
         var symName = grammar.Symbols[symbolId].Name;
         conflicts.Add(new LrConflict(state, symbolId, existing, newAction,
-            $"{kind} conflict at state {state} on '{symName}' (existing {existing}, new {newAction}, rule {prod}) | "
-            + $"{kindJa}コンフリクト: 状態 {state} の記号 '{symName}' (既存 {existing}, 新 {newAction}, 規則 {prod})"));
+            $"{kind} conflict at state {state} on '{symName}' (existing {existing}{ProdTag(grammar, existing)}, new {newAction}{ProdTag(grammar, newAction)}, rule {prod}{ProdTag(grammar, prod)}) | "
+            + $"{kindJa}コンフリクト: 状態 {state} の記号 '{symName}' (既存 {existing}{ProdTag(grammar, existing)}, 新 {newAction}{ProdTag(grammar, newAction)}, 規則 {prod}{ProdTag(grammar, prod)})"));
 
         // デフォルト解決: shift-reduce は reduce を優先 (左結合デフォルト)。
         // 多くの演算子が左結合なので、優先度未設定時は reduce を選ぶ。
@@ -236,6 +255,12 @@ public static class LalrTableBuilder
                 return p;
         return null;
     }
+
+    /// <summary>アクション/規則に紐づく具象クラス名 (Tag)。Reduce のみ。コンフリクト解読用。</summary>
+    private static string ProdTag(Grammar grammar, LrAction a)
+        => a.Kind == LrActionKind.Reduce ? ProdTag(grammar, grammar.Productions[a.Value]) : "";
+    private static string ProdTag(Grammar grammar, Production prod)
+        => prod.Tag is null ? "" : " {" + prod.Tag + "}";
 
     /// <summary>指定状態の還元項目（完成した規則）の precedence の最大。
     /// shift 後にどの規則が完成するかで、shift の「構文上の優先度」を決める。

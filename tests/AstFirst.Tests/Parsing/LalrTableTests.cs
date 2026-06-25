@@ -87,10 +87,12 @@ public class LalrTableTests
     }
 
     [Fact]
-    public void DanglingElseDetectsShiftReduceConflict()
+    public void DanglingElseResolvesToShift()
     {
         // S -> i E t S | i E t S e S | a , E -> b
-        // (古典的 shift-reduce 衝突: else の e で shift か reduce か)
+        // (古典的 shift-reduce: else の e で shift か reduce か)
+        // bison 互換: 優先度未設定の shift-reduce は shift 優先で解決 (報告なし)。
+        // dangling else は shift (else は最内 if に結合) となる。
         var b = new GrammarBuilder();
         var S = b.NonTerminal("S");
         var E = b.NonTerminal("E");
@@ -110,8 +112,8 @@ public class LalrTableTests
         var la = new LalrLookahead(g, auto, first);
         var table = LalrTableBuilder.Build(g, auto, la);
 
-        Assert.True(table.HasConflicts);
-        Assert.Contains(table.Conflicts, c => c.Description.Contains("shift-reduce"));
+        // shift 優先で解決されるため shift-reduce コンフリクトは残らない。
+        Assert.DoesNotContain(table.Conflicts, c => c.Description.Contains("shift-reduce"));
     }
 
     [Fact]
@@ -202,9 +204,10 @@ public class LalrTableTests
     }
 
     [Fact]
-    public void UnresolvedShiftReduceDefaultsToReduce()
+    public void UnresolvedShiftReduceDefaultsToShift()
     {
-        // 優先度未設定の E -> E+E | num。衝突は残り (ASTF001)、デフォルト解決は reduce。
+        // 優先度未設定の E -> E+E | num。
+        // bison 互換: 優先度未設定の shift-reduce は shift 優先で解決 (報告なし)。
         var b = new GrammarBuilder();
         var E = b.NonTerminal("E");
         var plus = b.Terminal("+");
@@ -216,8 +219,10 @@ public class LalrTableTests
         var auto = Lr0AutomatonBuilder.Build(g);
         var la = new LalrLookahead(g, auto, first);
         var table = LalrTableBuilder.Build(g, auto, la);
-        Assert.Contains(table.Conflicts, c => c.Description.Contains("shift-reduce"));
-        Assert.Equal(LrActionKind.Reduce, table.Action(ReduceDot3State(auto, g, plus), plus.Id).Kind);
+        // shift 優先で解決されるため shift-reduce コンフリクトは残らない。
+        Assert.DoesNotContain(table.Conflicts, c => c.Description.Contains("shift-reduce"));
+        // [E -> E + E .] で + を見たら Shift (bison 互換の既定)。
+        Assert.Equal(LrActionKind.Shift, table.Action(ReduceDot3State(auto, g, plus), plus.Id).Kind);
     }
 
     [Fact]

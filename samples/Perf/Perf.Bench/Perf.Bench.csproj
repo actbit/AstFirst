@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Perf.ManyTokens\Perf.ManyTokens.csproj" />
     <ProjectReference Include="..\Perf.DeepNest\Perf.DeepNest.csproj" />
     <ProjectReference Include="..\Perf.MegaLang\Perf.MegaLang.csproj" />
+    <ProjectReference Include="..\Perf.CSharp\Perf.CSharp.csproj" />
   </ItemGroup>
 
 </Project>

@@ -56,6 +56,27 @@ public static class InputGen
         }
         return sb.ToString();
     }
+
+    /// <summary>C#: クラス (generic フィールド/メソッド/if/while/式) を repeat 個並べる。
+    /// generic は Member の型のみ、ローカルは var (技術1)。</summary>
+    public static string CSharp(int repeat)
+    {
+        var sb = new StringBuilder();
+        for (int i = 0; i < repeat; i++)
+        {
+            sb.Append("class C").Append(i).Append(" { ");
+            sb.Append("int f").Append(i).Append("; ");
+            sb.Append("int[] g").Append(i).Append("; ");
+            sb.Append("int M").Append(i).Append("(int a, int b) { ");
+            sb.Append("var x = a + b * 2; ");
+            sb.Append("if (x > 0) { x = x - 1; } ");
+            sb.Append("while (x > 0) { x = x - 1; } ");
+            sb.Append("return x; ");
+            sb.Append("} ");
+            sb.Append("} ");
+        }
+        return sb.ToString();
+    }
 }
 
 /// <summary>ベンチマークの入力サイズ (各パターンで Small/Medium/Large に対応する生成パラメータが異なる)。</summary>
