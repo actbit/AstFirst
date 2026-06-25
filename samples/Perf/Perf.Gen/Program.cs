@@ -1,4 +1,5 @@
 using System.IO;
+using AstFirst.Core.Parsing;
 using AstFirst.Generator;
 using Perf.Grammars;
 
@@ -14,6 +15,7 @@ Emit(WideRulesFactory.Create(), "Perf.WideRules");
 Emit(ManyTokensFactory.Create(), "Perf.ManyTokens");
 Emit(DeepNestFactory.Create(), "Perf.DeepNest");
 Emit(MegaLangFactory.Create(), "Perf.MegaLang");
+Emit(CSharpFactory.Create(), "Perf.CSharp");
 
 void Emit(GrammarSpec spec, string projectDirName)
 {
@@ -27,8 +29,18 @@ void Emit(GrammarSpec spec, string projectDirName)
     var lines = cs.Count(c => c == '\n') + 1;
     Console.WriteLine($"=== {projectDirName} ({spec.Namespace}) ===");
     Console.WriteLine($"  Productions={table.Grammar.Productions.Count}, Symbols={table.SymbolCount}, States={table.StateCount}, Conflicts={table.Conflicts.Count}");
+    foreach (var c in table.Conflicts)
+        Console.WriteLine($"    {c}");
     Console.WriteLine($"  -> {full} ({new FileInfo(full).Length:N0} bytes, {lines} lines)");
+    // (sample) CSharpParser へのコピー
+    if (spec.Namespace == "CSharpParser")
+    {
+        var sampleDir = Path.GetFullPath(Path.Combine(root, "..", "..", "CSharpParser"));
+        if (Directory.Exists(sampleDir))
+            File.WriteAllText(Path.Combine(sampleDir, "GeneratedGrammar.cs"), cs);
+    }
 }
+
 
 static string FindCsprojDir()
 {

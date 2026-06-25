@@ -229,8 +229,57 @@ var result = ProgramParser.Parse(code, ctx);
 - **JSON パーサ** (`samples/JsonParser/`) — JSON 基本型。
 - **MiniC** (`samples/MiniC/`) — 変数・代入・`if`/`while`・ブロック・bool。**意味解析（Listener + 型チェック）デモ**。
 - **MiniBASIC** (`samples/MiniBasic/`) — 行番号付き BASIC。
+- **C# パーサ** (`samples/CSharpParser/`) — C# 完全文法（ECMA-334 Annex A 相当）。構文解析 + AST 構築のみ（意味解析なし）。`samples/Perf/Perf.Grammars/CSharpFactory.cs` で文法を定義。
 
 各サンプルの README を参照。
+
+## C# 完全文法ベンチマーク (samples/Perf)
+
+AstFirst で C# の完全文法（365 規則）を LALR(1) で実装し、パーサ生成時間 (Build) と実行時間 (Parse) を計測する。意味解析は行わない（構文解析 + AST 構築のみ）。
+
+- `samples/Perf/Perf.Grammars/CSharpFactory.cs` — 文法定義（型/式/パターン/文/宣言/メンバ/属性/プリプロセス）。
+- `samples/Perf/Perf.Gen` — `GrammarSpec → GrammarModel → LALR テーブル` を構築し、コンフリクト/状態数を検証。`GeneratedGrammar.cs` を各文法プロジェクトへ書き出す。
+- 集計結果: [samples/Perf/PerfSummary.md](samples/Perf/PerfSummary.md)
+
+### smoke test（Perf.CSharp）
+
+24/24 OK（宣言/継承/generic クラス/enum/struct/interface/プロパティ/全文/全式/switch/try/using 等）。
+
+### 計測結果（Ryzen 9 3900, .NET 10, Release）
+
+| 指標 | 値 |
+|---|---|
+| Parse_CSharp（50 クラス入力） | 0.33 ms |
+| Build_CSharp（ModelToTable.Build 純粋時間） | 231 ms |
+| クリーンビルド時間 | 11 s |
+| LALR 状態数 / シンボル数 | 798 / 608 |
+| 生成コードサイズ | 6.0 MB（8011 行） |
+
+> Build_CSharp 231 ms / 生成コード 6 MB は、365 規則の C# 完全文法に対する LALR テーブル構築（LalrLookahead の不動点反復）とテーブル埋め込みコードの規模限界。WideRules（103 規則）は Build 2.7 ms なので、規模に対して非線形に増大する。
+
+### コンフリクト解決技術
+
+C# の曖昧性を分類し、設計で解消（99 → 5）:
+
+| 曖昧性源 | 分類 | 解決 |
+|---|---|---|
+| 二項/三項/postfix/unary の shift-reduce | 見かけ上 | `[Precedence]` + 全終端伝播（規則の全終端に優先度を設定） |
+| リスト（文/引数/初期化子）の shift-reduce | 見かけ上 | bison 互換の shift 優先（LalrTable: 優先度未設定 SR は shift） |
+| LINQ キーワード / `get`/`set` 等の文脈キーワード | 文脈キーワード | `priority:1` + 文法位置で弁別 |
+| cast `(Type)e` vs 括弧式 `(e)` | 真に意味依存 | shift 優先で式文を優先（cast は制限） |
+| identifier/generic が「式か型か」 | 真に意味依存 | 残り 5 コンフリクト（RR、許容） |
+
+残り 5 コンフリクト（state 361）は `Foo` が式（`IdentifierExpr`）か型（`NamedType`）かの衝突。LALR(1) では解決不可（C# 仕様も意味解析で解決）。reduce-reduce を許容し式を優先。
+
+### 設計上の制限（LALR(1) の限界）
+
+指針「generic は Member の型のみ（ローカルは `var`）」「cast/paren は意味依存で許容」に沿う:
+
+- **generic メソッド呼び出し** `Foo<T>(x)`: 不可（式位置の `<` は比較のみとし、generic の `<` と衝突させない）。
+- **default 演算子** `default(T)` / target-typed `default`: 不可（switch 文の `default:` ラベルとの衝突を避けるため）。
+- **ユーザー定義型の** `Foo[]` / `Foo?` / `Foo*` / cast `(Foo)e`: 式優先のため制限。
+
+対照的に、定義済み型 `int[]` / `int?`、generic 型フィールド `List<int> x`、cast `(int)e` は動作する。
 
 ## アーキテクチャ
 
@@ -261,7 +310,7 @@ AstFirst.slnx
 
 ## テスト
 
-213 テスト（AstFirst.Tests 189 + Generator.Tests 24）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復、意味解析（スコープ・Listener・型チェック・ctx → ParseResult.Diagnostics の統合）、位置情報（行・列）を検証。
+277 テスト（AstFirst.Tests 234 + Generator.Tests 43）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復、意味解析（スコープ・Listener・型チェック・ctx → ParseResult.Diagnostics の統合）、位置情報（行・列）を検証。
 
 ## ライセンス
 

@@ -63,16 +63,16 @@ public class ModelToGrammarTests
     }
 
     [Fact]
-    public void TableHasShiftReduceConflictFromLeftRecursion()
+    public void TableResolvesShiftReduceFromLeftRecursionToShift()
     {
         // BuildCalcGrammar は Expr -> [0-9]+ | Expr + Expr (左再帰・優先度なし)。
-        // shift-reduce 衝突が発生しデフォルト shift で解決される。
+        // shift-reduce は bison 互換に shift 優先で解決される (報告なし)。
         var g = BuildCalcGrammar();
         var first = new FirstSet(g);
         var auto = Lr0AutomatonBuilder.Build(g);
         var la = new LalrLookahead(g, auto, first);
         var table = LalrTableBuilder.Build(g, auto, la);
-        Assert.Contains(table.Conflicts, c => c.Description.Contains("shift-reduce"));
+        Assert.DoesNotContain(table.Conflicts, c => c.Description.Contains("shift-reduce"));
     }
 
     [Fact]

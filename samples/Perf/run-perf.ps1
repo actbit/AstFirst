@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path "$PSScriptRoot/../..").Path
 Set-Location $repoRoot
 
-$patterns = @('DeepPrec','WideRules','ManyTokens','DeepNest','MegaLang')
+$patterns = @('DeepPrec','WideRules','ManyTokens','DeepNest','MegaLang','CSharp')
 
 Write-Host "=== AstFirst 大規模文法: 生成パフォーマンス計測 ==="
 Write-Host "(各プロジェクトの obj を削除しクリーンビルド。生成 .g.cs のサイズとテーブル次元を集計。)"

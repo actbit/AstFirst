@@ -53,7 +53,7 @@ public static class ModelExtraction
                 foreach (var td in ExtractInlineTokenDefs(type, tokenBase)) tokenDefs.Add(td);
         }
 
-        nodes.Sort((a, b) => a.FullName.CompareTo(b.FullName));
+        nodes.Sort((a, b) => string.CompareOrdinal(a.FullName, b.FullName));
 
         // [Skip] パターン ([Grammar] クラスまたはアセンブリ) を収集。
         var skipPatterns = new List<string>();
@@ -257,8 +257,8 @@ public static class ModelExtraction
         var result = seen.Values.ToList();
         result.Sort((a, b) =>
         {
-            int c = a.Key.CompareTo(b.Key);
-            return c != 0 ? c : a.Pattern.CompareTo(b.Pattern);
+            int c = string.CompareOrdinal(a.Key, b.Key);
+            return c != 0 ? c : string.CompareOrdinal(a.Pattern, b.Pattern);
         });
         return result;
     }

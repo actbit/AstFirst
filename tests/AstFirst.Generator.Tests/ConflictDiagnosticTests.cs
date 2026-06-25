@@ -46,15 +46,16 @@ namespace AstFirst {
     [Fact]
     public void AmbiguousGrammarEmitsAstf001()
     {
-        // Add の左再帰・優先度なし → shift-reduce コンフリクト → ASTF001 警告。
+        // A と B が同じ右辺 (num 1つ) → reduce-reduce コンフリクト → ASTF001 警告。
+        // (shift-reduce は bison 互換に shift 優先で解決されるため、reduce-reduce で検証する。)
         var grammar = @"
 [AstFirst.Grammar]
 public class RootExpr : AstFirst.AstNode { }
-public class Num : RootExpr {
-    public Num([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+public class A : RootExpr {
+    public A([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
 }
-public class Add : RootExpr {
-    public Add(RootExpr l, [AstFirst.Pattern(""\\+"")] AstFirst.Token op, RootExpr r) { }
+public class B : RootExpr {
+    public B([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
 }
 ";
         var diagnostics = RunGenerator(grammar);
