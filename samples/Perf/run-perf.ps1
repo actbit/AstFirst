@@ -74,14 +74,30 @@ foreach ($p in $patterns) {
 }
 
 # PerfSummary.md 出力
-$md = "# 大規模文法 生成パフォーマンス`r`n`r`n"
-$md += "各文法プロジェクトの obj 削除後のクリーンビルド (`dotnet build -c Release --no-incremental`) で計測。`r`n"
-$md += "生成コード = Generator が生成した `*.g.cs` (Lexer/Parser/Listener) の合計。`r`n`r`n"
-$md += "| パターン | LALR状態数 | シンボル数 | 生成コード(byte) | 生成コード(行) | ビルド時間(ms) |`r`n"
-$md += "|---|---:|---:|---:|---:|---:|`r`n"
+# 生成パフォーマンス表は <!-- BEGIN gen-perf -->〜<!-- END gen-perf --> の間のみ更新。
+# （実行パフォーマンス等のそれ以外のセクションは手動で維持され、上書きされない）
+$genTable = "| パターン | LALR状態数 | シンボル数 | 生成コード(byte) | 生成コード(行) | ビルド時間(ms) |`r`n"
+$genTable += "|---|---:|---:|---:|---:|---:|`r`n"
 foreach ($r in $results) {
-    $md += "| $($r.Pattern) | $($r.States) | $($r.Symbols) | $($r.GenBytes) | $($r.GenLines) | $($r.BuildMs) |`r`n"
+    $genTable += "| $($r.Pattern) | $($r.States) | $($r.Symbols) | $($r.GenBytes) | $($r.GenLines) | $($r.BuildMs) |`r`n"
 }
+$genSection = "<!-- BEGIN gen-perf -->`r`n$genTable<!-- END gen-perf -->"
+
 $summaryPath = "$PSScriptRoot/PerfSummary.md"
-$md | Set-Content -Path $summaryPath -Encoding UTF8
-Write-Host "-> $summaryPath に集計結果を書き出しました。"
+if ((Test-Path $summaryPath) -and (Select-String -Path $summaryPath -Pattern 'BEGIN gen-perf' -Quiet)) {
+    # 既存ファイル: マーカー間のみ差し替え（手動セクションは保持）
+    $lines = Get-Content $summaryPath
+    $beginIdx = (Select-String -Path $summaryPath -Pattern 'BEGIN gen-perf').LineNumber
+    $endIdx = (Select-String -Path $summaryPath -Pattern 'END gen-perf').LineNumber
+    $before = $lines[0..($beginIdx - 2)]
+    $after = $lines[$endIdx..($lines.Count - 1)]
+    $newContent = (($before -join "`r`n") + "`r`n" + $genSection + "`r`n" + ($after -join "`r`n"))
+    $newContent | Set-Content -Path $summaryPath -Encoding UTF8 -NoNewline
+} else {
+    # 初回（マーカーなし）: テンプレートを生成
+    $md = "# 大規模文法 パフォーマンス`r`n`r`n"
+    $md += "## 生成パフォーマンス（クリーンビルド）`r`n`r`n"
+    $md += $genSection + "`r`n"
+    $md | Set-Content -Path $summaryPath -Encoding UTF8
+}
+Write-Host "-> $summaryPath の生成パフォーマンス表を更新しました（実行セクションは保持）。"

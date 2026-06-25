@@ -249,13 +249,14 @@ AstFirst で C# の完全文法（365 規則）を LALR(1) で実装し、パー
 
 | 指標 | 値 |
 |---|---|
-| Parse_CSharp（50 クラス入力） | 0.33 ms |
+| Parse_CSharp（50 クラス入力 ≈ 7KB） | 0.33 ms（≈ 21 MB/s） |
+| Parse_CSharp アロケーション | 779 KB |
 | Build_CSharp（ModelToTable.Build 純粋時間） | 231 ms |
 | クリーンビルド時間 | 11 s |
 | LALR 状態数 / シンボル数 | 798 / 608 |
 | 生成コードサイズ | 6.0 MB（8011 行） |
 
-> Build_CSharp 231 ms / 生成コード 6 MB は、365 規則の C# 完全文法に対する LALR テーブル構築（LalrLookahead の不動点反復）とテーブル埋め込みコードの規模限界。WideRules（103 規則）は Build 2.7 ms なので、規模に対して非線形に増大する。
+> Build_CSharp 231 ms / 生成コード 6 MB は、365 規則の C# 完全文法に対する LALR テーブル構築（LalrLookahead の不動点反復）とテーブル埋め込みコードの規模限界。WideRules（103 規則）は Build 2.7 ms なので、規模に対して非線形に増大する。Parse のアロケーション（入力の ≈111 倍）は AST 構築（reduce ごとに `new`）で、仕組み上抑制困難。全6文法の比較は [samples/Perf/PerfSummary.md](samples/Perf/PerfSummary.md)。
 
 ### コンフリクト解決技術
 
