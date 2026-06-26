@@ -11,21 +11,21 @@ public class ModelToGrammarTests
     {
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, false, 0)
                 })
             }),
-            new NodeModel("AddExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("AddExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("Expr", "left", null, false, 0),
-                    new ParamModel("AstFirst.Token", "op", "\\+", false, 0),
-                    new ParamModel("Expr", "right", null, false, 0)
+                    new ParamModel("Expr", "left", null, false, false, 0),
+                    new ParamModel("AstFirst.Token", "op", "\\+", false, false, 0),
+                    new ParamModel("Expr", "right", null, false, false, 0)
                 })
             }),
         };
@@ -81,12 +81,12 @@ public class ModelToGrammarTests
         // Token 派生クラスの引数 ([Pattern] なし) は型名から解決。
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("NumToken", "num", null, false, 0)
+                    new ParamModel("NumToken", "num", null, false, false, 0)
                 })
             }),
         };
@@ -108,30 +108,30 @@ public class ModelToGrammarTests
         // JsonMember のような葉クラスの規則が欠落して到達不能非終端になっていた。
         var nodes = new List<NodeModel>
         {
-            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("SampleJson.JsonNumber", "SampleJson.Json", false, new List<CtorModel>
+            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("SampleJson.JsonNumber", "SampleJson.Json", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, false, 0)
                 })
             }),
             // ★ AstNode 直系の具象 (葉) クラス。cons 引数から参照される。
-            new NodeModel("SampleJson.JsonMember", "AstFirst.AstNode", false, new List<CtorModel>
+            new NodeModel("SampleJson.JsonMember", "AstFirst.AstNode", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "key", "\"[^\"]*\"", false, 0),
-                    new ParamModel("AstFirst.Token", "colon", ":", false, 0),
-                    new ParamModel("SampleJson.Json", "value", null, false, 0),
+                    new ParamModel("AstFirst.Token", "key", "\"[^\"]*\"", false, false, 0),
+                    new ParamModel("AstFirst.Token", "colon", ":", false, false, 0),
+                    new ParamModel("SampleJson.Json", "value", null, false, false, 0),
                 })
             }),
-            new NodeModel("SampleJson.JsonMembers", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("SampleJson.ConsMembers", "SampleJson.JsonMembers", false, new List<CtorModel>
+            new NodeModel("SampleJson.JsonMembers", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("SampleJson.ConsMembers", "SampleJson.JsonMembers", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("SampleJson.JsonMember", "head", null, false, 0),
+                    new ParamModel("SampleJson.JsonMember", "head", null, false, false, 0),
                 })
             }),
         };
@@ -157,18 +157,18 @@ public class ModelToGrammarTests
         // 引数なし ctor (NoElements) は右辺長 0 の ε 規則になる。
         var nodes = new List<NodeModel>
         {
-            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("SampleJson.JsonNumber", "SampleJson.Json", false, new List<CtorModel>
+            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("SampleJson.JsonNumber", "SampleJson.Json", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, false, 0)
                 })
             }),
-            new NodeModel("SampleJson.JsonElements", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("SampleJson.NoElements", "SampleJson.JsonElements", false, new List<CtorModel>
+            new NodeModel("SampleJson.JsonElements", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("SampleJson.NoElements", "SampleJson.JsonElements", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>())   // 引数なし = ε
+                new RuleModel("Reduce", new List<ParamModel>())   // 引数なし = ε
             }),
         };
         var tokenDefs = new List<TokenDefModel> { new TokenDefModel("AstFirst.Token", "[0-9]+", 0, false) };
@@ -184,22 +184,22 @@ public class ModelToGrammarTests
         // JsonObject に 2 ctor ({} と { Members }) → 同一 LHS に 2 規則。
         var nodes = new List<NodeModel>
         {
-            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("SampleJson.JsonObject", "SampleJson.Json", false, new List<CtorModel>
+            new NodeModel("SampleJson.Json", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("SampleJson.JsonObject", "SampleJson.Json", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "lb", "\\{", false, 0),
-                    new ParamModel("AstFirst.Token", "rb", "\\}", false, 0),
+                    new ParamModel("AstFirst.Token", "lb", "\\{", false, false, 0),
+                    new ParamModel("AstFirst.Token", "rb", "\\}", false, false, 0),
                 }),
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "lb", "\\{", false, 0),
-                    new ParamModel("SampleJson.JsonMembers", "members", null, false, 0),
-                    new ParamModel("AstFirst.Token", "rb", "\\}", false, 0),
+                    new ParamModel("AstFirst.Token", "lb", "\\{", false, false, 0),
+                    new ParamModel("SampleJson.JsonMembers", "members", null, false, false, 0),
+                    new ParamModel("AstFirst.Token", "rb", "\\}", false, false, 0),
                 }),
             }),
-            new NodeModel("SampleJson.JsonMembers", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("SampleJson.JsonMembers", "AstFirst.AstNode", true, new List<RuleModel>()),
         };
         var tokenDefs = new List<TokenDefModel>
         {
@@ -218,12 +218,12 @@ public class ModelToGrammarTests
         // [Pattern] も派生もない解決不能な引数型。
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("BadExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("BadExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("UnknownType", "x", null, false, 0)
+                    new ParamModel("UnknownType", "x", null, false, false, 0)
                 })
             }),
         };
@@ -236,7 +236,7 @@ public class ModelToGrammarTests
     {
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
         };
         var model = new GrammarModel("Nonexistent", nodes, new List<TokenDefModel>());
         Assert.Throws<InvalidOperationException>(() => ModelToGrammar.Build(model));

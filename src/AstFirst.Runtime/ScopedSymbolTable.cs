@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AstFirst;
 
@@ -26,8 +28,11 @@ public sealed class SymbolEntry
     }
 }
 
+/// <summary>スコープの種類。PushScope で指定し、PopScope で対応付けを検証する。</summary>
+public enum ScopeKind { Root, Block, Function, Loop, Other }
+
 /// <summary>
-/// レキシカルスコープ。親スコープへのリンクを持ち、ネストした宣言の可視性を表現する。
+/// レキシカルスコープ。親スコープへのリンク・キー・種類・深さを持つ。
 /// ルートスコープの深さは 0、子スコープは親の深さ + 1。
 /// </summary>
 public sealed class Scope
@@ -36,28 +41,38 @@ public sealed class Scope
 
     public Scope? Parent { get; }
     public int Depth { get; }
+    /// <summary>スコープを識別するキー (辞書風)。同名種類の複数スコープも区別する。</summary>
+    public string? Key { get; }
+    /// <summary>スコープの種類 (Block/Function/Loop 等)。</summary>
+    public ScopeKind Kind { get; }
 
     /// <summary>このスコープで直接宣言されたシンボル (外側スコープは含まない)。</summary>
     public IEnumerable<SymbolEntry> Symbols => _symbols.Values;
 
-    internal Scope(Scope? parent, int depth)
+    internal Scope(Scope? parent, int depth, string? key, ScopeKind kind)
     {
         Parent = parent;
         Depth = depth;
+        Key = key;
+        Kind = kind;
     }
 
     internal bool TryGetLocal(string name, out SymbolEntry? symbol) => _symbols.TryGetValue(name, out symbol);
 
     internal void Add(SymbolEntry symbol) => _symbols[symbol.Name] = symbol;
+
+    public override string ToString() => Kind + ":" + (Key ?? "?");
 }
 
 /// <summary>
-/// A scoped symbol table. Push/pop a scope stack; <see cref="Lookup"/> resolves innermost-first.
+/// スコープ付きシンボル表。<see cref="PushScope(string, ScopeKind)"/>/<see cref="PopScope(string)"/> で
+/// スコープスタックを操作し、<see cref="Lookup"/> は内側スコープ優先で解決する。
+/// 辞書風: キーで個別スコープを識別・対応付け (同名種類の複数スコープも区別)。
+/// <see cref="Stack"/>/<see cref="StackTrace"/> で全体の階層とキーの階層をスタックぽく可視化できる。
 /// </summary>
 /// <remarks>
-/// スコープ付きシンボル表。<see cref="PushScope"/>/<see cref="PopScope"/> でスコープスタックを操作し、
-/// <see cref="Lookup"/> は内側スコープ優先で解決します。意味解析で使用。
-/// LALR のボトムアップ reduce では親スコープを子ノードに伝えられないため、正確なブロックスコープには Parse 後の AST ウォーク (2パス) を推奨します。
+/// LALR のボトムアップ reduce では親スコープを子ノードに伝えられないため、正確なブロックスコープには
+/// Parse 後の AST ウォーク (2パス) を推奨します。
 /// </remarks>
 public sealed class ScopedSymbolTable
 {
@@ -66,17 +81,29 @@ public sealed class ScopedSymbolTable
 
     public ScopedSymbolTable()
     {
-        Current = new Scope(null, 0);
+        Current = new Scope(null, 0, null, ScopeKind.Root);
     }
 
-    /// <summary>新しい子スコープを開き、それを <see cref="Current"/> にする。</summary>
-    public Scope PushScope()
+    /// <summary>キー+種類付きの子スコープを開き、それを <see cref="Current"/> にする。同名種類の複数スコープもキーで区別。</summary>
+    public Scope PushScope(string key, ScopeKind kind)
     {
-        Current = new Scope(Current, Current.Depth + 1);
+        Current = new Scope(Current, Current.Depth + 1, key, kind);
         return Current;
     }
 
-    /// <summary>現在のスコープを閉じて親に戻る。ルートスコープでは何もしない。</summary>
+    /// <summary>子スコープを開く (後方互換: キー/種類なし)。</summary>
+    public Scope PushScope() => PushScope(null, ScopeKind.Other);
+
+    /// <summary>キーを検証して現在のスコープを閉じ、親に戻る (ミスマッチは例外)。辞書風の対応付け。</summary>
+    public void PopScope(string key)
+    {
+        if (Current.Parent is null) return; // ルートスコープは閉じない
+        if (Current.Key != key)
+            throw new InvalidOperationException($"スコープ Pop のキー不一致: 期待 '{key}', 実際 '{Current.Key ?? "(null)"}'");
+        Current = Current.Parent;
+    }
+
+    /// <summary>現在のスコープを閉じて親に戻る (後方互換: キー検証なし)。</summary>
     public void PopScope()
     {
         if (Current.Parent is not null) Current = Current.Parent;
@@ -112,4 +139,19 @@ public sealed class ScopedSymbolTable
         if (symbol is null) bag.Error("'" + name + "' は宣言されていません", span);
         return symbol;
     }
+
+    /// <summary>ルート→現在のスコープ列 (全体の階層)。インデックス 0 がルート、末尾が現在。</summary>
+    public IReadOnlyList<Scope> Stack
+    {
+        get
+        {
+            var list = new List<Scope>();
+            for (Scope? s = Current; s is not null; s = s.Parent) list.Add(s);
+            list.Reverse();
+            return list;
+        }
+    }
+
+    /// <summary>スタックを "Root:? > Function:main > Block:if" のように表現 (全体の階層とキーの階層)。</summary>
+    public string StackTrace => string.Join(" > ", Stack);
 }

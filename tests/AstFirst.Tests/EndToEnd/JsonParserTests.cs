@@ -101,7 +101,7 @@ public class JsonParserTests
     // --- オブジェクト (★今回の修正の核心) ---
     [Fact]
     public void ParsesEmptyObject()
-        => Assert.Null(((JsonObject)Parse("{}")).Members);
+        => Assert.IsType<JsonObjectEmpty>(Parse("{}"));
 
     [Fact]
     public void ParsesSingleMemberObject()

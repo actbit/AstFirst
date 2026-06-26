@@ -27,9 +27,31 @@ public abstract class AstNode
         if (_annotations is null || !_annotations.TryGetValue(key, out var v)) return null;
         return v as T;
     }
+
+    /// <summary>受領状態。OnReduce で Accept()/Reject() を呼んで設定。既定 Undecided (= Accept 扱い)。</summary>
+    public AcceptState AcceptState { get; private set; } = AcceptState.Undecided;
+
+    /// <summary>この構文を受領する (既定)。OnReduce 内で呼ぶ。何も呼ばなければ受領扱い。</summary>
+    protected void Accept() => AcceptState = AcceptState.Accepted;
+
+    /// <summary>この構文を受領しない。優先度順の別候補 (別規則/shift) へフォールバックする。</summary>
+    protected void Reject() => AcceptState = AcceptState.Rejected;
+
+    /// <summary>受領されたか (Accepted、または既定の Undecided)。パーサ生成コードが参照。</summary>
+    public bool IsAccepted => AcceptState != AcceptState.Rejected;
+
+    /// <summary>2パス目: 子の前 (トップダウン)。override して意味解析 (スコープ Push 等)。</summary>
+    /// <remarks>派生 ctx 型を使う場合は <paramref name="ctx"/> をキャスト。</remarks>
+    public virtual void OnSecondPassEnter(SemanticContext ctx) { }
+
+    /// <summary>2パス目: 子の後。override してスコープ Pop 等。</summary>
+    public virtual void OnSecondPassExit(SemanticContext ctx) { }
 }
 
 public enum Severity { Error, Warning }
+
+/// <summary>reduce 時の受領状態。OnReduce で Accept()/Reject() を呼んで設定。</summary>
+public enum AcceptState { Undecided, Accepted, Rejected }
 
 /// <summary>診断メッセージ (エラー/警告)。</summary>
 public sealed class Diagnostic(string message, SourceSpan span, Severity severity)
@@ -66,8 +88,8 @@ public abstract class SemanticContext
     public abstract DiagnosticBag Diagnostics { get; }
 }
 
-/// <summary>SemanticContext の標準実装。生成コードが既定で使う。</summary>
-public sealed class BasicSemanticContext : SemanticContext
+/// <summary>SemanticContext の標準実装。生成コードが既定で使う。ユーザーが派生して独自 ctx を定義可能。</summary>
+public class BasicSemanticContext : SemanticContext
 {
     public override ScopedSymbolTable Symbols { get; } = new ScopedSymbolTable();
     public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag();

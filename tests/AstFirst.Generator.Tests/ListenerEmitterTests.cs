@@ -14,16 +14,16 @@ public class ListenerEmitterTests
     {
         var nodes = new List<NodeModel>
         {
-            new NodeModel("TestNs.Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("TestNs.NumExpr", "TestNs.Expr", false, new List<CtorModel>(),
+            new NodeModel("TestNs.Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("TestNs.NumExpr", "TestNs.Expr", false, new List<RuleModel>(),
                 new List<ChildModel>()),
-            new NodeModel("TestNs.AddExpr", "TestNs.Expr", false, new List<CtorModel>(),
+            new NodeModel("TestNs.AddExpr", "TestNs.Expr", false, new List<RuleModel>(),
                 new List<ChildModel>
                 {
                     new ChildModel("Left", "TestNs.Expr", false),
                     new ChildModel("Right", "TestNs.Expr", false),
                 }),
-            new NodeModel("TestNs.OptExpr", "TestNs.Expr", false, new List<CtorModel>(),
+            new NodeModel("TestNs.OptExpr", "TestNs.Expr", false, new List<RuleModel>(),
                 new List<ChildModel> { new ChildModel("Inner", "TestNs.Expr", true) }),
         };
         return new GrammarModel("TestNs.Expr", nodes, new List<TokenDefModel>());

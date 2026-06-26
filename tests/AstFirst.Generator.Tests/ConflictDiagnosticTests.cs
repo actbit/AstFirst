@@ -25,6 +25,8 @@ namespace AstFirst {
     public class PatternAttribute : System.Attribute { public PatternAttribute(string regex) {} }
     [System.AttributeUsage(System.AttributeTargets.Class)]
     public class PrecedenceAttribute : System.Attribute { public PrecedenceAttribute(int priority) {} }
+    [System.AttributeUsage(System.AttributeTargets.Method)]
+    public class RuleAttribute : System.Attribute { }
 }
 ";
 
@@ -52,10 +54,10 @@ namespace AstFirst {
 [AstFirst.Grammar]
 public class RootExpr : AstFirst.AstNode { }
 public class A : RootExpr {
-    public A([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+    [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
 }
 public class B : RootExpr {
-    public B([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+    [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
 }
 ";
         var diagnostics = RunGenerator(grammar);
@@ -89,10 +91,10 @@ public class Add : RootExpr {
 [AstFirst.Grammar]
 public class RootExpr : AstFirst.AstNode { }
 public class Num : RootExpr {
-    public Num([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+    [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
 }
 public class Unused : AstFirst.AstNode {
-    public Unused([AstFirst.Pattern(""x"")] AstFirst.Token n) { }
+    [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""x"")] AstFirst.Token n) { }
 }
 ";
         var diagnostics = RunGenerator(grammar);

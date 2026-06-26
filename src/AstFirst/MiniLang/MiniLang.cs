@@ -2,61 +2,66 @@ using AstFirst;
 
 namespace MiniLang;
 
-/// <summary>MiniLang: 変数宣言・print・四則演算のサンプル言語。</summary>
+/// <summary>MiniLang: 変数宣言・print・四則演算 ([Rule] static モデル)。</summary>
 
 [Grammar]
 [Skip(@"\s+")]
-public abstract class Stmt : AstNode { }
+public abstract partial class Stmt : AstNode { }
 
 /// <summary>let x = expr;</summary>
-public sealed class LetStmt : Stmt
+public sealed partial class LetStmt : Stmt
 {
-    public string Name { get; }
-    public Expr Value { get; }
-    public LetStmt([Pattern(@"let", Priority = 1)] Token kw, [Pattern(@"[A-Za-z_]\w*")] Token name,
-                   [Pattern(@"=")] Token eq, Expr value, [Pattern(@";")] Token semi)
+    public string Name { get; private set; }
+    [Rule]
+    public static void Let([Token(@"let", Priority = 1)] Token kw, [Token(@"[A-Za-z_]\w*")] Token nameTok,
+                           [Token(@"=")] Token eq, Expr value, [Token(@";")] Token semi) { }
+    partial void OnReduce()
     {
-        Name = name.Text;
-        Value = value;
+        Name = NameTok.Text;
     }
 }
 
 /// <summary>print expr;</summary>
-public sealed class PrintStmt : Stmt
+public sealed partial class PrintStmt : Stmt
 {
-    public Expr Value { get; }
-    public PrintStmt([Pattern(@"print", Priority = 1)] Token kw, Expr value, [Pattern(@";")] Token semi)
+    [Rule]
+    public static void Print([Token(@"print", Priority = 1)] Token kw, Expr value, [Token(@";")] Token semi) { }
+}
+
+public abstract partial class Expr : AstNode { }
+
+public sealed partial class NumExpr : Expr
+{
+    public int Value { get; private set; }
+    [Rule]
+    public static void NumToken([Token(@"[0-9]+")] Token num) { }
+    partial void OnReduce()
     {
-        Value = value;
+        Value = int.Parse(Num.Text);
     }
 }
 
-public abstract class Expr : AstNode { }
-
-public sealed class NumExpr : Expr
+public sealed partial class VarExpr : Expr
 {
-    public int Value { get; }
-    public NumExpr([Pattern(@"[0-9]+")] Token num) { Value = int.Parse(num.Text); }
-}
-
-public sealed class VarExpr : Expr
-{
-    public string Name { get; }
-    public VarExpr([Pattern(@"[A-Za-z_]\w*")] Token name) { Name = name.Text; }
+    public string Name { get; private set; }
+    [Rule]
+    public static void VarToken([Token(@"[A-Za-z_]\w*")] Token nameTok) { }
+    partial void OnReduce()
+    {
+        Name = NameTok.Text;
+    }
 }
 
 [Precedence(1)]
-public sealed class AddExpr : Expr
+public sealed partial class AddExpr : Expr
 {
-    public Expr Left { get; }
-    public Expr Right { get; }
-    public AddExpr(Expr left, [Pattern(@"\+")] Token op, Expr right) { Left = left; Right = right; }
+    [Rule]
+    public static void Add(Expr left, [Token(@"\+")] Token op, Expr right) { }
 }
 
 [Precedence(2)]
-public sealed class MulExpr : Expr
+public sealed partial class MulExpr : Expr
 {
-    public Expr Left { get; }
-    public Expr Right { get; }
-    public MulExpr(Expr left, [Pattern(@"\*")] Token op, Expr right) { Left = left; Right = right; }
+    [Rule]
+    public static void Mul(Expr left, [Token(@"\*")] Token op, Expr right) { }
 }

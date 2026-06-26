@@ -14,21 +14,21 @@ public class ParserEmitterTests
     {
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, false, 0)
                 })
             }),
-            new NodeModel("AddExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("AddExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("Expr", "left", null, false, 0),
-                    new ParamModel("AstFirst.Token", "op", "\\+", false, 0),
-                    new ParamModel("Expr", "right", null, false, 0)
+                    new ParamModel("Expr", "left", null, false, false, 0),
+                    new ParamModel("AstFirst.Token", "op", "\\+", false, false, 0),
+                    new ParamModel("Expr", "right", null, false, false, 0)
                 })
             }),
         };
@@ -62,7 +62,7 @@ public class ParserEmitterTests
         var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         var stubs = @"
 namespace AstFirst {
-    public abstract class AstNode { }
+    public abstract class AstNode { public bool IsAccepted => true; public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
     public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
     public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
     public readonly struct Position { public Position(int o, int l, int c) { } }
@@ -106,12 +106,12 @@ public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) {
         // NumExpr(NumToken) — Token派生型を ctor 引数に取る (G7)。
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("NumToken", "num", null, false, 0)   // Token派生型、Pattern なし
+                    new ParamModel("NumToken", "num", null, false, false, 0)   // Token派生型、Pattern なし
                 })
             }),
         };
@@ -145,7 +145,7 @@ public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) {
         var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         var stubs = @"
 namespace AstFirst {
-    public abstract class AstNode { }
+    public abstract class AstNode { public bool IsAccepted => true; public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
     public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
     public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
     public readonly struct Position { public Position(int o, int l, int c) { } }
@@ -172,13 +172,13 @@ public class NumExpr : Expr { public NumExpr(NumToken n) { } }
         // SemanticContext 派生引数 (IsContext) を持つ ctor。
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("DeclExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("DeclExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "name", "[a-z]+", false, 0),
-                    new ParamModel("AstFirst.SemanticContext", "ctx", null, true, 0),
+                    new ParamModel("AstFirst.Token", "name", "[a-z]+", false, false, 0),
+                    new ParamModel("AstFirst.SemanticContext", "ctx", null, true, false, 0),
                 })
             }),
         };

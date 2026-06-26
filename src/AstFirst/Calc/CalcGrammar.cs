@@ -2,45 +2,43 @@ using AstFirst;
 
 namespace Calc;
 
-/// <summary>電卓の式 (フェーズ3 の動作確認用 DSL)。</summary>
+/// <summary>電卓の式 ([Rule] static モデル)。</summary>
 [Grammar]
-public abstract class Expr : AstNode { }
+public abstract partial class Expr : AstNode { }
 
 /// <summary>規則 Expr : [0-9]+</summary>
-public sealed class NumExpr : Expr
+public sealed partial class NumExpr : Expr
 {
-    public int Value { get; }
-    public NumExpr([Pattern(@"[0-9]+")] Token num)
+    public int Value { get; private set; }
+    [Rule]
+    public static void NumToken([Token(@"[0-9]+")] Token num) { }
+    partial void OnReduce()
     {
-        Value = int.Parse(num.Text);
-        Span = num.Span;
+        Value = int.Parse(Num.Text);
+        Span = Num.Span;
     }
 }
 
 /// <summary>規則 Expr : Expr + Expr</summary>
 [Precedence(1)]
-public sealed class AddExpr : Expr
+public sealed partial class AddExpr : Expr
 {
-    public Expr Left { get; }
-    public Expr Right { get; }
-    public AddExpr(Expr left, [Pattern(@"\+")] Token op, Expr right)
+    [Rule]
+    public static void Add(Expr left, [Token(@"\+")] Token op, Expr right) { }
+    partial void OnReduce()
     {
-        Left = left;
-        Right = right;
-        Span = SourceSpan.Merge(left.Span, right.Span);
+        Span = SourceSpan.Merge(Left.Span, Right.Span);
     }
 }
 
 /// <summary>規則 Expr : Expr * Expr</summary>
 [Precedence(2)]
-public sealed class MulExpr : Expr
+public sealed partial class MulExpr : Expr
 {
-    public Expr Left { get; }
-    public Expr Right { get; }
-    public MulExpr(Expr left, [Pattern(@"\*")] Token op, Expr right)
+    [Rule]
+    public static void Mul(Expr left, [Token(@"\*")] Token op, Expr right) { }
+    partial void OnReduce()
     {
-        Left = left;
-        Right = right;
-        Span = SourceSpan.Merge(left.Span, right.Span);
+        Span = SourceSpan.Merge(Left.Span, Right.Span);
     }
 }

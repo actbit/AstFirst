@@ -5,517 +5,619 @@ namespace PerfWideRules;
 
 [Grammar]
 [Skip(@"\s+")]
-public abstract class WideProgram : AstNode { }
+public abstract partial class WideProgram : AstNode { }
 
-public sealed class ConsStmt : WideProgram
+public sealed partial class ConsStmt : WideProgram
 {
-    public ConsStmt(Stmt first, WideProgram rest) { }
+    [Rule]
+    public static void Reduce(Stmt first, WideProgram rest) { }
 }
 
-public sealed class NilProgram : WideProgram
+public sealed partial class NilProgram : WideProgram
 {
-    public NilProgram() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public abstract class Stmt : AstNode { }
+public abstract partial class Stmt : AstNode { }
 
-public sealed class Stmt0 : Stmt
+public sealed partial class Stmt0 : Stmt
 {
-    public Stmt0([Pattern(@"s0")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s0")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt1 : Stmt
+public sealed partial class Stmt1 : Stmt
 {
-    public Stmt1([Pattern(@"s1")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s1")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt2 : Stmt
+public sealed partial class Stmt2 : Stmt
 {
-    public Stmt2([Pattern(@"s2")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s2")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt3 : Stmt
+public sealed partial class Stmt3 : Stmt
 {
-    public Stmt3([Pattern(@"s3")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s3")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt4 : Stmt
+public sealed partial class Stmt4 : Stmt
 {
-    public Stmt4([Pattern(@"s4")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s4")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt5 : Stmt
+public sealed partial class Stmt5 : Stmt
 {
-    public Stmt5([Pattern(@"s5")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s5")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt6 : Stmt
+public sealed partial class Stmt6 : Stmt
 {
-    public Stmt6([Pattern(@"s6")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s6")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt7 : Stmt
+public sealed partial class Stmt7 : Stmt
 {
-    public Stmt7([Pattern(@"s7")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s7")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt8 : Stmt
+public sealed partial class Stmt8 : Stmt
 {
-    public Stmt8([Pattern(@"s8")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s8")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt9 : Stmt
+public sealed partial class Stmt9 : Stmt
 {
-    public Stmt9([Pattern(@"s9")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s9")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt10 : Stmt
+public sealed partial class Stmt10 : Stmt
 {
-    public Stmt10([Pattern(@"s10")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s10")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt11 : Stmt
+public sealed partial class Stmt11 : Stmt
 {
-    public Stmt11([Pattern(@"s11")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s11")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt12 : Stmt
+public sealed partial class Stmt12 : Stmt
 {
-    public Stmt12([Pattern(@"s12")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s12")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt13 : Stmt
+public sealed partial class Stmt13 : Stmt
 {
-    public Stmt13([Pattern(@"s13")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s13")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt14 : Stmt
+public sealed partial class Stmt14 : Stmt
 {
-    public Stmt14([Pattern(@"s14")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s14")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt15 : Stmt
+public sealed partial class Stmt15 : Stmt
 {
-    public Stmt15([Pattern(@"s15")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s15")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt16 : Stmt
+public sealed partial class Stmt16 : Stmt
 {
-    public Stmt16([Pattern(@"s16")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s16")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt17 : Stmt
+public sealed partial class Stmt17 : Stmt
 {
-    public Stmt17([Pattern(@"s17")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s17")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt18 : Stmt
+public sealed partial class Stmt18 : Stmt
 {
-    public Stmt18([Pattern(@"s18")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s18")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt19 : Stmt
+public sealed partial class Stmt19 : Stmt
 {
-    public Stmt19([Pattern(@"s19")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s19")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt20 : Stmt
+public sealed partial class Stmt20 : Stmt
 {
-    public Stmt20([Pattern(@"s20")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s20")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt21 : Stmt
+public sealed partial class Stmt21 : Stmt
 {
-    public Stmt21([Pattern(@"s21")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s21")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt22 : Stmt
+public sealed partial class Stmt22 : Stmt
 {
-    public Stmt22([Pattern(@"s22")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s22")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt23 : Stmt
+public sealed partial class Stmt23 : Stmt
 {
-    public Stmt23([Pattern(@"s23")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s23")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt24 : Stmt
+public sealed partial class Stmt24 : Stmt
 {
-    public Stmt24([Pattern(@"s24")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s24")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt25 : Stmt
+public sealed partial class Stmt25 : Stmt
 {
-    public Stmt25([Pattern(@"s25")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s25")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt26 : Stmt
+public sealed partial class Stmt26 : Stmt
 {
-    public Stmt26([Pattern(@"s26")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s26")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt27 : Stmt
+public sealed partial class Stmt27 : Stmt
 {
-    public Stmt27([Pattern(@"s27")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s27")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt28 : Stmt
+public sealed partial class Stmt28 : Stmt
 {
-    public Stmt28([Pattern(@"s28")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s28")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt29 : Stmt
+public sealed partial class Stmt29 : Stmt
 {
-    public Stmt29([Pattern(@"s29")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s29")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt30 : Stmt
+public sealed partial class Stmt30 : Stmt
 {
-    public Stmt30([Pattern(@"s30")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s30")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt31 : Stmt
+public sealed partial class Stmt31 : Stmt
 {
-    public Stmt31([Pattern(@"s31")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s31")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt32 : Stmt
+public sealed partial class Stmt32 : Stmt
 {
-    public Stmt32([Pattern(@"s32")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s32")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt33 : Stmt
+public sealed partial class Stmt33 : Stmt
 {
-    public Stmt33([Pattern(@"s33")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s33")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt34 : Stmt
+public sealed partial class Stmt34 : Stmt
 {
-    public Stmt34([Pattern(@"s34")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s34")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt35 : Stmt
+public sealed partial class Stmt35 : Stmt
 {
-    public Stmt35([Pattern(@"s35")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s35")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt36 : Stmt
+public sealed partial class Stmt36 : Stmt
 {
-    public Stmt36([Pattern(@"s36")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s36")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt37 : Stmt
+public sealed partial class Stmt37 : Stmt
 {
-    public Stmt37([Pattern(@"s37")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s37")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt38 : Stmt
+public sealed partial class Stmt38 : Stmt
 {
-    public Stmt38([Pattern(@"s38")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s38")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt39 : Stmt
+public sealed partial class Stmt39 : Stmt
 {
-    public Stmt39([Pattern(@"s39")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s39")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt40 : Stmt
+public sealed partial class Stmt40 : Stmt
 {
-    public Stmt40([Pattern(@"s40")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s40")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt41 : Stmt
+public sealed partial class Stmt41 : Stmt
 {
-    public Stmt41([Pattern(@"s41")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s41")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt42 : Stmt
+public sealed partial class Stmt42 : Stmt
 {
-    public Stmt42([Pattern(@"s42")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s42")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt43 : Stmt
+public sealed partial class Stmt43 : Stmt
 {
-    public Stmt43([Pattern(@"s43")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s43")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt44 : Stmt
+public sealed partial class Stmt44 : Stmt
 {
-    public Stmt44([Pattern(@"s44")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s44")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt45 : Stmt
+public sealed partial class Stmt45 : Stmt
 {
-    public Stmt45([Pattern(@"s45")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s45")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt46 : Stmt
+public sealed partial class Stmt46 : Stmt
 {
-    public Stmt46([Pattern(@"s46")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s46")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt47 : Stmt
+public sealed partial class Stmt47 : Stmt
 {
-    public Stmt47([Pattern(@"s47")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s47")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt48 : Stmt
+public sealed partial class Stmt48 : Stmt
 {
-    public Stmt48([Pattern(@"s48")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s48")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt49 : Stmt
+public sealed partial class Stmt49 : Stmt
 {
-    public Stmt49([Pattern(@"s49")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s49")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt50 : Stmt
+public sealed partial class Stmt50 : Stmt
 {
-    public Stmt50([Pattern(@"s50")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s50")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt51 : Stmt
+public sealed partial class Stmt51 : Stmt
 {
-    public Stmt51([Pattern(@"s51")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s51")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt52 : Stmt
+public sealed partial class Stmt52 : Stmt
 {
-    public Stmt52([Pattern(@"s52")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s52")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt53 : Stmt
+public sealed partial class Stmt53 : Stmt
 {
-    public Stmt53([Pattern(@"s53")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s53")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt54 : Stmt
+public sealed partial class Stmt54 : Stmt
 {
-    public Stmt54([Pattern(@"s54")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s54")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt55 : Stmt
+public sealed partial class Stmt55 : Stmt
 {
-    public Stmt55([Pattern(@"s55")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s55")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt56 : Stmt
+public sealed partial class Stmt56 : Stmt
 {
-    public Stmt56([Pattern(@"s56")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s56")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt57 : Stmt
+public sealed partial class Stmt57 : Stmt
 {
-    public Stmt57([Pattern(@"s57")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s57")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt58 : Stmt
+public sealed partial class Stmt58 : Stmt
 {
-    public Stmt58([Pattern(@"s58")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s58")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt59 : Stmt
+public sealed partial class Stmt59 : Stmt
 {
-    public Stmt59([Pattern(@"s59")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s59")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt60 : Stmt
+public sealed partial class Stmt60 : Stmt
 {
-    public Stmt60([Pattern(@"s60")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s60")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt61 : Stmt
+public sealed partial class Stmt61 : Stmt
 {
-    public Stmt61([Pattern(@"s61")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s61")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt62 : Stmt
+public sealed partial class Stmt62 : Stmt
 {
-    public Stmt62([Pattern(@"s62")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s62")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt63 : Stmt
+public sealed partial class Stmt63 : Stmt
 {
-    public Stmt63([Pattern(@"s63")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s63")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt64 : Stmt
+public sealed partial class Stmt64 : Stmt
 {
-    public Stmt64([Pattern(@"s64")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s64")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt65 : Stmt
+public sealed partial class Stmt65 : Stmt
 {
-    public Stmt65([Pattern(@"s65")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s65")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt66 : Stmt
+public sealed partial class Stmt66 : Stmt
 {
-    public Stmt66([Pattern(@"s66")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s66")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt67 : Stmt
+public sealed partial class Stmt67 : Stmt
 {
-    public Stmt67([Pattern(@"s67")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s67")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt68 : Stmt
+public sealed partial class Stmt68 : Stmt
 {
-    public Stmt68([Pattern(@"s68")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s68")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt69 : Stmt
+public sealed partial class Stmt69 : Stmt
 {
-    public Stmt69([Pattern(@"s69")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s69")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt70 : Stmt
+public sealed partial class Stmt70 : Stmt
 {
-    public Stmt70([Pattern(@"s70")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s70")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt71 : Stmt
+public sealed partial class Stmt71 : Stmt
 {
-    public Stmt71([Pattern(@"s71")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s71")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt72 : Stmt
+public sealed partial class Stmt72 : Stmt
 {
-    public Stmt72([Pattern(@"s72")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s72")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt73 : Stmt
+public sealed partial class Stmt73 : Stmt
 {
-    public Stmt73([Pattern(@"s73")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s73")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt74 : Stmt
+public sealed partial class Stmt74 : Stmt
 {
-    public Stmt74([Pattern(@"s74")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s74")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt75 : Stmt
+public sealed partial class Stmt75 : Stmt
 {
-    public Stmt75([Pattern(@"s75")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s75")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt76 : Stmt
+public sealed partial class Stmt76 : Stmt
 {
-    public Stmt76([Pattern(@"s76")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s76")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt77 : Stmt
+public sealed partial class Stmt77 : Stmt
 {
-    public Stmt77([Pattern(@"s77")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s77")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt78 : Stmt
+public sealed partial class Stmt78 : Stmt
 {
-    public Stmt78([Pattern(@"s78")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s78")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt79 : Stmt
+public sealed partial class Stmt79 : Stmt
 {
-    public Stmt79([Pattern(@"s79")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s79")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt80 : Stmt
+public sealed partial class Stmt80 : Stmt
 {
-    public Stmt80([Pattern(@"s80")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s80")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt81 : Stmt
+public sealed partial class Stmt81 : Stmt
 {
-    public Stmt81([Pattern(@"s81")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s81")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt82 : Stmt
+public sealed partial class Stmt82 : Stmt
 {
-    public Stmt82([Pattern(@"s82")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s82")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt83 : Stmt
+public sealed partial class Stmt83 : Stmt
 {
-    public Stmt83([Pattern(@"s83")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s83")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt84 : Stmt
+public sealed partial class Stmt84 : Stmt
 {
-    public Stmt84([Pattern(@"s84")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s84")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt85 : Stmt
+public sealed partial class Stmt85 : Stmt
 {
-    public Stmt85([Pattern(@"s85")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s85")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt86 : Stmt
+public sealed partial class Stmt86 : Stmt
 {
-    public Stmt86([Pattern(@"s86")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s86")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt87 : Stmt
+public sealed partial class Stmt87 : Stmt
 {
-    public Stmt87([Pattern(@"s87")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s87")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt88 : Stmt
+public sealed partial class Stmt88 : Stmt
 {
-    public Stmt88([Pattern(@"s88")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s88")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt89 : Stmt
+public sealed partial class Stmt89 : Stmt
 {
-    public Stmt89([Pattern(@"s89")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s89")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt90 : Stmt
+public sealed partial class Stmt90 : Stmt
 {
-    public Stmt90([Pattern(@"s90")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s90")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt91 : Stmt
+public sealed partial class Stmt91 : Stmt
 {
-    public Stmt91([Pattern(@"s91")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s91")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt92 : Stmt
+public sealed partial class Stmt92 : Stmt
 {
-    public Stmt92([Pattern(@"s92")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s92")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt93 : Stmt
+public sealed partial class Stmt93 : Stmt
 {
-    public Stmt93([Pattern(@"s93")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s93")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt94 : Stmt
+public sealed partial class Stmt94 : Stmt
 {
-    public Stmt94([Pattern(@"s94")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s94")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt95 : Stmt
+public sealed partial class Stmt95 : Stmt
 {
-    public Stmt95([Pattern(@"s95")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s95")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt96 : Stmt
+public sealed partial class Stmt96 : Stmt
 {
-    public Stmt96([Pattern(@"s96")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s96")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt97 : Stmt
+public sealed partial class Stmt97 : Stmt
 {
-    public Stmt97([Pattern(@"s97")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s97")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt98 : Stmt
+public sealed partial class Stmt98 : Stmt
 {
-    public Stmt98([Pattern(@"s98")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s98")] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class Stmt99 : Stmt
+public sealed partial class Stmt99 : Stmt
 {
-    public Stmt99([Pattern(@"s99")] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"s99")] Token kw, [Pattern(@";")] Token semi) { }
 }
 

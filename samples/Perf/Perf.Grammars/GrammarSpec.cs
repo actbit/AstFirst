@@ -105,7 +105,7 @@ public sealed class GrammarSpec
         foreach (var n in Nodes)
         {
             var baseFullName = n.BaseClass == "AstNode" ? "AstFirst.AstNode" : Namespace + "." + n.BaseClass;
-            var ctors = new List<CtorModel>();
+            var ctors = new List<RuleModel>();
             if (!n.IsAbstract)
             {
                 foreach (var ctor in n.Ctors)
@@ -116,16 +116,16 @@ public sealed class GrammarSpec
                         if (p.Pattern is not null)
                         {
                             // Token 型の終端 ([Pattern] 付き)。
-                            ps.Add(new ParamModel("AstFirst.Token", p.Name, p.Pattern, isContext: false, p.Priority));
+                            ps.Add(new ParamModel("AstFirst.Token", p.Name, p.Pattern, isContext: false, isChild: false, priority: p.Priority));
                             tokenDefs.Add(new TokenDefModel("AstFirst.Token", p.Pattern, p.Priority, isHidden: false));
                         }
                         else
                         {
                             // 非終端 (AstNode 派生クラス)。
-                            ps.Add(new ParamModel(Namespace + "." + p.CsType, p.Name, pattern: null, isContext: false, priority: 0));
+                            ps.Add(new ParamModel(Namespace + "." + p.CsType, p.Name, pattern: null, isContext: false, isChild: true, priority: 0));
                         }
                     }
-                    ctors.Add(new CtorModel(ps));
+                    ctors.Add(new RuleModel("Reduce", ps));
                 }
             }
             nodes.Add(new NodeModel(

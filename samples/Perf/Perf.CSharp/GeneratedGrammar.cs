@@ -5,2045 +5,2409 @@ namespace CSharpParser;
 
 [Grammar]
 [Skip(@"(\s|//[^\n]*)+")]
-public abstract class CSharpCompilationUnit : AstNode { }
+public abstract partial class CSharpCompilationUnit : AstNode { }
 
-public abstract class Type : AstNode { }
+public abstract partial class Type : AstNode { }
 
-public sealed class IntType : Type
+public sealed partial class IntType : Type
 {
-    public IntType([Pattern(@"int", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"int", Priority = 1)] Token kw) { }
 }
 
-public sealed class StringType : Type
+public sealed partial class StringType : Type
 {
-    public StringType([Pattern(@"string", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"string", Priority = 1)] Token kw) { }
 }
 
-public sealed class BoolType : Type
+public sealed partial class BoolType : Type
 {
-    public BoolType([Pattern(@"bool", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"bool", Priority = 1)] Token kw) { }
 }
 
-public sealed class DoubleType : Type
+public sealed partial class DoubleType : Type
 {
-    public DoubleType([Pattern(@"double", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"double", Priority = 1)] Token kw) { }
 }
 
-public sealed class FloatType : Type
+public sealed partial class FloatType : Type
 {
-    public FloatType([Pattern(@"float", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"float", Priority = 1)] Token kw) { }
 }
 
-public sealed class CharType : Type
+public sealed partial class CharType : Type
 {
-    public CharType([Pattern(@"char", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"char", Priority = 1)] Token kw) { }
 }
 
-public sealed class ByteType : Type
+public sealed partial class ByteType : Type
 {
-    public ByteType([Pattern(@"byte", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"byte", Priority = 1)] Token kw) { }
 }
 
-public sealed class SbyteType : Type
+public sealed partial class SbyteType : Type
 {
-    public SbyteType([Pattern(@"sbyte", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"sbyte", Priority = 1)] Token kw) { }
 }
 
-public sealed class ShortType : Type
+public sealed partial class ShortType : Type
 {
-    public ShortType([Pattern(@"short", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"short", Priority = 1)] Token kw) { }
 }
 
-public sealed class UshortType : Type
+public sealed partial class UshortType : Type
 {
-    public UshortType([Pattern(@"ushort", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"ushort", Priority = 1)] Token kw) { }
 }
 
-public sealed class UintType : Type
+public sealed partial class UintType : Type
 {
-    public UintType([Pattern(@"uint", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"uint", Priority = 1)] Token kw) { }
 }
 
-public sealed class UlongType : Type
+public sealed partial class UlongType : Type
 {
-    public UlongType([Pattern(@"ulong", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"ulong", Priority = 1)] Token kw) { }
 }
 
-public sealed class LongType : Type
+public sealed partial class LongType : Type
 {
-    public LongType([Pattern(@"long", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"long", Priority = 1)] Token kw) { }
 }
 
-public sealed class DecimalType : Type
+public sealed partial class DecimalType : Type
 {
-    public DecimalType([Pattern(@"decimal", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decimal", Priority = 1)] Token kw) { }
 }
 
-public sealed class ObjectType : Type
+public sealed partial class ObjectType : Type
 {
-    public ObjectType([Pattern(@"object", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"object", Priority = 1)] Token kw) { }
 }
 
-public sealed class VoidType : Type
+public sealed partial class VoidType : Type
 {
-    public VoidType([Pattern(@"void", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"void", Priority = 1)] Token kw) { }
 }
 
-public sealed class VarType : Type
+public sealed partial class VarType : Type
 {
-    public VarType([Pattern(@"var", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"var", Priority = 1)] Token kw) { }
 }
 
-public sealed class DynamicType : Type
+public sealed partial class DynamicType : Type
 {
-    public DynamicType([Pattern(@"dynamic", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"dynamic", Priority = 1)] Token kw) { }
 }
 
-public sealed class NintType : Type
+public sealed partial class NintType : Type
 {
-    public NintType([Pattern(@"nint", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"nint", Priority = 1)] Token kw) { }
 }
 
-public sealed class NuintType : Type
+public sealed partial class NuintType : Type
 {
-    public NuintType([Pattern(@"nuint", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"nuint", Priority = 1)] Token kw) { }
 }
 
-public sealed class NamedType : Type
+public sealed partial class NamedType : Type
 {
-    public NamedType([Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public sealed class ArrayType : Type
+public sealed partial class ArrayType : Type
 {
-    public ArrayType(Type element, [Pattern(@"\[")] Token lb, [Pattern(@"\]")] Token rb) { }
-}
-
-[Precedence(15)]
-public sealed class GenericType : Type
-{
-    public GenericType([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"<")] Token lt, TypeArgumentList args, [Pattern(@">")] Token gt) { }
-}
-
-public abstract class TypeArgumentList : AstNode { }
-
-public sealed class SingleTypeArg : TypeArgumentList
-{
-    public SingleTypeArg(Type type) { }
-}
-
-public sealed class ConsTypeArg : TypeArgumentList
-{
-    public ConsTypeArg(TypeArgumentList list, [Pattern(@",")] Token comma, Type type) { }
-}
-
-[Precedence(15)]
-public sealed class NullableType : Type
-{
-    public NullableType(Type element, [Pattern(@"\?")] Token question) { }
-}
-
-[Precedence(15)]
-public sealed class PointerType : Type
-{
-    public PointerType(Type element, [Pattern(@"\*")] Token star) { }
-}
-
-public sealed class FunctionPointerType : Type
-{
-    public FunctionPointerType([Pattern(@"delegate\*", Priority = 1)] Token delegatePtr, [Pattern(@"<")] Token lt, FpTypeList args, [Pattern(@">")] Token gt) { }
-}
-
-public abstract class FpTypeList : AstNode { }
-
-public sealed class SingleFpType : FpTypeList
-{
-    public SingleFpType(Type type) { }
-}
-
-public sealed class ConsFpType : FpTypeList
-{
-    public ConsFpType(FpTypeList list, [Pattern(@",")] Token comma, Type type) { }
-}
-
-public sealed class TupleType : Type
-{
-    public TupleType([Pattern(@"\(")] Token lp, Type first, [Pattern(@",")] Token comma, TupleTypeList rest, [Pattern(@"\)")] Token rp) { }
-}
-
-public abstract class TupleTypeList : AstNode { }
-
-public sealed class SingleTupleElement : TupleTypeList
-{
-    public SingleTupleElement(Type type) { }
-}
-
-public sealed class ConsTupleElement : TupleTypeList
-{
-    public ConsTupleElement(TupleTypeList list, [Pattern(@",")] Token comma, Type type) { }
+    [Rule]
+    public static void Reduce(Type element, [Pattern(@"\[")] Token lb, [Pattern(@"\]")] Token rb) { }
 }
 
 [Precedence(15)]
-public sealed class RefType : Type
+public sealed partial class GenericType : Type
 {
-    public RefType([Pattern(@"ref", Priority = 1)] Token refKw, Type element) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"<")] Token lt, TypeArgumentList args, [Pattern(@">")] Token gt) { }
+}
+
+public abstract partial class TypeArgumentList : AstNode { }
+
+public sealed partial class SingleTypeArg : TypeArgumentList
+{
+    [Rule]
+    public static void Reduce(Type type) { }
+}
+
+public sealed partial class ConsTypeArg : TypeArgumentList
+{
+    [Rule]
+    public static void Reduce(TypeArgumentList list, [Pattern(@",")] Token comma, Type type) { }
 }
 
 [Precedence(15)]
-public sealed class RefReadOnlyType : Type
+public sealed partial class NullableType : Type
 {
-    public RefReadOnlyType([Pattern(@"ref", Priority = 1)] Token refKw, [Pattern(@"readonly", Priority = 1)] Token readonlyKw, Type element) { }
+    [Rule]
+    public static void Reduce(Type element, [Pattern(@"\?")] Token question) { }
 }
 
 [Precedence(15)]
-public sealed class MultiDimensionalArrayType : Type
+public sealed partial class PointerType : Type
 {
-    public MultiDimensionalArrayType(Type element, [Pattern(@"\[")] Token lb, RankCommaList commas, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce(Type element, [Pattern(@"\*")] Token star) { }
 }
 
-public abstract class RankCommaList : AstNode { }
-
-public sealed class SingleRankComma : RankCommaList
+public sealed partial class FunctionPointerType : Type
 {
-    public SingleRankComma([Pattern(@",")] Token comma) { }
+    [Rule]
+    public static void Reduce([Pattern(@"delegate\*", Priority = 1)] Token delegatePtr, [Pattern(@"<")] Token lt, FpTypeList args, [Pattern(@">")] Token gt) { }
 }
 
-public sealed class ConsRankComma : RankCommaList
+public abstract partial class FpTypeList : AstNode { }
+
+public sealed partial class SingleFpType : FpTypeList
 {
-    public ConsRankComma(RankCommaList list, [Pattern(@",")] Token comma) { }
+    [Rule]
+    public static void Reduce(Type type) { }
 }
 
-public abstract class Expression : AstNode { }
-
-public abstract class ArgumentList : AstNode { }
-
-public sealed class NilArgumentList : ArgumentList
+public sealed partial class ConsFpType : FpTypeList
 {
-    public NilArgumentList() { }
+    [Rule]
+    public static void Reduce(FpTypeList list, [Pattern(@",")] Token comma, Type type) { }
 }
 
-public sealed class SingleArgument : ArgumentList
+public sealed partial class TupleType : Type
 {
-    public SingleArgument(Expression head, ArgumentTail tail) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, Type first, [Pattern(@",")] Token comma, TupleTypeList rest, [Pattern(@"\)")] Token rp) { }
 }
 
-public abstract class ArgumentTail : AstNode { }
+public abstract partial class TupleTypeList : AstNode { }
 
-public sealed class NilArgumentTail : ArgumentTail
+public sealed partial class SingleTupleElement : TupleTypeList
 {
-    public NilArgumentTail() { }
+    [Rule]
+    public static void Reduce(Type type) { }
 }
 
-public sealed class ConsArgumentTail : ArgumentTail
+public sealed partial class ConsTupleElement : TupleTypeList
 {
-    public ConsArgumentTail([Pattern(@",")] Token comma, Expression head, ArgumentTail tail) { }
-}
-
-public sealed class IntegerLiteral : Expression
-{
-    public IntegerLiteral([Pattern(@"[0-9]+")] Token value) { }
-}
-
-public sealed class RealLiteral : Expression
-{
-    public RealLiteral([Pattern(@"[0-9]+\.[0-9]+")] Token value) { }
-}
-
-public sealed class StringLiteral : Expression
-{
-    public StringLiteral([Pattern(@"""([^""\\]|\\.)*""")] Token value) { }
-}
-
-public sealed class CharLiteral : Expression
-{
-    public CharLiteral([Pattern(@"'([^'\\]|\\.)'")] Token value) { }
-}
-
-public sealed class TrueLiteral : Expression
-{
-    public TrueLiteral([Pattern(@"true", Priority = 1)] Token kw) { }
-}
-
-public sealed class FalseLiteral : Expression
-{
-    public FalseLiteral([Pattern(@"false", Priority = 1)] Token kw) { }
-}
-
-public sealed class NullLiteral : Expression
-{
-    public NullLiteral([Pattern(@"null", Priority = 1)] Token kw) { }
-}
-
-public sealed class IdentifierExpr : Expression
-{
-    public IdentifierExpr([Pattern(@"[A-Za-z_]\w*")] Token name) { }
-}
-
-public sealed class ThisExpr : Expression
-{
-    public ThisExpr([Pattern(@"this", Priority = 1)] Token kw) { }
-}
-
-public sealed class ParenExpr : Expression
-{
-    public ParenExpr([Pattern(@"\(")] Token lp, Expression inner, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce(TupleTypeList list, [Pattern(@",")] Token comma, Type type) { }
 }
 
 [Precedence(15)]
-public sealed class MemberAccess : Expression
+public sealed partial class RefType : Type
 {
-    public MemberAccess(Expression target, [Pattern(@"\.")] Token dot, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce([Pattern(@"ref", Priority = 1)] Token refKw, Type element) { }
 }
 
 [Precedence(15)]
-public sealed class Invocation : Expression
+public sealed partial class RefReadOnlyType : Type
 {
-    public Invocation(Expression target, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"ref", Priority = 1)] Token refKw, [Pattern(@"readonly", Priority = 1)] Token readonlyKw, Type element) { }
 }
 
 [Precedence(15)]
-public sealed class PostIncrement : Expression
+public sealed partial class MultiDimensionalArrayType : Type
 {
-    public PostIncrement(Expression operand, [Pattern(@"\+\+")] Token op) { }
+    [Rule]
+    public static void Reduce(Type element, [Pattern(@"\[")] Token lb, RankCommaList commas, [Pattern(@"\]")] Token rb) { }
+}
+
+public abstract partial class RankCommaList : AstNode { }
+
+public sealed partial class SingleRankComma : RankCommaList
+{
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token comma) { }
+}
+
+public sealed partial class ConsRankComma : RankCommaList
+{
+    [Rule]
+    public static void Reduce(RankCommaList list, [Pattern(@",")] Token comma) { }
+}
+
+public abstract partial class Expression : AstNode { }
+
+public abstract partial class ArgumentList : AstNode { }
+
+public sealed partial class NilArgumentList : ArgumentList
+{
+    [Rule]
+    public static void Reduce() { }
+}
+
+public sealed partial class SingleArgument : ArgumentList
+{
+    [Rule]
+    public static void Reduce(Expression head, ArgumentTail tail) { }
+}
+
+public abstract partial class ArgumentTail : AstNode { }
+
+public sealed partial class NilArgumentTail : ArgumentTail
+{
+    [Rule]
+    public static void Reduce() { }
+}
+
+public sealed partial class ConsArgumentTail : ArgumentTail
+{
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token comma, Expression head, ArgumentTail tail) { }
+}
+
+public sealed partial class IntegerLiteral : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"[0-9]+")] Token value) { }
+}
+
+public sealed partial class RealLiteral : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"[0-9]+\.[0-9]+")] Token value) { }
+}
+
+public sealed partial class StringLiteral : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"""([^""\\]|\\.)*""")] Token value) { }
+}
+
+public sealed partial class CharLiteral : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"'([^'\\]|\\.)'")] Token value) { }
+}
+
+public sealed partial class TrueLiteral : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"true", Priority = 1)] Token kw) { }
+}
+
+public sealed partial class FalseLiteral : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"false", Priority = 1)] Token kw) { }
+}
+
+public sealed partial class NullLiteral : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"null", Priority = 1)] Token kw) { }
+}
+
+public sealed partial class IdentifierExpr : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name) { }
+}
+
+public sealed partial class ThisExpr : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"this", Priority = 1)] Token kw) { }
+}
+
+public sealed partial class ParenExpr : Expression
+{
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, Expression inner, [Pattern(@"\)")] Token rp) { }
 }
 
 [Precedence(15)]
-public sealed class PostDecrement : Expression
+public sealed partial class MemberAccess : Expression
 {
-    public PostDecrement(Expression operand, [Pattern(@"--")] Token op) { }
+    [Rule]
+    public static void Reduce(Expression target, [Pattern(@"\.")] Token dot, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public abstract class TupleElementList : AstNode { }
-
-public sealed class SingleTupleElementList : TupleElementList
+[Precedence(15)]
+public sealed partial class Invocation : Expression
 {
-    public SingleTupleElementList(Expression head, TupleElementTail tail) { }
+    [Rule]
+    public static void Reduce(Expression target, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp) { }
 }
 
-public abstract class TupleElementTail : AstNode { }
-
-public sealed class NilTupleElementTail : TupleElementTail
+[Precedence(15)]
+public sealed partial class PostIncrement : Expression
 {
-    public NilTupleElementTail() { }
+    [Rule]
+    public static void Reduce(Expression operand, [Pattern(@"\+\+")] Token op) { }
 }
 
-public sealed class ConsTupleElementTail : TupleElementTail
+[Precedence(15)]
+public sealed partial class PostDecrement : Expression
 {
-    public ConsTupleElementTail([Pattern(@",")] Token sep, Expression head, TupleElementTail tail) { }
+    [Rule]
+    public static void Reduce(Expression operand, [Pattern(@"--")] Token op) { }
 }
 
-public abstract class InitializerList : AstNode { }
+public abstract partial class TupleElementList : AstNode { }
 
-public sealed class NilInitializerList : InitializerList
+public sealed partial class SingleTupleElementList : TupleElementList
 {
-    public NilInitializerList() { }
+    [Rule]
+    public static void Reduce(Expression head, TupleElementTail tail) { }
 }
 
-public sealed class SingleInitializerList : InitializerList
+public abstract partial class TupleElementTail : AstNode { }
+
+public sealed partial class NilTupleElementTail : TupleElementTail
 {
-    public SingleInitializerList(Expression head, InitializerTail tail) { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public abstract class InitializerTail : AstNode { }
-
-public sealed class NilInitializerTail : InitializerTail
+public sealed partial class ConsTupleElementTail : TupleElementTail
 {
-    public NilInitializerTail() { }
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token sep, Expression head, TupleElementTail tail) { }
 }
 
-public sealed class ConsInitializerTail : InitializerTail
+public abstract partial class InitializerList : AstNode { }
+
+public sealed partial class NilInitializerList : InitializerList
 {
-    public ConsInitializerTail([Pattern(@",")] Token sep, Expression head, InitializerTail tail) { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public abstract class CollectionElementList : AstNode { }
-
-public sealed class NilCollectionElementList : CollectionElementList
+public sealed partial class SingleInitializerList : InitializerList
 {
-    public NilCollectionElementList() { }
+    [Rule]
+    public static void Reduce(Expression head, InitializerTail tail) { }
 }
 
-public sealed class SingleCollectionElementList : CollectionElementList
+public abstract partial class InitializerTail : AstNode { }
+
+public sealed partial class NilInitializerTail : InitializerTail
 {
-    public SingleCollectionElementList(Expression head, CollectionElementTail tail) { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public abstract class CollectionElementTail : AstNode { }
-
-public sealed class NilCollectionElementTail : CollectionElementTail
+public sealed partial class ConsInitializerTail : InitializerTail
 {
-    public NilCollectionElementTail() { }
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token sep, Expression head, InitializerTail tail) { }
 }
 
-public sealed class ConsCollectionElementTail : CollectionElementTail
+public abstract partial class CollectionElementList : AstNode { }
+
+public sealed partial class NilCollectionElementList : CollectionElementList
 {
-    public ConsCollectionElementTail([Pattern(@",")] Token sep, Expression head, CollectionElementTail tail) { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public abstract class LambdaParameterList : AstNode { }
-
-public sealed class NilLambdaParameterList : LambdaParameterList
+public sealed partial class SingleCollectionElementList : CollectionElementList
 {
-    public NilLambdaParameterList() { }
+    [Rule]
+    public static void Reduce(Expression head, CollectionElementTail tail) { }
 }
 
-public sealed class SingleLambdaParameterList : LambdaParameterList
+public abstract partial class CollectionElementTail : AstNode { }
+
+public sealed partial class NilCollectionElementTail : CollectionElementTail
 {
-    public SingleLambdaParameterList([Pattern(@"[A-Za-z_]\w*")] Token name, LambdaParameterTail tail) { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public abstract class LambdaParameterTail : AstNode { }
-
-public sealed class NilLambdaParameterTail : LambdaParameterTail
+public sealed partial class ConsCollectionElementTail : CollectionElementTail
 {
-    public NilLambdaParameterTail() { }
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token sep, Expression head, CollectionElementTail tail) { }
 }
 
-public sealed class ConsLambdaParameterTail : LambdaParameterTail
+public abstract partial class LambdaParameterList : AstNode { }
+
+public sealed partial class NilLambdaParameterList : LambdaParameterList
 {
-    public ConsLambdaParameterTail([Pattern(@",")] Token sep, [Pattern(@"[A-Za-z_]\w*")] Token name, LambdaParameterTail tail) { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public abstract class SwitchExprArmList : AstNode { }
-
-public sealed class NilSwitchExprArmList : SwitchExprArmList
+public sealed partial class SingleLambdaParameterList : LambdaParameterList
 {
-    public NilSwitchExprArmList() { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name, LambdaParameterTail tail) { }
 }
 
-public sealed class SingleSwitchExprArmList : SwitchExprArmList
+public abstract partial class LambdaParameterTail : AstNode { }
+
+public sealed partial class NilLambdaParameterTail : LambdaParameterTail
 {
-    public SingleSwitchExprArmList(SwitchExprArm arm) { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsSwitchExprArmList : SwitchExprArmList
+public sealed partial class ConsLambdaParameterTail : LambdaParameterTail
 {
-    public ConsSwitchExprArmList(SwitchExprArm head, [Pattern(@",")] Token sep, SwitchExprArmList rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token sep, [Pattern(@"[A-Za-z_]\w*")] Token name, LambdaParameterTail tail) { }
 }
 
-public abstract class SwitchExprArm : AstNode { }
+public abstract partial class SwitchExprArmList : AstNode { }
 
-public sealed class PatternArm : SwitchExprArm
+public sealed partial class NilSwitchExprArmList : SwitchExprArmList
 {
-    public PatternArm(Pattern pattern, [Pattern(@"=>")] Token arrow, Expression body) { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class DiscardArm : SwitchExprArm
+public sealed partial class SingleSwitchExprArmList : SwitchExprArmList
 {
-    public DiscardArm([Pattern(@"_")] Token discard, [Pattern(@"=>")] Token arrow, Expression body) { }
+    [Rule]
+    public static void Reduce(SwitchExprArm arm) { }
 }
 
-public abstract class QueryClauseList : AstNode { }
-
-public sealed class SingleQueryClause : QueryClauseList
+public sealed partial class ConsSwitchExprArmList : SwitchExprArmList
 {
-    public SingleQueryClause(QueryClause head) { }
+    [Rule]
+    public static void Reduce(SwitchExprArm head, [Pattern(@",")] Token sep, SwitchExprArmList rest) { }
 }
 
-public sealed class ConsQueryClauseList : QueryClauseList
+public abstract partial class SwitchExprArm : AstNode { }
+
+public sealed partial class PatternArm : SwitchExprArm
 {
-    public ConsQueryClauseList(QueryClause head, QueryClauseList rest) { }
+    [Rule]
+    public static void Reduce(Pattern pattern, [Pattern(@"=>")] Token arrow, Expression body) { }
 }
 
-public abstract class QueryClause : AstNode { }
+public sealed partial class DiscardArm : SwitchExprArm
+{
+    [Rule]
+    public static void Reduce([Pattern(@"_")] Token discard, [Pattern(@"=>")] Token arrow, Expression body) { }
+}
+
+public abstract partial class QueryClauseList : AstNode { }
+
+public sealed partial class SingleQueryClause : QueryClauseList
+{
+    [Rule]
+    public static void Reduce(QueryClause head) { }
+}
+
+public sealed partial class ConsQueryClauseList : QueryClauseList
+{
+    [Rule]
+    public static void Reduce(QueryClause head, QueryClauseList rest) { }
+}
+
+public abstract partial class QueryClause : AstNode { }
 
 [Precedence(1)]
-public sealed class FromClause : QueryClause
+public sealed partial class FromClause : QueryClause
 {
-    public FromClause([Pattern(@"from", Priority = 1)] Token kwFrom, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"in", Priority = 1)] Token kwIn, Expression source) { }
+    [Rule]
+    public static void Reduce([Pattern(@"from", Priority = 1)] Token kwFrom, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"in", Priority = 1)] Token kwIn, Expression source) { }
 }
 
 [Precedence(1)]
-public sealed class SelectClause : QueryClause
+public sealed partial class SelectClause : QueryClause
 {
-    public SelectClause([Pattern(@"select", Priority = 1)] Token kwSelect, Expression selector) { }
+    [Rule]
+    public static void Reduce([Pattern(@"select", Priority = 1)] Token kwSelect, Expression selector) { }
 }
 
 [Precedence(1)]
-public sealed class WhereClause : QueryClause
+public sealed partial class WhereClause : QueryClause
 {
-    public WhereClause([Pattern(@"where", Priority = 1)] Token kwWhere, Expression condition) { }
+    [Rule]
+    public static void Reduce([Pattern(@"where", Priority = 1)] Token kwWhere, Expression condition) { }
 }
 
 [Precedence(1)]
-public sealed class OrderByClause : QueryClause
+public sealed partial class OrderByClause : QueryClause
 {
-    public OrderByClause([Pattern(@"orderby", Priority = 1)] Token kwOrderBy, Expression key) { }
+    [Rule]
+    public static void Reduce([Pattern(@"orderby", Priority = 1)] Token kwOrderBy, Expression key) { }
 }
 
 [Precedence(1)]
-public sealed class GroupClause : QueryClause
+public sealed partial class GroupClause : QueryClause
 {
-    public GroupClause([Pattern(@"group", Priority = 1)] Token kwGroup, Expression element, [Pattern(@"by", Priority = 1)] Token kwBy, Expression key) { }
+    [Rule]
+    public static void Reduce([Pattern(@"group", Priority = 1)] Token kwGroup, Expression element, [Pattern(@"by", Priority = 1)] Token kwBy, Expression key) { }
 }
 
 [Precedence(1)]
-public sealed class LetClause : QueryClause
+public sealed partial class LetClause : QueryClause
 {
-    public LetClause([Pattern(@"let", Priority = 1)] Token kwLet, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"let", Priority = 1)] Token kwLet, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression value) { }
 }
 
-public sealed class BaseExpr : Expression
+public sealed partial class BaseExpr : Expression
 {
-    public BaseExpr([Pattern(@"base", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"base", Priority = 1)] Token kw) { }
 }
 
-public sealed class HexLiteral : Expression
+public sealed partial class HexLiteral : Expression
 {
-    public HexLiteral([Pattern(@"0[xX][0-9a-fA-F_]+")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"0[xX][0-9a-fA-F_]+")] Token value) { }
 }
 
-public sealed class BinaryLiteral : Expression
+public sealed partial class BinaryLiteral : Expression
 {
-    public BinaryLiteral([Pattern(@"0[bB][01_]+")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"0[bB][01_]+")] Token value) { }
 }
 
-public sealed class VerbatimStringLiteral : Expression
+public sealed partial class VerbatimStringLiteral : Expression
 {
-    public VerbatimStringLiteral([Pattern(@"@""(""""|[^""])*""")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"@""(""""|[^""])*""")] Token value) { }
 }
 
-public sealed class InterpolatedStringLiteral : Expression
+public sealed partial class InterpolatedStringLiteral : Expression
 {
-    public InterpolatedStringLiteral([Pattern(@"\$\$(""""|[^""])*""")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\$\$(""""|[^""])*""")] Token value) { }
 }
 
-public sealed class RawStringLiteral : Expression
+public sealed partial class RawStringLiteral : Expression
 {
-    public RawStringLiteral([Pattern(@"\""""[\s\S]*?\""""")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\""""[\s\S]*?\""""")] Token value) { }
 }
 
-public sealed class NameofExpr : Expression
+public sealed partial class NameofExpr : Expression
 {
-    public NameofExpr([Pattern(@"nameof", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, QualifiedName name, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"nameof", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, QualifiedName name, [Pattern(@"\)")] Token rp) { }
 }
 
-public sealed class TypeofExpr : Expression
+public sealed partial class TypeofExpr : Expression
 {
-    public TypeofExpr([Pattern(@"typeof", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"typeof", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"\)")] Token rp) { }
 }
 
-public sealed class SizeofExpr : Expression
+public sealed partial class SizeofExpr : Expression
 {
-    public SizeofExpr([Pattern(@"sizeof", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"sizeof", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"\)")] Token rp) { }
 }
 
-public sealed class StackallocExpr : Expression
+public sealed partial class StackallocExpr : Expression
 {
-    public StackallocExpr([Pattern(@"stackalloc", Priority = 1)] Token kw, Type type, [Pattern(@"\[")] Token lb, Expression size, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"stackalloc", Priority = 1)] Token kw, Type type, [Pattern(@"\[")] Token lb, Expression size, [Pattern(@"\]")] Token rb) { }
 }
 
-public sealed class TupleExpr : Expression
+public sealed partial class TupleExpr : Expression
 {
-    public TupleExpr([Pattern(@"\(")] Token lp, Expression first, [Pattern(@",")] Token sep, TupleElementList rest, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, Expression first, [Pattern(@",")] Token sep, TupleElementList rest, [Pattern(@"\)")] Token rp) { }
 }
 
-public sealed class CollectionExpr : Expression
+public sealed partial class CollectionExpr : Expression
 {
-    public CollectionExpr([Pattern(@"\[")] Token lb, CollectionElementList elements, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\[")] Token lb, CollectionElementList elements, [Pattern(@"\]")] Token rb) { }
 }
 
 [Precedence(14)]
-public sealed class IndexExpr : Expression
+public sealed partial class IndexExpr : Expression
 {
-    public IndexExpr([Pattern(@"\^")] Token hat, Expression expr) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\^")] Token hat, Expression expr) { }
 }
 
 [Precedence(15)]
-public sealed class ElementAccess : Expression
+public sealed partial class ElementAccess : Expression
 {
-    public ElementAccess(Expression target, [Pattern(@"\[")] Token lb, ArgumentList args, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce(Expression target, [Pattern(@"\[")] Token lb, ArgumentList args, [Pattern(@"\]")] Token rb) { }
 }
 
 [Precedence(15)]
-public sealed class NullConditionalMember : Expression
+public sealed partial class NullConditionalMember : Expression
 {
-    public NullConditionalMember(Expression target, [Pattern(@"\?\.")] Token op, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce(Expression target, [Pattern(@"\?\.")] Token op, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
 [Precedence(15)]
-public sealed class NullConditionalIndex : Expression
+public sealed partial class NullConditionalIndex : Expression
 {
-    public NullConditionalIndex(Expression target, [Pattern(@"\?\[")] Token op, ArgumentList args, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce(Expression target, [Pattern(@"\?\[")] Token op, ArgumentList args, [Pattern(@"\]")] Token rb) { }
 }
 
 [Precedence(15)]
-public sealed class RangeExpr : Expression
+public sealed partial class RangeExpr : Expression
 {
-    public RangeExpr(Expression from, [Pattern(@"\.\.")] Token op, Expression to) { }
+    [Rule]
+    public static void Reduce(Expression from, [Pattern(@"\.\.")] Token op, Expression to) { }
 }
 
 [Precedence(14)]
-public sealed class PreIncrementExpr : Expression
+public sealed partial class PreIncrementExpr : Expression
 {
-    public PreIncrementExpr([Pattern(@"\+\+")] Token op, Expression expr) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\+\+")] Token op, Expression expr) { }
 }
 
 [Precedence(14)]
-public sealed class PreDecrementExpr : Expression
+public sealed partial class PreDecrementExpr : Expression
 {
-    public PreDecrementExpr([Pattern(@"--")] Token op, Expression expr) { }
+    [Rule]
+    public static void Reduce([Pattern(@"--")] Token op, Expression expr) { }
 }
 
 [Precedence(14)]
-public sealed class IndirectionExpr : Expression
+public sealed partial class IndirectionExpr : Expression
 {
-    public IndirectionExpr([Pattern(@"\*")] Token op, Expression expr) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\*")] Token op, Expression expr) { }
 }
 
 [Precedence(14)]
-public sealed class AddressOfExpr : Expression
+public sealed partial class AddressOfExpr : Expression
 {
-    public AddressOfExpr([Pattern(@"&")] Token op, Expression expr) { }
+    [Rule]
+    public static void Reduce([Pattern(@"&")] Token op, Expression expr) { }
 }
 
 [Precedence(14)]
-public sealed class CastExpr : Expression
+public sealed partial class CastExpr : Expression
 {
-    public CastExpr([Pattern(@"\(")] Token lp, Type type, [Pattern(@"\)")] Token rp, Expression expr) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, Type type, [Pattern(@"\)")] Token rp, Expression expr) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class AssignExpr : Expression
+public sealed partial class AssignExpr : Expression
 {
-    public AssignExpr(Expression left, [Pattern(@"=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class AddAssignExpr : Expression
+public sealed partial class AddAssignExpr : Expression
 {
-    public AddAssignExpr(Expression left, [Pattern(@"\+=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\+=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class SubAssignExpr : Expression
+public sealed partial class SubAssignExpr : Expression
 {
-    public SubAssignExpr(Expression left, [Pattern(@"-=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"-=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class MulAssignExpr : Expression
+public sealed partial class MulAssignExpr : Expression
 {
-    public MulAssignExpr(Expression left, [Pattern(@"\*=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\*=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class DivAssignExpr : Expression
+public sealed partial class DivAssignExpr : Expression
 {
-    public DivAssignExpr(Expression left, [Pattern(@"/=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"/=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class ModAssignExpr : Expression
+public sealed partial class ModAssignExpr : Expression
 {
-    public ModAssignExpr(Expression left, [Pattern(@"%=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"%=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class AndAssignExpr : Expression
+public sealed partial class AndAssignExpr : Expression
 {
-    public AndAssignExpr(Expression left, [Pattern(@"&=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"&=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class OrAssignExpr : Expression
+public sealed partial class OrAssignExpr : Expression
 {
-    public OrAssignExpr(Expression left, [Pattern(@"\|=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\|=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class XorAssignExpr : Expression
+public sealed partial class XorAssignExpr : Expression
 {
-    public XorAssignExpr(Expression left, [Pattern(@"\^=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\^=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class LeftShiftAssignExpr : Expression
+public sealed partial class LeftShiftAssignExpr : Expression
 {
-    public LeftShiftAssignExpr(Expression left, [Pattern(@"<<=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"<<=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class RightShiftAssignExpr : Expression
+public sealed partial class RightShiftAssignExpr : Expression
 {
-    public RightShiftAssignExpr(Expression left, [Pattern(@">>=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@">>=")] Token op, Expression right) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class CoalesceAssignExpr : Expression
+public sealed partial class CoalesceAssignExpr : Expression
 {
-    public CoalesceAssignExpr(Expression left, [Pattern(@"\?\?=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\?\?=")] Token op, Expression right) { }
 }
 
 [Precedence(2, IsRightAssociative = true)]
-public sealed class ConditionalExpr : Expression
+public sealed partial class ConditionalExpr : Expression
 {
-    public ConditionalExpr(Expression cond, [Pattern(@"\?")] Token question, Expression then, [Pattern(@":")] Token colon, Expression elseBranch) { }
+    [Rule]
+    public static void Reduce(Expression cond, [Pattern(@"\?")] Token question, Expression then, [Pattern(@":")] Token colon, Expression elseBranch) { }
 }
 
 [Precedence(3)]
-public sealed class CoalesceExpr : Expression
+public sealed partial class CoalesceExpr : Expression
 {
-    public CoalesceExpr(Expression left, [Pattern(@"\?\?")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\?\?")] Token op, Expression right) { }
 }
 
 [Precedence(4)]
-public sealed class OrExpr : Expression
+public sealed partial class OrExpr : Expression
 {
-    public OrExpr(Expression left, [Pattern(@"\|\|")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\|\|")] Token op, Expression right) { }
 }
 
 [Precedence(5)]
-public sealed class AndExpr : Expression
+public sealed partial class AndExpr : Expression
 {
-    public AndExpr(Expression left, [Pattern(@"&&")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"&&")] Token op, Expression right) { }
 }
 
 [Precedence(6)]
-public sealed class BitOrExpr : Expression
+public sealed partial class BitOrExpr : Expression
 {
-    public BitOrExpr(Expression left, [Pattern(@"\|")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\|")] Token op, Expression right) { }
 }
 
 [Precedence(7)]
-public sealed class BitXorExpr : Expression
+public sealed partial class BitXorExpr : Expression
 {
-    public BitXorExpr(Expression left, [Pattern(@"\^")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\^")] Token op, Expression right) { }
 }
 
 [Precedence(8)]
-public sealed class BitAndExpr : Expression
+public sealed partial class BitAndExpr : Expression
 {
-    public BitAndExpr(Expression left, [Pattern(@"&")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"&")] Token op, Expression right) { }
 }
 
 [Precedence(9)]
-public sealed class EqualExpr : Expression
+public sealed partial class EqualExpr : Expression
 {
-    public EqualExpr(Expression left, [Pattern(@"==")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"==")] Token op, Expression right) { }
 }
 
 [Precedence(9)]
-public sealed class NotEqualExpr : Expression
+public sealed partial class NotEqualExpr : Expression
 {
-    public NotEqualExpr(Expression left, [Pattern(@"!=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"!=")] Token op, Expression right) { }
 }
 
 [Precedence(10)]
-public sealed class LessExpr : Expression
+public sealed partial class LessExpr : Expression
 {
-    public LessExpr(Expression left, [Pattern(@"<")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"<")] Token op, Expression right) { }
 }
 
 [Precedence(10)]
-public sealed class GreaterExpr : Expression
+public sealed partial class GreaterExpr : Expression
 {
-    public GreaterExpr(Expression left, [Pattern(@">")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@">")] Token op, Expression right) { }
 }
 
 [Precedence(10)]
-public sealed class LessEqualExpr : Expression
+public sealed partial class LessEqualExpr : Expression
 {
-    public LessEqualExpr(Expression left, [Pattern(@"<=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"<=")] Token op, Expression right) { }
 }
 
 [Precedence(10)]
-public sealed class GreaterEqualExpr : Expression
+public sealed partial class GreaterEqualExpr : Expression
 {
-    public GreaterEqualExpr(Expression left, [Pattern(@">=")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@">=")] Token op, Expression right) { }
 }
 
 [Precedence(11)]
-public sealed class LeftShiftExpr : Expression
+public sealed partial class LeftShiftExpr : Expression
 {
-    public LeftShiftExpr(Expression left, [Pattern(@"<<")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"<<")] Token op, Expression right) { }
 }
 
 [Precedence(11)]
-public sealed class RightShiftExpr : Expression
+public sealed partial class RightShiftExpr : Expression
 {
-    public RightShiftExpr(Expression left, [Pattern(@">>")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@">>")] Token op, Expression right) { }
 }
 
 [Precedence(12)]
-public sealed class AddExpr : Expression
+public sealed partial class AddExpr : Expression
 {
-    public AddExpr(Expression left, [Pattern(@"\+")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\+")] Token op, Expression right) { }
 }
 
 [Precedence(12)]
-public sealed class SubExpr : Expression
+public sealed partial class SubExpr : Expression
 {
-    public SubExpr(Expression left, [Pattern(@"-")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"-")] Token op, Expression right) { }
 }
 
 [Precedence(13)]
-public sealed class MulExpr : Expression
+public sealed partial class MulExpr : Expression
 {
-    public MulExpr(Expression left, [Pattern(@"\*")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"\*")] Token op, Expression right) { }
 }
 
 [Precedence(13)]
-public sealed class DivExpr : Expression
+public sealed partial class DivExpr : Expression
 {
-    public DivExpr(Expression left, [Pattern(@"/")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"/")] Token op, Expression right) { }
 }
 
 [Precedence(13)]
-public sealed class ModExpr : Expression
+public sealed partial class ModExpr : Expression
 {
-    public ModExpr(Expression left, [Pattern(@"%")] Token op, Expression right) { }
+    [Rule]
+    public static void Reduce(Expression left, [Pattern(@"%")] Token op, Expression right) { }
 }
 
 [Precedence(14)]
-public sealed class AwaitExpr : Expression
+public sealed partial class AwaitExpr : Expression
 {
-    public AwaitExpr([Pattern(@"await", Priority = 1)] Token kw, Expression expr) { }
+    [Rule]
+    public static void Reduce([Pattern(@"await", Priority = 1)] Token kw, Expression expr) { }
 }
 
 [Precedence(10)]
-public sealed class IsPatternExpr : Expression
+public sealed partial class IsPatternExpr : Expression
 {
-    public IsPatternExpr(Expression expr, [Pattern(@"is", Priority = 1)] Token kw, Pattern pattern) { }
+    [Rule]
+    public static void Reduce(Expression expr, [Pattern(@"is", Priority = 1)] Token kw, Pattern pattern) { }
 }
 
 [Precedence(10)]
-public sealed class AsExpr : Expression
+public sealed partial class AsExpr : Expression
 {
-    public AsExpr(Expression expr, [Pattern(@"as", Priority = 1)] Token kw, Type type) { }
+    [Rule]
+    public static void Reduce(Expression expr, [Pattern(@"as", Priority = 1)] Token kw, Type type) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class SimpleLambdaExpr : Expression
+public sealed partial class SimpleLambdaExpr : Expression
 {
-    public SimpleLambdaExpr([Pattern(@"[A-Za-z_]\w*")] Token param, [Pattern(@"=>")] Token arrow, Expression body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token param, [Pattern(@"=>")] Token arrow, Expression body) { }
 }
 
-public sealed class AnonymousMethodExpr : Expression
+public sealed partial class AnonymousMethodExpr : Expression
 {
-    public AnonymousMethodExpr([Pattern(@"delegate", Priority = 1)] Token kw, [Pattern(@"\{")] Token lb, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"delegate", Priority = 1)] Token kw, [Pattern(@"\{")] Token lb, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class AnonymousMethodParamsExpr : Expression
+public sealed partial class AnonymousMethodParamsExpr : Expression
 {
-    public AnonymousMethodParamsExpr([Pattern(@"delegate", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, LambdaParameterList parameters, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"delegate", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, LambdaParameterList parameters, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class ObjectCreationExpr : Expression
+public sealed partial class ObjectCreationExpr : Expression
 {
-    public ObjectCreationExpr([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp) { }
 }
 
-public sealed class ObjectCreationInitExpr : Expression
+public sealed partial class ObjectCreationInitExpr : Expression
 {
-    public ObjectCreationInitExpr([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, InitializerList initializers, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, InitializerList initializers, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class ObjectCreationEmptyInitExpr : Expression
+public sealed partial class ObjectCreationEmptyInitExpr : Expression
 {
-    public ObjectCreationEmptyInitExpr([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\{")] Token lb, InitializerList initializers, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\{")] Token lb, InitializerList initializers, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class ArrayCreationExpr : Expression
+public sealed partial class ArrayCreationExpr : Expression
 {
-    public ArrayCreationExpr([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\[")] Token lb, Expression size, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\[")] Token lb, Expression size, [Pattern(@"\]")] Token rb) { }
 }
 
-public sealed class ArrayCreationInitExpr : Expression
+public sealed partial class ArrayCreationInitExpr : Expression
 {
-    public ArrayCreationInitExpr([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\[")] Token lb, Expression size, [Pattern(@"\]")] Token rb, [Pattern(@"\{")] Token lb2, InitializerList initializers, [Pattern(@"\}")] Token rb2) { }
+    [Rule]
+    public static void Reduce([Pattern(@"new", Priority = 1)] Token kw, Type type, [Pattern(@"\[")] Token lb, Expression size, [Pattern(@"\]")] Token rb, [Pattern(@"\{")] Token lb2, InitializerList initializers, [Pattern(@"\}")] Token rb2) { }
 }
 
-public sealed class ImplicitArrayCreationExpr : Expression
+public sealed partial class ImplicitArrayCreationExpr : Expression
 {
-    public ImplicitArrayCreationExpr([Pattern(@"new", Priority = 1)] Token kw, [Pattern(@"\[")] Token lb, [Pattern(@"\]")] Token rb, [Pattern(@"\{")] Token lb2, InitializerList initializers, [Pattern(@"\}")] Token rb2) { }
+    [Rule]
+    public static void Reduce([Pattern(@"new", Priority = 1)] Token kw, [Pattern(@"\[")] Token lb, [Pattern(@"\]")] Token rb, [Pattern(@"\{")] Token lb2, InitializerList initializers, [Pattern(@"\}")] Token rb2) { }
 }
 
-public sealed class TargetTypedNewExpr : Expression
+public sealed partial class TargetTypedNewExpr : Expression
 {
-    public TargetTypedNewExpr([Pattern(@"new", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"new", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp) { }
 }
 
-public sealed class TargetTypedNewInitExpr : Expression
+public sealed partial class TargetTypedNewInitExpr : Expression
 {
-    public TargetTypedNewInitExpr([Pattern(@"new", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, InitializerList initializers, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"new", Priority = 1)] Token kw, [Pattern(@"\(")] Token lp, ArgumentList args, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, InitializerList initializers, [Pattern(@"\}")] Token rb) { }
 }
 
 [Precedence(15)]
-public sealed class WithExpr : Expression
+public sealed partial class WithExpr : Expression
 {
-    public WithExpr(Expression expr, [Pattern(@"with", Priority = 1)] Token kw, [Pattern(@"\{")] Token lb, InitializerList initializers, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(Expression expr, [Pattern(@"with", Priority = 1)] Token kw, [Pattern(@"\{")] Token lb, InitializerList initializers, [Pattern(@"\}")] Token rb) { }
 }
 
 [Precedence(15)]
-public sealed class SwitchExpr : Expression
+public sealed partial class SwitchExpr : Expression
 {
-    public SwitchExpr(Expression governor, [Pattern(@"switch", Priority = 1)] Token kw, [Pattern(@"\{")] Token lb, SwitchExprArmList arms, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(Expression governor, [Pattern(@"switch", Priority = 1)] Token kw, [Pattern(@"\{")] Token lb, SwitchExprArmList arms, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class QueryExpr : Expression
+public sealed partial class QueryExpr : Expression
 {
-    public QueryExpr([Pattern(@"from", Priority = 1)] Token kwFrom, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"in", Priority = 1)] Token kwIn, Expression source, QueryClauseList clauses) { }
+    [Rule]
+    public static void Reduce([Pattern(@"from", Priority = 1)] Token kwFrom, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"in", Priority = 1)] Token kwIn, Expression source, QueryClauseList clauses) { }
 }
 
 [Precedence(1)]
-public sealed class ThrowExpr : Expression
+public sealed partial class ThrowExpr : Expression
 {
-    public ThrowExpr([Pattern(@"throw", Priority = 1)] Token kw, Expression expr) { }
+    [Rule]
+    public static void Reduce([Pattern(@"throw", Priority = 1)] Token kw, Expression expr) { }
 }
 
-public abstract class Pattern : AstNode { }
+public abstract partial class Pattern : AstNode { }
 
-public sealed class NullConstantPattern : Pattern
+public sealed partial class NullConstantPattern : Pattern
 {
-    public NullConstantPattern([Pattern(@"null", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"null", Priority = 1)] Token kw) { }
 }
 
-public sealed class TrueConstantPattern : Pattern
+public sealed partial class TrueConstantPattern : Pattern
 {
-    public TrueConstantPattern([Pattern(@"true", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"true", Priority = 1)] Token kw) { }
 }
 
-public sealed class FalseConstantPattern : Pattern
+public sealed partial class FalseConstantPattern : Pattern
 {
-    public FalseConstantPattern([Pattern(@"false", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"false", Priority = 1)] Token kw) { }
 }
 
-public sealed class IntConstantPattern : Pattern
+public sealed partial class IntConstantPattern : Pattern
 {
-    public IntConstantPattern([Pattern(@"[0-9]+[dDfFlLmMuU]*")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[0-9]+[dDfFlLmMuU]*")] Token value) { }
 }
 
-public sealed class RealConstantPattern : Pattern
+public sealed partial class RealConstantPattern : Pattern
 {
-    public RealConstantPattern([Pattern(@"[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdDmM]*")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[0-9]+\.[0-9]+([eE][+-]?[0-9]+)?[fFdDmM]*")] Token value) { }
 }
 
-public sealed class HexConstantPattern : Pattern
+public sealed partial class HexConstantPattern : Pattern
 {
-    public HexConstantPattern([Pattern(@"0[xX][0-9a-fA-F_]+")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"0[xX][0-9a-fA-F_]+")] Token value) { }
 }
 
-public sealed class BinaryConstantPattern : Pattern
+public sealed partial class BinaryConstantPattern : Pattern
 {
-    public BinaryConstantPattern([Pattern(@"0[bB][01_]+")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"0[bB][01_]+")] Token value) { }
 }
 
-public sealed class CharConstantPattern : Pattern
+public sealed partial class CharConstantPattern : Pattern
 {
-    public CharConstantPattern([Pattern(@"'([^'\\]|\\.)'")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"'([^'\\]|\\.)'")] Token value) { }
 }
 
-public sealed class StringConstantPattern : Pattern
+public sealed partial class StringConstantPattern : Pattern
 {
-    public StringConstantPattern([Pattern(@"""([^""\\]|\\.)*""")] Token value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"""([^""\\]|\\.)*""")] Token value) { }
 }
 
-public sealed class TypePattern : Pattern
+public sealed partial class TypePattern : Pattern
 {
-    public TypePattern(Type type) { }
+    [Rule]
+    public static void Reduce(Type type) { }
 }
 
-public sealed class DeclarationPattern : Pattern
+public sealed partial class DeclarationPattern : Pattern
 {
-    public DeclarationPattern(Type type, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce(Type type, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public sealed class VarPattern : Pattern
+public sealed partial class VarPattern : Pattern
 {
-    public VarPattern([Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce([Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public sealed class DiscardPattern : Pattern
+public sealed partial class DiscardPattern : Pattern
 {
-    public DiscardPattern([Pattern(@"_", Priority = 1)] Token underscore) { }
-}
-
-[Precedence(15)]
-public sealed class ParenPattern : Pattern
-{
-    public ParenPattern([Pattern(@"\(")] Token lp, Pattern inner, [Pattern(@"\)")] Token rp) { }
-}
-
-[Precedence(15)]
-public sealed class ListPattern : Pattern
-{
-    public ListPattern([Pattern(@"\[")] Token lb, ListPatternElemList elements, [Pattern(@"\]")] Token rb) { }
-}
-
-[Precedence(15)]
-public sealed class SlicePattern : Pattern
-{
-    public SlicePattern([Pattern(@"\[")] Token lb, [Pattern(@"\.\.")] Token slice, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"_", Priority = 1)] Token underscore) { }
 }
 
 [Precedence(15)]
-public sealed class PropertyPattern : Pattern
+public sealed partial class ParenPattern : Pattern
 {
-    public PropertyPattern([Pattern(@"\{")] Token lb, PropPatternList properties, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, Pattern inner, [Pattern(@"\)")] Token rp) { }
 }
 
 [Precedence(15)]
-public sealed class PositionalPattern : Pattern
+public sealed partial class ListPattern : Pattern
 {
-    public PositionalPattern([Pattern(@"\(")] Token lp, Pattern first, [Pattern(@",")] Token comma, PositionalRestList rest, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\[")] Token lb, ListPatternElemList elements, [Pattern(@"\]")] Token rb) { }
+}
+
+[Precedence(15)]
+public sealed partial class SlicePattern : Pattern
+{
+    [Rule]
+    public static void Reduce([Pattern(@"\[")] Token lb, [Pattern(@"\.\.")] Token slice, [Pattern(@"\]")] Token rb) { }
+}
+
+[Precedence(15)]
+public sealed partial class PropertyPattern : Pattern
+{
+    [Rule]
+    public static void Reduce([Pattern(@"\{")] Token lb, PropPatternList properties, [Pattern(@"\}")] Token rb) { }
+}
+
+[Precedence(15)]
+public sealed partial class PositionalPattern : Pattern
+{
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, Pattern first, [Pattern(@",")] Token comma, PositionalRestList rest, [Pattern(@"\)")] Token rp) { }
 }
 
 [Precedence(14)]
-public sealed class LessThanPattern : Pattern
+public sealed partial class LessThanPattern : Pattern
 {
-    public LessThanPattern([Pattern(@"<")] Token op, Pattern right) { }
+    [Rule]
+    public static void Reduce([Pattern(@"<")] Token op, Pattern right) { }
 }
 
 [Precedence(14)]
-public sealed class GreaterThanPattern : Pattern
+public sealed partial class GreaterThanPattern : Pattern
 {
-    public GreaterThanPattern([Pattern(@">")] Token op, Pattern right) { }
+    [Rule]
+    public static void Reduce([Pattern(@">")] Token op, Pattern right) { }
 }
 
 [Precedence(14)]
-public sealed class LessThanOrEqualPattern : Pattern
+public sealed partial class LessThanOrEqualPattern : Pattern
 {
-    public LessThanOrEqualPattern([Pattern(@"<=")] Token op, Pattern right) { }
+    [Rule]
+    public static void Reduce([Pattern(@"<=")] Token op, Pattern right) { }
 }
 
 [Precedence(14)]
-public sealed class GreaterThanOrEqualPattern : Pattern
+public sealed partial class GreaterThanOrEqualPattern : Pattern
 {
-    public GreaterThanOrEqualPattern([Pattern(@">=")] Token op, Pattern right) { }
+    [Rule]
+    public static void Reduce([Pattern(@">=")] Token op, Pattern right) { }
 }
 
 [Precedence(14)]
-public sealed class NotPattern : Pattern
+public sealed partial class NotPattern : Pattern
 {
-    public NotPattern([Pattern(@"not", Priority = 1)] Token notKw, Pattern operand) { }
+    [Rule]
+    public static void Reduce([Pattern(@"not", Priority = 1)] Token notKw, Pattern operand) { }
 }
 
 [Precedence(8)]
-public sealed class AndPattern : Pattern
+public sealed partial class AndPattern : Pattern
 {
-    public AndPattern(Pattern left, [Pattern(@"and", Priority = 1)] Token andKw, Pattern right) { }
+    [Rule]
+    public static void Reduce(Pattern left, [Pattern(@"and", Priority = 1)] Token andKw, Pattern right) { }
 }
 
 [Precedence(6)]
-public sealed class OrPattern : Pattern
+public sealed partial class OrPattern : Pattern
 {
-    public OrPattern(Pattern left, [Pattern(@"or", Priority = 1)] Token orKw, Pattern right) { }
+    [Rule]
+    public static void Reduce(Pattern left, [Pattern(@"or", Priority = 1)] Token orKw, Pattern right) { }
 }
 
-public abstract class ListPatternElemList : AstNode { }
+public abstract partial class ListPatternElemList : AstNode { }
 
-public sealed class NilListPatternElem : ListPatternElemList
+public sealed partial class NilListPatternElem : ListPatternElemList
 {
-    public NilListPatternElem() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class SingleListPatternElem : ListPatternElemList
+public sealed partial class SingleListPatternElem : ListPatternElemList
 {
-    public SingleListPatternElem(Pattern head, ListPatternElemTail tail) { }
+    [Rule]
+    public static void Reduce(Pattern head, ListPatternElemTail tail) { }
 }
 
-public abstract class ListPatternElemTail : AstNode { }
+public abstract partial class ListPatternElemTail : AstNode { }
 
-public sealed class NilListPatternElemTail : ListPatternElemTail
+public sealed partial class NilListPatternElemTail : ListPatternElemTail
 {
-    public NilListPatternElemTail() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsListPatternElemTail : ListPatternElemTail
+public sealed partial class ConsListPatternElemTail : ListPatternElemTail
 {
-    public ConsListPatternElemTail([Pattern(@",")] Token comma, Pattern head, ListPatternElemTail tail) { }
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token comma, Pattern head, ListPatternElemTail tail) { }
 }
 
-public abstract class PositionalRestList : AstNode { }
+public abstract partial class PositionalRestList : AstNode { }
 
-public sealed class SinglePositionalRest : PositionalRestList
+public sealed partial class SinglePositionalRest : PositionalRestList
 {
-    public SinglePositionalRest(Pattern head, PositionalRestTail tail) { }
+    [Rule]
+    public static void Reduce(Pattern head, PositionalRestTail tail) { }
 }
 
-public abstract class PositionalRestTail : AstNode { }
+public abstract partial class PositionalRestTail : AstNode { }
 
-public sealed class NilPositionalRestTail : PositionalRestTail
+public sealed partial class NilPositionalRestTail : PositionalRestTail
 {
-    public NilPositionalRestTail() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsPositionalRestTail : PositionalRestTail
+public sealed partial class ConsPositionalRestTail : PositionalRestTail
 {
-    public ConsPositionalRestTail([Pattern(@",")] Token comma, Pattern head, PositionalRestTail tail) { }
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token comma, Pattern head, PositionalRestTail tail) { }
 }
 
-public abstract class PropPatternList : AstNode { }
+public abstract partial class PropPatternList : AstNode { }
 
-public sealed class NilPropPatternList : PropPatternList
+public sealed partial class NilPropPatternList : PropPatternList
 {
-    public NilPropPatternList() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class SinglePropPattern : PropPatternList
+public sealed partial class SinglePropPattern : PropPatternList
 {
-    public SinglePropPattern([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@":")] Token colon, Pattern value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@":")] Token colon, Pattern value) { }
 }
 
-public sealed class ConsPropPattern : PropPatternList
+public sealed partial class ConsPropPattern : PropPatternList
 {
-    public ConsPropPattern(PropPatternList list, [Pattern(@",")] Token comma, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@":")] Token colon, Pattern value) { }
+    [Rule]
+    public static void Reduce(PropPatternList list, [Pattern(@",")] Token comma, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@":")] Token colon, Pattern value) { }
 }
 
-public abstract class Statement : AstNode { }
+public abstract partial class Statement : AstNode { }
 
-public sealed class EmptyStatement : Statement
+public sealed partial class EmptyStatement : Statement
 {
-    public EmptyStatement([Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@";")] Token semi) { }
 }
 
-public sealed class ExpressionStatement : Statement
+public sealed partial class ExpressionStatement : Statement
 {
-    public ExpressionStatement(Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce(Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class VarDeclaration : Statement
+public sealed partial class VarDeclaration : Statement
 {
-    public VarDeclaration([Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class LocalConstantDeclaration : Statement
+public sealed partial class LocalConstantDeclaration : Statement
 {
-    public LocalConstantDeclaration([Pattern(@"const", Priority = 1)] Token constKw, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"const", Priority = 1)] Token constKw, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class IfStatement : Statement
+public sealed partial class IfStatement : Statement
 {
-    public IfStatement([Pattern(@"if", Priority = 1)] Token ifKw, [Pattern(@"\(")] Token lp, Expression cond, [Pattern(@"\)")] Token rp, Statement then) { }
+    [Rule]
+    public static void Reduce([Pattern(@"if", Priority = 1)] Token ifKw, [Pattern(@"\(")] Token lp, Expression cond, [Pattern(@"\)")] Token rp, Statement then) { }
 }
 
-public sealed class IfElseStatement : Statement
+public sealed partial class IfElseStatement : Statement
 {
-    public IfElseStatement([Pattern(@"if", Priority = 1)] Token ifKw, [Pattern(@"\(")] Token lp, Expression cond, [Pattern(@"\)")] Token rp, Statement then, [Pattern(@"else", Priority = 1)] Token elseKw, Statement elseBranch) { }
+    [Rule]
+    public static void Reduce([Pattern(@"if", Priority = 1)] Token ifKw, [Pattern(@"\(")] Token lp, Expression cond, [Pattern(@"\)")] Token rp, Statement then, [Pattern(@"else", Priority = 1)] Token elseKw, Statement elseBranch) { }
 }
 
-public sealed class WhileStatement : Statement
+public sealed partial class WhileStatement : Statement
 {
-    public WhileStatement([Pattern(@"while", Priority = 1)] Token whileKw, [Pattern(@"\(")] Token lp, Expression cond, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"while", Priority = 1)] Token whileKw, [Pattern(@"\(")] Token lp, Expression cond, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class ReturnStatement : Statement
+public sealed partial class ReturnStatement : Statement
 {
-    public ReturnStatement([Pattern(@"return", Priority = 1)] Token returnKw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"return", Priority = 1)] Token returnKw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class ReturnExprStatement : Statement
+public sealed partial class ReturnExprStatement : Statement
 {
-    public ReturnExprStatement([Pattern(@"return", Priority = 1)] Token returnKw, Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"return", Priority = 1)] Token returnKw, Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class BreakStatement : Statement
+public sealed partial class BreakStatement : Statement
 {
-    public BreakStatement([Pattern(@"break", Priority = 1)] Token breakKw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"break", Priority = 1)] Token breakKw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class ContinueStatement : Statement
+public sealed partial class ContinueStatement : Statement
 {
-    public ContinueStatement([Pattern(@"continue", Priority = 1)] Token continueKw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"continue", Priority = 1)] Token continueKw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class BlockStatement : Statement
+public sealed partial class BlockStatement : Statement
 {
-    public BlockStatement([Pattern(@"\{")] Token lb, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\{")] Token lb, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class BlockStatementWithBody : Statement
+public sealed partial class BlockStatementWithBody : Statement
 {
-    public BlockStatementWithBody([Pattern(@"\{")] Token lb, StatementList body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\{")] Token lb, StatementList body, [Pattern(@"\}")] Token rb) { }
 }
 
-public abstract class StatementList : AstNode { }
+public abstract partial class StatementList : AstNode { }
 
-public sealed class SingleStatement : StatementList
+public sealed partial class SingleStatement : StatementList
 {
-    public SingleStatement(Statement head) { }
+    [Rule]
+    public static void Reduce(Statement head) { }
 }
 
-public sealed class ConsStatement : StatementList
+public sealed partial class ConsStatement : StatementList
 {
-    public ConsStatement(Statement head, StatementList rest) { }
+    [Rule]
+    public static void Reduce(Statement head, StatementList rest) { }
 }
 
-public abstract class SwitchSectionStatementList : AstNode { }
+public abstract partial class SwitchSectionStatementList : AstNode { }
 
-public sealed class SingleSwitchSectionStatement : SwitchSectionStatementList
+public sealed partial class SingleSwitchSectionStatement : SwitchSectionStatementList
 {
-    public SingleSwitchSectionStatement(Statement head) { }
+    [Rule]
+    public static void Reduce(Statement head) { }
 }
 
-public sealed class ConsSwitchSectionStatement : SwitchSectionStatementList
+public sealed partial class ConsSwitchSectionStatement : SwitchSectionStatementList
 {
-    public ConsSwitchSectionStatement(Statement head, SwitchSectionStatementList rest) { }
+    [Rule]
+    public static void Reduce(Statement head, SwitchSectionStatementList rest) { }
 }
 
-public abstract class ForInit : AstNode { }
+public abstract partial class ForInit : AstNode { }
 
-public sealed class NilForInit : ForInit
+public sealed partial class NilForInit : ForInit
 {
-    public NilForInit() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ForInitVar : ForInit
+public sealed partial class ForInitVar : ForInit
 {
-    public ForInitVar([Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init) { }
+    [Rule]
+    public static void Reduce([Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init) { }
 }
 
-public sealed class ForInitExprList : ForInit
+public sealed partial class ForInitExprList : ForInit
 {
-    public ForInitExprList(Expression head, ForInitExprTail tail) { }
+    [Rule]
+    public static void Reduce(Expression head, ForInitExprTail tail) { }
 }
 
-public abstract class ForInitExprTail : AstNode { }
+public abstract partial class ForInitExprTail : AstNode { }
 
-public sealed class NilForInitExprTail : ForInitExprTail
+public sealed partial class NilForInitExprTail : ForInitExprTail
 {
-    public NilForInitExprTail() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsForInitExprTail : ForInitExprTail
+public sealed partial class ConsForInitExprTail : ForInitExprTail
 {
-    public ConsForInitExprTail([Pattern(@",")] Token comma, Expression head, ForInitExprTail tail) { }
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token comma, Expression head, ForInitExprTail tail) { }
 }
 
-public abstract class ForUpdate : AstNode { }
+public abstract partial class ForUpdate : AstNode { }
 
-public sealed class NilForUpdate : ForUpdate
+public sealed partial class NilForUpdate : ForUpdate
 {
-    public NilForUpdate() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ForUpdateExprList : ForUpdate
+public sealed partial class ForUpdateExprList : ForUpdate
 {
-    public ForUpdateExprList(Expression head, ForUpdateExprTail tail) { }
+    [Rule]
+    public static void Reduce(Expression head, ForUpdateExprTail tail) { }
 }
 
-public abstract class ForUpdateExprTail : AstNode { }
+public abstract partial class ForUpdateExprTail : AstNode { }
 
-public sealed class NilForUpdateExprTail : ForUpdateExprTail
+public sealed partial class NilForUpdateExprTail : ForUpdateExprTail
 {
-    public NilForUpdateExprTail() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsForUpdateExprTail : ForUpdateExprTail
+public sealed partial class ConsForUpdateExprTail : ForUpdateExprTail
 {
-    public ConsForUpdateExprTail([Pattern(@",")] Token comma, Expression head, ForUpdateExprTail tail) { }
+    [Rule]
+    public static void Reduce([Pattern(@",")] Token comma, Expression head, ForUpdateExprTail tail) { }
 }
 
-public abstract class ForCondition : AstNode { }
+public abstract partial class ForCondition : AstNode { }
 
-public sealed class NilForCondition : ForCondition
+public sealed partial class NilForCondition : ForCondition
 {
-    public NilForCondition() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ForConditionExpr : ForCondition
+public sealed partial class ForConditionExpr : ForCondition
 {
-    public ForConditionExpr(Expression cond) { }
+    [Rule]
+    public static void Reduce(Expression cond) { }
 }
 
-public sealed class ForStatement : Statement
+public sealed partial class ForStatement : Statement
 {
-    public ForStatement([Pattern(@"for", Priority = 1)] Token forKw, [Pattern(@"\(")] Token lp, ForInit init, [Pattern(@";")] Token semi1, ForCondition cond, [Pattern(@";")] Token semi2, ForUpdate update, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"for", Priority = 1)] Token forKw, [Pattern(@"\(")] Token lp, ForInit init, [Pattern(@";")] Token semi1, ForCondition cond, [Pattern(@";")] Token semi2, ForUpdate update, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class ForEachStatement : Statement
+public sealed partial class ForEachStatement : Statement
 {
-    public ForEachStatement([Pattern(@"foreach", Priority = 1)] Token foreachKw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"in", Priority = 1)] Token inKw, Expression collection, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"foreach", Priority = 1)] Token foreachKw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"in", Priority = 1)] Token inKw, Expression collection, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class ForEachVarStatement : Statement
+public sealed partial class ForEachVarStatement : Statement
 {
-    public ForEachVarStatement([Pattern(@"foreach", Priority = 1)] Token foreachKw, [Pattern(@"\(")] Token lp, [Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"in", Priority = 1)] Token inKw, Expression collection, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"foreach", Priority = 1)] Token foreachKw, [Pattern(@"\(")] Token lp, [Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"in", Priority = 1)] Token inKw, Expression collection, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class DoStatement : Statement
+public sealed partial class DoStatement : Statement
 {
-    public DoStatement([Pattern(@"do", Priority = 1)] Token doKw, Statement body, [Pattern(@"while", Priority = 1)] Token whileKw, [Pattern(@"\(")] Token lp, Expression cond, [Pattern(@"\)")] Token rp, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"do", Priority = 1)] Token doKw, Statement body, [Pattern(@"while", Priority = 1)] Token whileKw, [Pattern(@"\(")] Token lp, Expression cond, [Pattern(@"\)")] Token rp, [Pattern(@";")] Token semi) { }
 }
 
-public abstract class CaseLabel : AstNode { }
+public abstract partial class CaseLabel : AstNode { }
 
-public sealed class CaseExprLabel : CaseLabel
+public sealed partial class CaseExprLabel : CaseLabel
 {
-    public CaseExprLabel([Pattern(@"case", Priority = 1)] Token caseKw, Expression value, [Pattern(@":")] Token colon) { }
+    [Rule]
+    public static void Reduce([Pattern(@"case", Priority = 1)] Token caseKw, Expression value, [Pattern(@":")] Token colon) { }
 }
 
-public sealed class DefaultLabel : CaseLabel
+public sealed partial class DefaultLabel : CaseLabel
 {
-    public DefaultLabel([Pattern(@"default", Priority = 1)] Token defaultKw, [Pattern(@":")] Token colon) { }
+    [Rule]
+    public static void Reduce([Pattern(@"default", Priority = 1)] Token defaultKw, [Pattern(@":")] Token colon) { }
 }
 
-public abstract class CaseLabelList : AstNode { }
+public abstract partial class CaseLabelList : AstNode { }
 
-public sealed class SingleCaseLabel : CaseLabelList
+public sealed partial class SingleCaseLabel : CaseLabelList
 {
-    public SingleCaseLabel(CaseLabel head) { }
+    [Rule]
+    public static void Reduce(CaseLabel head) { }
 }
 
-public sealed class ConsCaseLabel : CaseLabelList
+public sealed partial class ConsCaseLabel : CaseLabelList
 {
-    public ConsCaseLabel(CaseLabelList list, CaseLabel label) { }
+    [Rule]
+    public static void Reduce(CaseLabelList list, CaseLabel label) { }
 }
 
-public abstract class SwitchSection : AstNode { }
+public abstract partial class SwitchSection : AstNode { }
 
-public sealed class LabeledSwitchSection : SwitchSection
+public sealed partial class LabeledSwitchSection : SwitchSection
 {
-    public LabeledSwitchSection(CaseLabelList labels, SwitchSectionStatementList body) { }
+    [Rule]
+    public static void Reduce(CaseLabelList labels, SwitchSectionStatementList body) { }
 }
 
-public abstract class SwitchSectionList : AstNode { }
+public abstract partial class SwitchSectionList : AstNode { }
 
-public sealed class NilSwitchSection : SwitchSectionList
+public sealed partial class NilSwitchSection : SwitchSectionList
 {
-    public NilSwitchSection() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsSwitchSection : SwitchSectionList
+public sealed partial class ConsSwitchSection : SwitchSectionList
 {
-    public ConsSwitchSection(SwitchSection head, SwitchSectionList rest) { }
+    [Rule]
+    public static void Reduce(SwitchSection head, SwitchSectionList rest) { }
 }
 
-public sealed class SwitchStatement : Statement
+public sealed partial class SwitchStatement : Statement
 {
-    public SwitchStatement([Pattern(@"switch", Priority = 1)] Token switchKw, [Pattern(@"\(")] Token lp, Expression expr, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, SwitchSectionList sections, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"switch", Priority = 1)] Token switchKw, [Pattern(@"\(")] Token lp, Expression expr, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, SwitchSectionList sections, [Pattern(@"\}")] Token rb) { }
 }
 
-public abstract class CatchClause : AstNode { }
+public abstract partial class CatchClause : AstNode { }
 
-public sealed class CatchTypeClause : CatchClause
+public sealed partial class CatchTypeClause : CatchClause
 {
-    public CatchTypeClause([Pattern(@"catch", Priority = 1)] Token catchKw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"catch", Priority = 1)] Token catchKw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class CatchTypeOnlyClause : CatchClause
+public sealed partial class CatchTypeOnlyClause : CatchClause
 {
-    public CatchTypeOnlyClause([Pattern(@"catch", Priority = 1)] Token catchKw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"catch", Priority = 1)] Token catchKw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class CatchGeneralClause : CatchClause
+public sealed partial class CatchGeneralClause : CatchClause
 {
-    public CatchGeneralClause([Pattern(@"catch", Priority = 1)] Token catchKw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"catch", Priority = 1)] Token catchKw, Statement body) { }
 }
 
-public abstract class CatchClauseList : AstNode { }
+public abstract partial class CatchClauseList : AstNode { }
 
-public sealed class NilCatchClause : CatchClauseList
+public sealed partial class NilCatchClause : CatchClauseList
 {
-    public NilCatchClause() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsCatchClause : CatchClauseList
+public sealed partial class ConsCatchClause : CatchClauseList
 {
-    public ConsCatchClause(CatchClause head, CatchClauseList rest) { }
+    [Rule]
+    public static void Reduce(CatchClause head, CatchClauseList rest) { }
 }
 
-public abstract class FinallyClause : AstNode { }
+public abstract partial class FinallyClause : AstNode { }
 
-public sealed class NilFinallyClause : FinallyClause
+public sealed partial class NilFinallyClause : FinallyClause
 {
-    public NilFinallyClause() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class PresentFinallyClause : FinallyClause
+public sealed partial class PresentFinallyClause : FinallyClause
 {
-    public PresentFinallyClause([Pattern(@"finally", Priority = 1)] Token finallyKw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"finally", Priority = 1)] Token finallyKw, Statement body) { }
 }
 
-public sealed class TryStatement : Statement
+public sealed partial class TryStatement : Statement
 {
-    public TryStatement([Pattern(@"try", Priority = 1)] Token tryKw, Statement body, CatchClauseList catchClauses, FinallyClause finallyClause) { }
+    [Rule]
+    public static void Reduce([Pattern(@"try", Priority = 1)] Token tryKw, Statement body, CatchClauseList catchClauses, FinallyClause finallyClause) { }
 }
 
-public sealed class LockStatement : Statement
+public sealed partial class LockStatement : Statement
 {
-    public LockStatement([Pattern(@"lock", Priority = 1)] Token lockKw, [Pattern(@"\(")] Token lp, Expression expr, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"lock", Priority = 1)] Token lockKw, [Pattern(@"\(")] Token lp, Expression expr, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public abstract class UsingResource : AstNode { }
+public abstract partial class UsingResource : AstNode { }
 
-public sealed class UsingExprResource : UsingResource
+public sealed partial class UsingExprResource : UsingResource
 {
-    public UsingExprResource(Expression expr) { }
+    [Rule]
+    public static void Reduce(Expression expr) { }
 }
 
-public sealed class UsingVarResource : UsingResource
+public sealed partial class UsingVarResource : UsingResource
 {
-    public UsingVarResource([Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init) { }
+    [Rule]
+    public static void Reduce([Pattern(@"var", Priority = 1)] Token varKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init) { }
 }
 
-public sealed class UsingStatement : Statement
+public sealed partial class UsingStatement : Statement
 {
-    public UsingStatement([Pattern(@"using", Priority = 1)] Token usingKw, [Pattern(@"\(")] Token lp, UsingResource resource, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"using", Priority = 1)] Token usingKw, [Pattern(@"\(")] Token lp, UsingResource resource, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class FixedStatement : Statement
+public sealed partial class FixedStatement : Statement
 {
-    public FixedStatement([Pattern(@"fixed", Priority = 1)] Token fixedKw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"\*")] Token star, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"fixed", Priority = 1)] Token fixedKw, [Pattern(@"\(")] Token lp, Type type, [Pattern(@"\*")] Token star, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class CheckedStatement : Statement
+public sealed partial class CheckedStatement : Statement
 {
-    public CheckedStatement([Pattern(@"checked", Priority = 1)] Token checkedKw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"checked", Priority = 1)] Token checkedKw, Statement body) { }
 }
 
-public sealed class UncheckedStatement : Statement
+public sealed partial class UncheckedStatement : Statement
 {
-    public UncheckedStatement([Pattern(@"unchecked", Priority = 1)] Token uncheckedKw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"unchecked", Priority = 1)] Token uncheckedKw, Statement body) { }
 }
 
-public sealed class UnsafeStatement : Statement
+public sealed partial class UnsafeStatement : Statement
 {
-    public UnsafeStatement([Pattern(@"unsafe", Priority = 1)] Token unsafeKw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"unsafe", Priority = 1)] Token unsafeKw, Statement body) { }
 }
 
-public sealed class YieldReturnStatement : Statement
+public sealed partial class YieldReturnStatement : Statement
 {
-    public YieldReturnStatement([Pattern(@"yield", Priority = 1)] Token yieldKw, [Pattern(@"return", Priority = 1)] Token returnKw, Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"yield", Priority = 1)] Token yieldKw, [Pattern(@"return", Priority = 1)] Token returnKw, Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class YieldBreakStatement : Statement
+public sealed partial class YieldBreakStatement : Statement
 {
-    public YieldBreakStatement([Pattern(@"yield", Priority = 1)] Token yieldKw, [Pattern(@"break", Priority = 1)] Token breakKw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"yield", Priority = 1)] Token yieldKw, [Pattern(@"break", Priority = 1)] Token breakKw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class GotoStatement : Statement
+public sealed partial class GotoStatement : Statement
 {
-    public GotoStatement([Pattern(@"goto", Priority = 1)] Token gotoKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"goto", Priority = 1)] Token gotoKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class GotoCaseStatement : Statement
+public sealed partial class GotoCaseStatement : Statement
 {
-    public GotoCaseStatement([Pattern(@"goto", Priority = 1)] Token gotoKw, [Pattern(@"case", Priority = 1)] Token caseKw, Expression value, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"goto", Priority = 1)] Token gotoKw, [Pattern(@"case", Priority = 1)] Token caseKw, Expression value, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class GotoDefaultStatement : Statement
+public sealed partial class GotoDefaultStatement : Statement
 {
-    public GotoDefaultStatement([Pattern(@"goto", Priority = 1)] Token gotoKw, [Pattern(@"default", Priority = 1)] Token defaultKw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"goto", Priority = 1)] Token gotoKw, [Pattern(@"default", Priority = 1)] Token defaultKw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class LabeledStatement : Statement
+public sealed partial class LabeledStatement : Statement
 {
-    public LabeledStatement([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@":")] Token colon, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@":")] Token colon, Statement body) { }
 }
 
-public sealed class ThrowStatement : Statement
+public sealed partial class ThrowStatement : Statement
 {
-    public ThrowStatement([Pattern(@"throw", Priority = 1)] Token throwKw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"throw", Priority = 1)] Token throwKw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class ThrowExprStatement : Statement
+public sealed partial class ThrowExprStatement : Statement
 {
-    public ThrowExprStatement([Pattern(@"throw", Priority = 1)] Token throwKw, Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"throw", Priority = 1)] Token throwKw, Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public abstract class QualifiedName : AstNode { }
+public abstract partial class QualifiedName : AstNode { }
 
-public sealed class SimpleQualifiedName : QualifiedName
+public sealed partial class SimpleQualifiedName : QualifiedName
 {
-    public SimpleQualifiedName([Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public sealed class QualifiedQualifiedName : QualifiedName
+public sealed partial class QualifiedQualifiedName : QualifiedName
 {
-    public QualifiedQualifiedName(QualifiedName left, [Pattern(@"\.")] Token dot, [Pattern(@"[A-Za-z_]\w*")] Token right) { }
+    [Rule]
+    public static void Reduce(QualifiedName left, [Pattern(@"\.")] Token dot, [Pattern(@"[A-Za-z_]\w*")] Token right) { }
 }
 
-public abstract class ModifierList : AstNode { }
+public abstract partial class ModifierList : AstNode { }
 
-public sealed class NilModifierList : ModifierList
+public sealed partial class NilModifierList : ModifierList
 {
-    public NilModifierList() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsModifier : ModifierList
+public sealed partial class ConsModifier : ModifierList
 {
-    public ConsModifier([Pattern(@"(public|private|protected|internal|static|readonly|abstract|sealed|const|async|virtual|override|extern|partial|unsafe|volatile)", Priority = 1)] Token modifier, ModifierList rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"(public|private|protected|internal|static|readonly|abstract|sealed|const|async|virtual|override|extern|partial|unsafe|volatile)", Priority = 1)] Token modifier, ModifierList rest) { }
 }
 
-public abstract class Declaration : AstNode { }
+public abstract partial class Declaration : AstNode { }
 
-public sealed class UsingDirective : Declaration
+public sealed partial class UsingDirective : Declaration
 {
-    public UsingDirective([Pattern(@"using", Priority = 1)] Token usingKw, QualifiedName ns, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"using", Priority = 1)] Token usingKw, QualifiedName ns, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class NamespaceDeclaration : Declaration
+public sealed partial class NamespaceDeclaration : Declaration
 {
-    public NamespaceDeclaration([Pattern(@"namespace", Priority = 1)] Token namespaceKw, QualifiedName name, [Pattern(@"\{")] Token lb, NamespaceBody body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"namespace", Priority = 1)] Token namespaceKw, QualifiedName name, [Pattern(@"\{")] Token lb, NamespaceBody body, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class ClassDeclaration : Declaration
+public sealed partial class ClassDeclaration : Declaration
 {
-    public ClassDeclaration(ModifierList modifiers, [Pattern(@"class", Priority = 1)] Token classKw, [Pattern(@"[A-Za-z_]\w*")] Token name, OptionalTypeParameterList typeParams, BaseList bases, TypeParameterConstraintClauseList constraints, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"class", Priority = 1)] Token classKw, [Pattern(@"[A-Za-z_]\w*")] Token name, OptionalTypeParameterList typeParams, BaseList bases, TypeParameterConstraintClauseList constraints, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
 }
 
-public abstract class NamespaceBody : AstNode { }
+public abstract partial class NamespaceBody : AstNode { }
 
-public sealed class NilNamespaceBody : NamespaceBody
+public sealed partial class NilNamespaceBody : NamespaceBody
 {
-    public NilNamespaceBody() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsNamespaceMember : NamespaceBody
+public sealed partial class ConsNamespaceMember : NamespaceBody
 {
-    public ConsNamespaceMember(Declaration head, NamespaceBody rest) { }
+    [Rule]
+    public static void Reduce(Declaration head, NamespaceBody rest) { }
 }
 
-public abstract class TypeParameter : AstNode { }
+public abstract partial class TypeParameter : AstNode { }
 
-public sealed class PlainTypeParameter : TypeParameter
+public sealed partial class PlainTypeParameter : TypeParameter
 {
-    public PlainTypeParameter([Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public abstract class TypeParameterList : AstNode { }
+public abstract partial class TypeParameterList : AstNode { }
 
-public sealed class SingleTypeParameter : TypeParameterList
+public sealed partial class SingleTypeParameter : TypeParameterList
 {
-    public SingleTypeParameter([Pattern(@"<")] Token lt, TypeParameter head) { }
+    [Rule]
+    public static void Reduce([Pattern(@"<")] Token lt, TypeParameter head) { }
 }
 
-public sealed class ConsTypeParameter : TypeParameterList
+public sealed partial class ConsTypeParameter : TypeParameterList
 {
-    public ConsTypeParameter(TypeParameterList list, [Pattern(@",")] Token comma, TypeParameter next) { }
+    [Rule]
+    public static void Reduce(TypeParameterList list, [Pattern(@",")] Token comma, TypeParameter next) { }
 }
 
-public abstract class OptionalTypeParameterList : AstNode { }
+public abstract partial class OptionalTypeParameterList : AstNode { }
 
-public sealed class AbsentTypeParameterList : OptionalTypeParameterList
+public sealed partial class AbsentTypeParameterList : OptionalTypeParameterList
 {
-    public AbsentTypeParameterList() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class PresentTypeParameterList : OptionalTypeParameterList
+public sealed partial class PresentTypeParameterList : OptionalTypeParameterList
 {
-    public PresentTypeParameterList(TypeParameterList list, [Pattern(@">")] Token gt) { }
+    [Rule]
+    public static void Reduce(TypeParameterList list, [Pattern(@">")] Token gt) { }
 }
 
-public abstract class BaseList : AstNode { }
+public abstract partial class BaseList : AstNode { }
 
-public sealed class NilBaseList : BaseList
+public sealed partial class NilBaseList : BaseList
 {
-    public NilBaseList() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class SingleBaseType : BaseList
+public sealed partial class SingleBaseType : BaseList
 {
-    public SingleBaseType([Pattern(@":")] Token colon, Type head) { }
+    [Rule]
+    public static void Reduce([Pattern(@":")] Token colon, Type head) { }
 }
 
-public sealed class ConsBaseType : BaseList
+public sealed partial class ConsBaseType : BaseList
 {
-    public ConsBaseType(BaseList list, [Pattern(@",")] Token comma, Type next) { }
+    [Rule]
+    public static void Reduce(BaseList list, [Pattern(@",")] Token comma, Type next) { }
 }
 
-public abstract class TypeParameterConstraint : AstNode { }
+public abstract partial class TypeParameterConstraint : AstNode { }
 
-public sealed class ClassTypeConstraint : TypeParameterConstraint
+public sealed partial class ClassTypeConstraint : TypeParameterConstraint
 {
-    public ClassTypeConstraint([Pattern(@"class", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"class", Priority = 1)] Token kw) { }
 }
 
-public sealed class StructTypeConstraint : TypeParameterConstraint
+public sealed partial class StructTypeConstraint : TypeParameterConstraint
 {
-    public StructTypeConstraint([Pattern(@"struct", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Reduce([Pattern(@"struct", Priority = 1)] Token kw) { }
 }
 
-public sealed class TypeConstraint : TypeParameterConstraint
+public sealed partial class TypeConstraint : TypeParameterConstraint
 {
-    public TypeConstraint(Type type) { }
+    [Rule]
+    public static void Reduce(Type type) { }
 }
 
-public abstract class TypeParameterConstraintList : AstNode { }
+public abstract partial class TypeParameterConstraintList : AstNode { }
 
-public sealed class SingleTypeParameterConstraint : TypeParameterConstraintList
+public sealed partial class SingleTypeParameterConstraint : TypeParameterConstraintList
 {
-    public SingleTypeParameterConstraint(TypeParameterConstraint head) { }
+    [Rule]
+    public static void Reduce(TypeParameterConstraint head) { }
 }
 
-public sealed class ConsTypeParameterConstraint : TypeParameterConstraintList
+public sealed partial class ConsTypeParameterConstraint : TypeParameterConstraintList
 {
-    public ConsTypeParameterConstraint(TypeParameterConstraintList list, [Pattern(@",")] Token comma, TypeParameterConstraint next) { }
+    [Rule]
+    public static void Reduce(TypeParameterConstraintList list, [Pattern(@",")] Token comma, TypeParameterConstraint next) { }
 }
 
-public abstract class TypeParameterConstraintClauseList : AstNode { }
+public abstract partial class TypeParameterConstraintClauseList : AstNode { }
 
-public sealed class NilTypeParameterConstraintClause : TypeParameterConstraintClauseList
+public sealed partial class NilTypeParameterConstraintClause : TypeParameterConstraintClauseList
 {
-    public NilTypeParameterConstraintClause() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsTypeParameterConstraintClause : TypeParameterConstraintClauseList
+public sealed partial class ConsTypeParameterConstraintClause : TypeParameterConstraintClauseList
 {
-    public ConsTypeParameterConstraintClause([Pattern(@"where", Priority = 1)] Token whereKw, [Pattern(@"[A-Za-z_]\w*")] Token param, [Pattern(@":")] Token colon, TypeParameterConstraintList constraints, TypeParameterConstraintClauseList rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"where", Priority = 1)] Token whereKw, [Pattern(@"[A-Za-z_]\w*")] Token param, [Pattern(@":")] Token colon, TypeParameterConstraintList constraints, TypeParameterConstraintClauseList rest) { }
 }
 
-public sealed class StructDeclaration : Declaration
+public sealed partial class StructDeclaration : Declaration
 {
-    public StructDeclaration(ModifierList modifiers, [Pattern(@"struct", Priority = 1)] Token structKw, [Pattern(@"[A-Za-z_]\w*")] Token name, OptionalTypeParameterList typeParams, BaseList bases, TypeParameterConstraintClauseList constraints, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"struct", Priority = 1)] Token structKw, [Pattern(@"[A-Za-z_]\w*")] Token name, OptionalTypeParameterList typeParams, BaseList bases, TypeParameterConstraintClauseList constraints, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class InterfaceDeclaration : Declaration
+public sealed partial class InterfaceDeclaration : Declaration
 {
-    public InterfaceDeclaration(ModifierList modifiers, [Pattern(@"interface", Priority = 1)] Token interfaceKw, [Pattern(@"[A-Za-z_]\w*")] Token name, OptionalTypeParameterList typeParams, BaseList bases, TypeParameterConstraintClauseList constraints, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"interface", Priority = 1)] Token interfaceKw, [Pattern(@"[A-Za-z_]\w*")] Token name, OptionalTypeParameterList typeParams, BaseList bases, TypeParameterConstraintClauseList constraints, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class EnumDeclaration : Declaration
+public sealed partial class EnumDeclaration : Declaration
 {
-    public EnumDeclaration(ModifierList modifiers, [Pattern(@"enum", Priority = 1)] Token enumKw, [Pattern(@"[A-Za-z_]\w*")] Token name, BaseList bases, [Pattern(@"\{")] Token lb, EnumMemberBody body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"enum", Priority = 1)] Token enumKw, [Pattern(@"[A-Za-z_]\w*")] Token name, BaseList bases, [Pattern(@"\{")] Token lb, EnumMemberBody body, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class DelegateDeclaration : Declaration
+public sealed partial class DelegateDeclaration : Declaration
 {
-    public DelegateDeclaration(ModifierList modifiers, [Pattern(@"delegate", Priority = 1)] Token delegateKw, Type returnType, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"delegate", Priority = 1)] Token delegateKw, Type returnType, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class RecordDeclaration : Declaration
+public sealed partial class RecordDeclaration : Declaration
 {
-    public RecordDeclaration(ModifierList modifiers, [Pattern(@"record", Priority = 1)] Token recordKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, BaseList bases, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"record", Priority = 1)] Token recordKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, BaseList bases, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class RecordStructDeclaration : Declaration
+public sealed partial class RecordStructDeclaration : Declaration
 {
-    public RecordStructDeclaration(ModifierList modifiers, [Pattern(@"record", Priority = 1)] Token recordKw, [Pattern(@"struct", Priority = 1)] Token structKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"record", Priority = 1)] Token recordKw, [Pattern(@"struct", Priority = 1)] Token structKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, [Pattern(@"\{")] Token lb, MemberBody body, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class FileScopedNamespaceDeclaration : Declaration
+public sealed partial class FileScopedNamespaceDeclaration : Declaration
 {
-    public FileScopedNamespaceDeclaration([Pattern(@"namespace", Priority = 1)] Token namespaceKw, QualifiedName name, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"namespace", Priority = 1)] Token namespaceKw, QualifiedName name, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class GlobalUsingDirective : Declaration
+public sealed partial class GlobalUsingDirective : Declaration
 {
-    public GlobalUsingDirective([Pattern(@"global", Priority = 1)] Token globalKw, [Pattern(@"using", Priority = 1)] Token usingKw, QualifiedName ns, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"global", Priority = 1)] Token globalKw, [Pattern(@"using", Priority = 1)] Token usingKw, QualifiedName ns, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class GlobalUsingAliasDirective : Declaration
+public sealed partial class GlobalUsingAliasDirective : Declaration
 {
-    public GlobalUsingAliasDirective([Pattern(@"global", Priority = 1)] Token globalKw, [Pattern(@"using", Priority = 1)] Token usingKw, [Pattern(@"[A-Za-z_]\w*")] Token alias, [Pattern(@"=")] Token eq, Type target, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"global", Priority = 1)] Token globalKw, [Pattern(@"using", Priority = 1)] Token usingKw, [Pattern(@"[A-Za-z_]\w*")] Token alias, [Pattern(@"=")] Token eq, Type target, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class ExternAliasDirective : Declaration
+public sealed partial class ExternAliasDirective : Declaration
 {
-    public ExternAliasDirective([Pattern(@"extern", Priority = 1)] Token externKw, [Pattern(@"alias", Priority = 1)] Token aliasKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"extern", Priority = 1)] Token externKw, [Pattern(@"alias", Priority = 1)] Token aliasKw, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { }
 }
 
-public abstract class EnumMemberBody : AstNode { }
+public abstract partial class EnumMemberBody : AstNode { }
 
-public sealed class NilEnumMember : EnumMemberBody
+public sealed partial class NilEnumMember : EnumMemberBody
 {
-    public NilEnumMember() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class SingleEnumMember : EnumMemberBody
+public sealed partial class SingleEnumMember : EnumMemberBody
 {
-    public SingleEnumMember(EnumMember head) { }
+    [Rule]
+    public static void Reduce(EnumMember head) { }
 }
 
-public sealed class ConsEnumMember : EnumMemberBody
+public sealed partial class ConsEnumMember : EnumMemberBody
 {
-    public ConsEnumMember(EnumMember head, [Pattern(@",")] Token comma, EnumMemberBody rest) { }
+    [Rule]
+    public static void Reduce(EnumMember head, [Pattern(@",")] Token comma, EnumMemberBody rest) { }
 }
 
-public abstract class EnumMember : AstNode { }
+public abstract partial class EnumMember : AstNode { }
 
-public sealed class EnumMemberDecl : EnumMember
+public sealed partial class EnumMemberDecl : EnumMember
 {
-    public EnumMemberDecl([Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public sealed class EnumMemberInitDecl : EnumMember
+public sealed partial class EnumMemberInitDecl : EnumMember
 {
-    public EnumMemberInitDecl([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression value) { }
 }
 
-public abstract class ParameterList : AstNode { }
+public abstract partial class ParameterList : AstNode { }
 
-public sealed class NilParameterList : ParameterList
+public sealed partial class NilParameterList : ParameterList
 {
-    public NilParameterList() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class SingleParameter : ParameterList
+public sealed partial class SingleParameter : ParameterList
 {
-    public SingleParameter(Type type, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce(Type type, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public sealed class ConsParameter : ParameterList
+public sealed partial class ConsParameter : ParameterList
 {
-    public ConsParameter(ParameterList list, [Pattern(@",")] Token comma, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce(ParameterList list, [Pattern(@",")] Token comma, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public abstract class AccessorList : AstNode { }
+public abstract partial class AccessorList : AstNode { }
 
-public sealed class NilAccessorList : AccessorList
+public sealed partial class NilAccessorList : AccessorList
 {
-    public NilAccessorList() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsAccessor : AccessorList
+public sealed partial class ConsAccessor : AccessorList
 {
-    public ConsAccessor(Accessor head, AccessorList rest) { }
+    [Rule]
+    public static void Reduce(Accessor head, AccessorList rest) { }
 }
 
-public abstract class Accessor : AstNode { }
+public abstract partial class Accessor : AstNode { }
 
-public sealed class GetAccessor : Accessor
+public sealed partial class GetAccessor : Accessor
 {
-    public GetAccessor([Pattern(@"get", Priority = 1)] Token kw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"get", Priority = 1)] Token kw, Statement body) { }
 }
 
-public sealed class GetAccessorExprBody : Accessor
+public sealed partial class GetAccessorExprBody : Accessor
 {
-    public GetAccessorExprBody([Pattern(@"get", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"get", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class SetAccessor : Accessor
+public sealed partial class SetAccessor : Accessor
 {
-    public SetAccessor([Pattern(@"set", Priority = 1)] Token kw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"set", Priority = 1)] Token kw, Statement body) { }
 }
 
-public sealed class SetAccessorExprBody : Accessor
+public sealed partial class SetAccessorExprBody : Accessor
 {
-    public SetAccessorExprBody([Pattern(@"set", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"set", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class InitAccessor : Accessor
+public sealed partial class InitAccessor : Accessor
 {
-    public InitAccessor([Pattern(@"init", Priority = 1)] Token kw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"init", Priority = 1)] Token kw, Statement body) { }
 }
 
-public sealed class InitAccessorExprBody : Accessor
+public sealed partial class InitAccessorExprBody : Accessor
 {
-    public InitAccessorExprBody([Pattern(@"init", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"init", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class AddAccessor : Accessor
+public sealed partial class AddAccessor : Accessor
 {
-    public AddAccessor([Pattern(@"add", Priority = 1)] Token kw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"add", Priority = 1)] Token kw, Statement body) { }
 }
 
-public sealed class AddAccessorExprBody : Accessor
+public sealed partial class AddAccessorExprBody : Accessor
 {
-    public AddAccessorExprBody([Pattern(@"add", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"add", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class RemoveAccessor : Accessor
+public sealed partial class RemoveAccessor : Accessor
 {
-    public RemoveAccessor([Pattern(@"remove", Priority = 1)] Token kw, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"remove", Priority = 1)] Token kw, Statement body) { }
 }
 
-public sealed class RemoveAccessorExprBody : Accessor
+public sealed partial class RemoveAccessorExprBody : Accessor
 {
-    public RemoveAccessorExprBody([Pattern(@"remove", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"remove", Priority = 1)] Token kw, [Pattern(@"=>")] Token arrow, Expression expr, [Pattern(@";")] Token semi) { }
 }
 
-public abstract class MemberDeclaration : AstNode { }
+public abstract partial class MemberDeclaration : AstNode { }
 
-public sealed class FieldDeclaration : MemberDeclaration
+public sealed partial class FieldDeclaration : MemberDeclaration
 {
-    public FieldDeclaration(ModifierList modifiers, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class MethodDeclaration : MemberDeclaration
+public sealed partial class MethodDeclaration : MemberDeclaration
 {
-    public MethodDeclaration(ModifierList modifiers, Type returnType, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, Type returnType, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class PropertyDeclaration : MemberDeclaration
+public sealed partial class PropertyDeclaration : MemberDeclaration
 {
-    public PropertyDeclaration(ModifierList modifiers, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\{")] Token lb, AccessorList accessors, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\{")] Token lb, AccessorList accessors, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class IndexerDeclaration : MemberDeclaration
+public sealed partial class IndexerDeclaration : MemberDeclaration
 {
-    public IndexerDeclaration(ModifierList modifiers, Type type, [Pattern(@"this", Priority = 1)] Token thisKw, [Pattern(@"\[")] Token lb, ParameterList parameters, [Pattern(@"\]")] Token rb, [Pattern(@"\{")] Token lbrace, AccessorList accessors, [Pattern(@"\}")] Token rbrace) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, Type type, [Pattern(@"this", Priority = 1)] Token thisKw, [Pattern(@"\[")] Token lb, ParameterList parameters, [Pattern(@"\]")] Token rb, [Pattern(@"\{")] Token lbrace, AccessorList accessors, [Pattern(@"\}")] Token rbrace) { }
 }
 
-public sealed class EventDeclaration : MemberDeclaration
+public sealed partial class EventDeclaration : MemberDeclaration
 {
-    public EventDeclaration(ModifierList modifiers, [Pattern(@"event", Priority = 1)] Token eventKw, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\{")] Token lb, AccessorList accessors, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"event", Priority = 1)] Token eventKw, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\{")] Token lb, AccessorList accessors, [Pattern(@"\}")] Token rb) { }
 }
 
-public sealed class EventFieldDeclaration : MemberDeclaration
+public sealed partial class EventFieldDeclaration : MemberDeclaration
 {
-    public EventFieldDeclaration(ModifierList modifiers, [Pattern(@"event", Priority = 1)] Token eventKw, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"event", Priority = 1)] Token eventKw, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class EventFieldWithInitDeclaration : MemberDeclaration
+public sealed partial class EventFieldWithInitDeclaration : MemberDeclaration
 {
-    public EventFieldWithInitDeclaration(ModifierList modifiers, [Pattern(@"event", Priority = 1)] Token eventKw, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"event", Priority = 1)] Token eventKw, Type type, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression init, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class ImplicitOperatorDeclaration : MemberDeclaration
+public sealed partial class ImplicitOperatorDeclaration : MemberDeclaration
 {
-    public ImplicitOperatorDeclaration(ModifierList modifiers, [Pattern(@"implicit", Priority = 1)] Token implicitKw, [Pattern(@"operator", Priority = 1)] Token operatorKw, Type targetType, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"implicit", Priority = 1)] Token implicitKw, [Pattern(@"operator", Priority = 1)] Token operatorKw, Type targetType, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class ExplicitOperatorDeclaration : MemberDeclaration
+public sealed partial class ExplicitOperatorDeclaration : MemberDeclaration
 {
-    public ExplicitOperatorDeclaration(ModifierList modifiers, [Pattern(@"explicit", Priority = 1)] Token explicitKw, [Pattern(@"operator", Priority = 1)] Token operatorKw, Type targetType, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"explicit", Priority = 1)] Token explicitKw, [Pattern(@"operator", Priority = 1)] Token operatorKw, Type targetType, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class ConstructorDeclaration : MemberDeclaration
+public sealed partial class ConstructorDeclaration : MemberDeclaration
 {
-    public ConstructorDeclaration(ModifierList modifiers, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class ConstructorWithInitializerDeclaration : MemberDeclaration
+public sealed partial class ConstructorWithInitializerDeclaration : MemberDeclaration
 {
-    public ConstructorWithInitializerDeclaration(ModifierList modifiers, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, [Pattern(@":")] Token colon, [Pattern(@"base", Priority = 1)] Token baseKw, [Pattern(@"\(")] Token initLp, ArgumentList args, [Pattern(@"\)")] Token initRp, Statement body) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, ParameterList parameters, [Pattern(@"\)")] Token rp, [Pattern(@":")] Token colon, [Pattern(@"base", Priority = 1)] Token baseKw, [Pattern(@"\(")] Token initLp, ArgumentList args, [Pattern(@"\)")] Token initRp, Statement body) { }
 }
 
-public sealed class StaticConstructorDeclaration : MemberDeclaration
+public sealed partial class StaticConstructorDeclaration : MemberDeclaration
 {
-    public StaticConstructorDeclaration(ModifierList modifiers, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce(ModifierList modifiers, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public sealed class FinalizerDeclaration : MemberDeclaration
+public sealed partial class FinalizerDeclaration : MemberDeclaration
 {
-    public FinalizerDeclaration([Pattern(@"~")] Token tilde, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, [Pattern(@"\)")] Token rp, Statement body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"~")] Token tilde, [Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"\(")] Token lp, [Pattern(@"\)")] Token rp, Statement body) { }
 }
 
-public abstract class MemberBody : AstNode { }
+public abstract partial class MemberBody : AstNode { }
 
-public sealed class NilMemberBody : MemberBody
+public sealed partial class NilMemberBody : MemberBody
 {
-    public NilMemberBody() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsMemberDecl : MemberBody
+public sealed partial class ConsMemberDecl : MemberBody
 {
-    public ConsMemberDecl(MemberDeclaration head, MemberBody rest) { }
+    [Rule]
+    public static void Reduce(MemberDeclaration head, MemberBody rest) { }
 }
 
-public abstract class AttributeSectionList : AstNode { }
+public abstract partial class AttributeSectionList : AstNode { }
 
-public sealed class NilAttributeSection : AttributeSectionList
+public sealed partial class NilAttributeSection : AttributeSectionList
 {
-    public NilAttributeSection() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsAttributeSection : AttributeSectionList
+public sealed partial class ConsAttributeSection : AttributeSectionList
 {
-    public ConsAttributeSection(AttributeSection head, AttributeSectionList rest) { }
+    [Rule]
+    public static void Reduce(AttributeSection head, AttributeSectionList rest) { }
 }
 
-public abstract class AttributeSection : AstNode { }
+public abstract partial class AttributeSection : AstNode { }
 
-public sealed class AttributeSectionNoTarget : AttributeSection
+public sealed partial class AttributeSectionNoTarget : AttributeSection
 {
-    public AttributeSectionNoTarget([Pattern(@"\[")] Token lb, AttributeList attributes, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\[")] Token lb, AttributeList attributes, [Pattern(@"\]")] Token rb) { }
 }
 
 [Precedence(15)]
-public sealed class AttributeSectionWithTarget : AttributeSection
+public sealed partial class AttributeSectionWithTarget : AttributeSection
 {
-    public AttributeSectionWithTarget([Pattern(@"\[")] Token lb, [Pattern(@"[A-Za-z_]\w*")] Token target, [Pattern(@":")] Token colon, AttributeList attributes, [Pattern(@"\]")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\[")] Token lb, [Pattern(@"[A-Za-z_]\w*")] Token target, [Pattern(@":")] Token colon, AttributeList attributes, [Pattern(@"\]")] Token rb) { }
 }
 
-public abstract class AttributeList : AstNode { }
+public abstract partial class AttributeList : AstNode { }
 
-public sealed class SingleAttribute : AttributeList
+public sealed partial class SingleAttribute : AttributeList
 {
-    public SingleAttribute(Attribute head) { }
+    [Rule]
+    public static void Reduce(Attribute head) { }
 }
 
-public sealed class ConsAttribute : AttributeList
+public sealed partial class ConsAttribute : AttributeList
 {
-    public ConsAttribute(AttributeList list, [Pattern(@",")] Token comma, Attribute head) { }
+    [Rule]
+    public static void Reduce(AttributeList list, [Pattern(@",")] Token comma, Attribute head) { }
 }
 
-public abstract class Attribute : AstNode { }
+public abstract partial class Attribute : AstNode { }
 
-public sealed class AttributeDecl : Attribute
+public sealed partial class AttributeDecl : Attribute
 {
-    public AttributeDecl(QualifiedName name) { }
+    [Rule]
+    public static void Reduce(QualifiedName name) { }
 }
 
-public sealed class AttributeDeclWithArgs : Attribute
+public sealed partial class AttributeDeclWithArgs : Attribute
 {
-    public AttributeDeclWithArgs(QualifiedName name, [Pattern(@"\(")] Token lp, AttributeArgumentList args, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce(QualifiedName name, [Pattern(@"\(")] Token lp, AttributeArgumentList args, [Pattern(@"\)")] Token rp) { }
 }
 
-public abstract class AttributeArgumentList : AstNode { }
+public abstract partial class AttributeArgumentList : AstNode { }
 
-public sealed class NilAttributeArgument : AttributeArgumentList
+public sealed partial class NilAttributeArgument : AttributeArgumentList
 {
-    public NilAttributeArgument() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsAttributeArgument : AttributeArgumentList
+public sealed partial class ConsAttributeArgument : AttributeArgumentList
 {
-    public ConsAttributeArgument(AttributeArgumentList list, [Pattern(@",")] Token comma, AttributeArg arg) { }
+    [Rule]
+    public static void Reduce(AttributeArgumentList list, [Pattern(@",")] Token comma, AttributeArg arg) { }
 }
 
-public sealed class SingleAttributeArgument : AttributeArgumentList
+public sealed partial class SingleAttributeArgument : AttributeArgumentList
 {
-    public SingleAttributeArgument(AttributeArg arg) { }
+    [Rule]
+    public static void Reduce(AttributeArg arg) { }
 }
 
-public abstract class AttributeArg : AstNode { }
+public abstract partial class AttributeArg : AstNode { }
 
-public sealed class PositionalAttributeArg : AttributeArg
+public sealed partial class PositionalAttributeArg : AttributeArg
 {
-    public PositionalAttributeArg(Expression value) { }
+    [Rule]
+    public static void Reduce(Expression value) { }
 }
 
 [Precedence(15)]
-public sealed class NamedAttributeArg : AttributeArg
+public sealed partial class NamedAttributeArg : AttributeArg
 {
-    public NamedAttributeArg([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression value) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name, [Pattern(@"=")] Token eq, Expression value) { }
 }
 
-public abstract class PPDirective : AstNode { }
+public abstract partial class PPDirective : AstNode { }
 
-public abstract class PPExpr : AstNode { }
+public abstract partial class PPExpr : AstNode { }
 
-public sealed class PPSymbolExpr : PPExpr
+public sealed partial class PPSymbolExpr : PPExpr
 {
-    public PPSymbolExpr([Pattern(@"[A-Za-z_]\w*")] Token symbol) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token symbol) { }
 }
 
 [Precedence(14)]
-public sealed class PPNotExpr : PPExpr
+public sealed partial class PPNotExpr : PPExpr
 {
-    public PPNotExpr([Pattern(@"!")] Token bang, PPExpr operand) { }
+    [Rule]
+    public static void Reduce([Pattern(@"!")] Token bang, PPExpr operand) { }
 }
 
 [Precedence(9)]
-public sealed class PPEqExpr : PPExpr
+public sealed partial class PPEqExpr : PPExpr
 {
-    public PPEqExpr(PPExpr left, [Pattern(@"==")] Token op, PPExpr right) { }
+    [Rule]
+    public static void Reduce(PPExpr left, [Pattern(@"==")] Token op, PPExpr right) { }
 }
 
 [Precedence(9)]
-public sealed class PPNeExpr : PPExpr
+public sealed partial class PPNeExpr : PPExpr
 {
-    public PPNeExpr(PPExpr left, [Pattern(@"!=")] Token op, PPExpr right) { }
+    [Rule]
+    public static void Reduce(PPExpr left, [Pattern(@"!=")] Token op, PPExpr right) { }
 }
 
 [Precedence(5)]
-public sealed class PPAndExpr : PPExpr
+public sealed partial class PPAndExpr : PPExpr
 {
-    public PPAndExpr(PPExpr left, [Pattern(@"&&")] Token op, PPExpr right) { }
+    [Rule]
+    public static void Reduce(PPExpr left, [Pattern(@"&&")] Token op, PPExpr right) { }
 }
 
 [Precedence(4)]
-public sealed class PPOrExpr : PPExpr
+public sealed partial class PPOrExpr : PPExpr
 {
-    public PPOrExpr(PPExpr left, [Pattern(@"\|\|")] Token op, PPExpr right) { }
+    [Rule]
+    public static void Reduce(PPExpr left, [Pattern(@"\|\|")] Token op, PPExpr right) { }
 }
 
-public sealed class PPParenExpr : PPExpr
+public sealed partial class PPParenExpr : PPExpr
 {
-    public PPParenExpr([Pattern(@"\(")] Token lp, PPExpr inner, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, PPExpr inner, [Pattern(@"\)")] Token rp) { }
 }
 
-public sealed class PPDefine : PPDirective
+public sealed partial class PPDefine : PPDirective
 {
-    public PPDefine([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"define", Priority = 1)] Token kwDefine, [Pattern(@"[A-Za-z_]\w*")] Token symbol) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"define", Priority = 1)] Token kwDefine, [Pattern(@"[A-Za-z_]\w*")] Token symbol) { }
 }
 
-public sealed class PPUndef : PPDirective
+public sealed partial class PPUndef : PPDirective
 {
-    public PPUndef([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"undef", Priority = 1)] Token kwUndef, [Pattern(@"[A-Za-z_]\w*")] Token symbol) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"undef", Priority = 1)] Token kwUndef, [Pattern(@"[A-Za-z_]\w*")] Token symbol) { }
 }
 
-public sealed class PPIf : PPDirective
+public sealed partial class PPIf : PPDirective
 {
-    public PPIf([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"if", Priority = 1)] Token kwIf, PPExpr condition) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"if", Priority = 1)] Token kwIf, PPExpr condition) { }
 }
 
-public sealed class PPElif : PPDirective
+public sealed partial class PPElif : PPDirective
 {
-    public PPElif([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"elif", Priority = 1)] Token kwElif, PPExpr condition) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"elif", Priority = 1)] Token kwElif, PPExpr condition) { }
 }
 
-public sealed class PPElse : PPDirective
+public sealed partial class PPElse : PPDirective
 {
-    public PPElse([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"else", Priority = 1)] Token kwElse) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"else", Priority = 1)] Token kwElse) { }
 }
 
-public sealed class PPEndIf : PPDirective
+public sealed partial class PPEndIf : PPDirective
 {
-    public PPEndIf([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"endif", Priority = 1)] Token kwEndif) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"endif", Priority = 1)] Token kwEndif) { }
 }
 
-public sealed class PPRegion : PPDirective
+public sealed partial class PPRegion : PPDirective
 {
-    public PPRegion([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"region", Priority = 1)] Token kwRegion, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"region", Priority = 1)] Token kwRegion, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
 }
 
-public sealed class PPEndRegion : PPDirective
+public sealed partial class PPEndRegion : PPDirective
 {
-    public PPEndRegion([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"endregion", Priority = 1)] Token kwEndregion, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"endregion", Priority = 1)] Token kwEndregion, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
 }
 
-public sealed class PPPragmaWarning : PPDirective
+public sealed partial class PPPragmaWarning : PPDirective
 {
-    public PPPragmaWarning([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"pragma", Priority = 1)] Token kwPragma, [Pattern(@"warning", Priority = 1)] Token kwWarning, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"pragma", Priority = 1)] Token kwPragma, [Pattern(@"warning", Priority = 1)] Token kwWarning, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
 }
 
-public sealed class PPPragmaChecksum : PPDirective
+public sealed partial class PPPragmaChecksum : PPDirective
 {
-    public PPPragmaChecksum([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"pragma", Priority = 1)] Token kwPragma, [Pattern(@"checksum", Priority = 1)] Token kwChecksum, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"pragma", Priority = 1)] Token kwPragma, [Pattern(@"checksum", Priority = 1)] Token kwChecksum, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
 }
 
-public sealed class PPLine : PPDirective
+public sealed partial class PPLine : PPDirective
 {
-    public PPLine([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"line", Priority = 1)] Token kwLine, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"line", Priority = 1)] Token kwLine, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
 }
 
-public sealed class PPNullableEnable : PPDirective
+public sealed partial class PPNullableEnable : PPDirective
 {
-    public PPNullableEnable([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"nullable", Priority = 1)] Token kwNullable, [Pattern(@"enable", Priority = 1)] Token kwEnable) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"nullable", Priority = 1)] Token kwNullable, [Pattern(@"enable", Priority = 1)] Token kwEnable) { }
 }
 
-public sealed class PPNullableDisable : PPDirective
+public sealed partial class PPNullableDisable : PPDirective
 {
-    public PPNullableDisable([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"nullable", Priority = 1)] Token kwNullable, [Pattern(@"disable", Priority = 1)] Token kwDisable) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"nullable", Priority = 1)] Token kwNullable, [Pattern(@"disable", Priority = 1)] Token kwDisable) { }
 }
 
-public sealed class PPNullableWarnings : PPDirective
+public sealed partial class PPNullableWarnings : PPDirective
 {
-    public PPNullableWarnings([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"nullable", Priority = 1)] Token kwNullable, [Pattern(@"warnings", Priority = 1)] Token kwWarnings) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"nullable", Priority = 1)] Token kwNullable, [Pattern(@"warnings", Priority = 1)] Token kwWarnings) { }
 }
 
-public sealed class PPNullableAnnotations : PPDirective
+public sealed partial class PPNullableAnnotations : PPDirective
 {
-    public PPNullableAnnotations([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"nullable", Priority = 1)] Token kwNullable, [Pattern(@"annotations", Priority = 1)] Token kwAnnotations) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"nullable", Priority = 1)] Token kwNullable, [Pattern(@"annotations", Priority = 1)] Token kwAnnotations) { }
 }
 
-public sealed class PPError : PPDirective
+public sealed partial class PPError : PPDirective
 {
-    public PPError([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"error", Priority = 1)] Token kwError, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"error", Priority = 1)] Token kwError, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
 }
 
-public sealed class PPWarning : PPDirective
+public sealed partial class PPWarning : PPDirective
 {
-    public PPWarning([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"warning", Priority = 1)] Token kwWarning2, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
+    [Rule]
+    public static void Reduce([Pattern(@"#", Priority = 1)] Token hash, [Pattern(@"warning", Priority = 1)] Token kwWarning2, [Pattern(@"[A-Za-z_]\w*")] Token text) { }
 }
 
-public sealed class ConsPP : CSharpCompilationUnit
+public sealed partial class ConsPP : CSharpCompilationUnit
 {
-    public ConsPP(PPDirective directive, CSharpCompilationUnit rest) { }
+    [Rule]
+    public static void Reduce(PPDirective directive, CSharpCompilationUnit rest) { }
 }
 
-public sealed class NilCompilationUnit : CSharpCompilationUnit
+public sealed partial class NilCompilationUnit : CSharpCompilationUnit
 {
-    public NilCompilationUnit() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class ConsDeclaration : CSharpCompilationUnit
+public sealed partial class ConsDeclaration : CSharpCompilationUnit
 {
-    public ConsDeclaration(Declaration head, CSharpCompilationUnit rest) { }
+    [Rule]
+    public static void Reduce(Declaration head, CSharpCompilationUnit rest) { }
 }
 

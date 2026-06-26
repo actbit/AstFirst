@@ -45,3 +45,22 @@ C# 完全文法（365 規則 / 798 状態）を最大規模のストレステス
 - CPU: AMD Ryzen 9 3900（12 物理コア）
 - .NET 10.0.9、Windows 11 (10.0.26200)
 - BenchmarkDotNet 0.14.0、SimpleJob(launchCount:1, warmupCount:2, iterationCount:3)
+
+## スタック配列化（新モデル・段階8）
+
+`[Rule] static` 新モデルで ParserEmitter の実行時スタックを `Stack<int>`/`Stack<object?>` →
+配列 + top 指数へ置き換え、reduce ごとの `PeekN`（`new object?[n]`）を廃止してインデックス参照化した。
+（配列は容量超過時のみ 2 倍拡張。ボックス化は残るが再確保と reduce 时アロケーションを削減。）
+
+Windows Defender が BenchmarkDotNet のベンチ子プロセスを遮断する環境のため、
+`dotnet run -c Release --project samples/Perf/Perf.Bench -- direct`（Stopwatch + GC 直接計測、warmup 5 回後 1 回）で確認:
+
+| 文法 | アロケーション (新モデル配列化) | 備考 |
+|---|---:|---|
+| CSharp | **627 KB** | 旧 PeekN 版 779 KB から約 20% 削減 (PeekN 廃止の効果) |
+| MegaLang | 436 KB | |
+| DeepNest | 368 KB | |
+| DeepPrec | 4385 KB | |
+
+※ 時間は 1 回計測のため JIT/GC ノイズが大きく、BenchmarkDotNet（上記「実行パフォーマンス」表）ほど正確ではない。
+   正確な回帰値は Windows Defender 適用除外設定後、BenchmarkDotNet で再計測すること。

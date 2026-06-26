@@ -14,12 +14,12 @@ public class CodeEmitterTests
     {
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, false, 0)
                 })
             }),
         };

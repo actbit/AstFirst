@@ -5,130 +5,151 @@ namespace PerfDeepPrec;
 
 [Grammar]
 [Skip(@"\s+")]
-public abstract class PrecExpr : AstNode { }
+public abstract partial class PrecExpr : AstNode { }
 
-public sealed class NumExpr : PrecExpr
+public sealed partial class NumExpr : PrecExpr
 {
-    public NumExpr([Pattern(@"[0-9]+")] Token num) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[0-9]+")] Token num) { }
 }
 
 [Precedence(1)]
-public sealed class Op1Expr : PrecExpr
+public sealed partial class Op1Expr : PrecExpr
 {
-    public Op1Expr(PrecExpr left, [Pattern(@"\+")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"\+")] Token op, PrecExpr right) { }
 }
 
 [Precedence(2)]
-public sealed class Op2Expr : PrecExpr
+public sealed partial class Op2Expr : PrecExpr
 {
-    public Op2Expr(PrecExpr left, [Pattern(@"-")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"-")] Token op, PrecExpr right) { }
 }
 
 [Precedence(3)]
-public sealed class Op3Expr : PrecExpr
+public sealed partial class Op3Expr : PrecExpr
 {
-    public Op3Expr(PrecExpr left, [Pattern(@"\*")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"\*")] Token op, PrecExpr right) { }
 }
 
 [Precedence(4)]
-public sealed class Op4Expr : PrecExpr
+public sealed partial class Op4Expr : PrecExpr
 {
-    public Op4Expr(PrecExpr left, [Pattern(@"/")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"/")] Token op, PrecExpr right) { }
 }
 
 [Precedence(5)]
-public sealed class Op5Expr : PrecExpr
+public sealed partial class Op5Expr : PrecExpr
 {
-    public Op5Expr(PrecExpr left, [Pattern(@"%")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"%")] Token op, PrecExpr right) { }
 }
 
 [Precedence(6)]
-public sealed class Op6Expr : PrecExpr
+public sealed partial class Op6Expr : PrecExpr
 {
-    public Op6Expr(PrecExpr left, [Pattern(@"&")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"&")] Token op, PrecExpr right) { }
 }
 
 [Precedence(7)]
-public sealed class Op7Expr : PrecExpr
+public sealed partial class Op7Expr : PrecExpr
 {
-    public Op7Expr(PrecExpr left, [Pattern(@"\|")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"\|")] Token op, PrecExpr right) { }
 }
 
 [Precedence(8)]
-public sealed class Op8Expr : PrecExpr
+public sealed partial class Op8Expr : PrecExpr
 {
-    public Op8Expr(PrecExpr left, [Pattern(@"\^")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"\^")] Token op, PrecExpr right) { }
 }
 
 [Precedence(9)]
-public sealed class Op9Expr : PrecExpr
+public sealed partial class Op9Expr : PrecExpr
 {
-    public Op9Expr(PrecExpr left, [Pattern(@"<")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"<")] Token op, PrecExpr right) { }
 }
 
 [Precedence(10)]
-public sealed class Op10Expr : PrecExpr
+public sealed partial class Op10Expr : PrecExpr
 {
-    public Op10Expr(PrecExpr left, [Pattern(@">")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@">")] Token op, PrecExpr right) { }
 }
 
 [Precedence(11)]
-public sealed class Op11Expr : PrecExpr
+public sealed partial class Op11Expr : PrecExpr
 {
-    public Op11Expr(PrecExpr left, [Pattern(@"=")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"=")] Token op, PrecExpr right) { }
 }
 
 [Precedence(12)]
-public sealed class Op12Expr : PrecExpr
+public sealed partial class Op12Expr : PrecExpr
 {
-    public Op12Expr(PrecExpr left, [Pattern(@"~")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"~")] Token op, PrecExpr right) { }
 }
 
 [Precedence(13)]
-public sealed class Op13Expr : PrecExpr
+public sealed partial class Op13Expr : PrecExpr
 {
-    public Op13Expr(PrecExpr left, [Pattern(@"!")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"!")] Token op, PrecExpr right) { }
 }
 
 [Precedence(14)]
-public sealed class Op14Expr : PrecExpr
+public sealed partial class Op14Expr : PrecExpr
 {
-    public Op14Expr(PrecExpr left, [Pattern(@"@")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"@")] Token op, PrecExpr right) { }
 }
 
 [Precedence(15)]
-public sealed class Op15Expr : PrecExpr
+public sealed partial class Op15Expr : PrecExpr
 {
-    public Op15Expr(PrecExpr left, [Pattern(@"#")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"#")] Token op, PrecExpr right) { }
 }
 
 [Precedence(16)]
-public sealed class Op16Expr : PrecExpr
+public sealed partial class Op16Expr : PrecExpr
 {
-    public Op16Expr(PrecExpr left, [Pattern(@"\$")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"\$")] Token op, PrecExpr right) { }
 }
 
 [Precedence(17)]
-public sealed class Op17Expr : PrecExpr
+public sealed partial class Op17Expr : PrecExpr
 {
-    public Op17Expr(PrecExpr left, [Pattern(@"\?")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"\?")] Token op, PrecExpr right) { }
 }
 
 [Precedence(18)]
-public sealed class Op18Expr : PrecExpr
+public sealed partial class Op18Expr : PrecExpr
 {
-    public Op18Expr(PrecExpr left, [Pattern(@":")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@":")] Token op, PrecExpr right) { }
 }
 
 [Precedence(19)]
-public sealed class Op19Expr : PrecExpr
+public sealed partial class Op19Expr : PrecExpr
 {
-    public Op19Expr(PrecExpr left, [Pattern(@";")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@";")] Token op, PrecExpr right) { }
 }
 
 [Precedence(20)]
-public sealed class Op20Expr : PrecExpr
+public sealed partial class Op20Expr : PrecExpr
 {
-    public Op20Expr(PrecExpr left, [Pattern(@"`")] Token op, PrecExpr right) { }
+    [Rule]
+    public static void Reduce(PrecExpr left, [Pattern(@"`")] Token op, PrecExpr right) { }
 }
 

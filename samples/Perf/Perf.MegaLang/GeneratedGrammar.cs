@@ -5,312 +5,369 @@ namespace PerfMegaLang;
 
 [Grammar]
 [Skip(@"(\s|//[^\n]*)+")]
-public abstract class MegaProgram : AstNode { }
+public abstract partial class MegaProgram : AstNode { }
 
-public sealed class ConsStmt : MegaProgram
+public sealed partial class ConsStmt : MegaProgram
 {
-    public ConsStmt(Stmt first, MegaProgram rest) { }
+    [Rule]
+    public static void Reduce(Stmt first, MegaProgram rest) { }
 }
 
-public sealed class NilProgram : MegaProgram
+public sealed partial class NilProgram : MegaProgram
 {
-    public NilProgram() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public abstract class Stmt : AstNode { }
+public abstract partial class Stmt : AstNode { }
 
-public sealed class DeclStmt0 : Stmt
+public sealed partial class DeclStmt0 : Stmt
 {
-    public DeclStmt0([Pattern(@"decl0", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl0", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt1 : Stmt
+public sealed partial class DeclStmt1 : Stmt
 {
-    public DeclStmt1([Pattern(@"decl1", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl1", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt2 : Stmt
+public sealed partial class DeclStmt2 : Stmt
 {
-    public DeclStmt2([Pattern(@"decl2", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl2", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt3 : Stmt
+public sealed partial class DeclStmt3 : Stmt
 {
-    public DeclStmt3([Pattern(@"decl3", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl3", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt4 : Stmt
+public sealed partial class DeclStmt4 : Stmt
 {
-    public DeclStmt4([Pattern(@"decl4", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl4", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt5 : Stmt
+public sealed partial class DeclStmt5 : Stmt
 {
-    public DeclStmt5([Pattern(@"decl5", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl5", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt6 : Stmt
+public sealed partial class DeclStmt6 : Stmt
 {
-    public DeclStmt6([Pattern(@"decl6", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl6", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt7 : Stmt
+public sealed partial class DeclStmt7 : Stmt
 {
-    public DeclStmt7([Pattern(@"decl7", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl7", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt8 : Stmt
+public sealed partial class DeclStmt8 : Stmt
 {
-    public DeclStmt8([Pattern(@"decl8", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl8", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt9 : Stmt
+public sealed partial class DeclStmt9 : Stmt
 {
-    public DeclStmt9([Pattern(@"decl9", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl9", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt10 : Stmt
+public sealed partial class DeclStmt10 : Stmt
 {
-    public DeclStmt10([Pattern(@"decl10", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl10", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt11 : Stmt
+public sealed partial class DeclStmt11 : Stmt
 {
-    public DeclStmt11([Pattern(@"decl11", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl11", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt12 : Stmt
+public sealed partial class DeclStmt12 : Stmt
 {
-    public DeclStmt12([Pattern(@"decl12", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl12", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt13 : Stmt
+public sealed partial class DeclStmt13 : Stmt
 {
-    public DeclStmt13([Pattern(@"decl13", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl13", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt14 : Stmt
+public sealed partial class DeclStmt14 : Stmt
 {
-    public DeclStmt14([Pattern(@"decl14", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl14", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt15 : Stmt
+public sealed partial class DeclStmt15 : Stmt
 {
-    public DeclStmt15([Pattern(@"decl15", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl15", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt16 : Stmt
+public sealed partial class DeclStmt16 : Stmt
 {
-    public DeclStmt16([Pattern(@"decl16", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl16", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt17 : Stmt
+public sealed partial class DeclStmt17 : Stmt
 {
-    public DeclStmt17([Pattern(@"decl17", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl17", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt18 : Stmt
+public sealed partial class DeclStmt18 : Stmt
 {
-    public DeclStmt18([Pattern(@"decl18", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl18", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt19 : Stmt
+public sealed partial class DeclStmt19 : Stmt
 {
-    public DeclStmt19([Pattern(@"decl19", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl19", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt20 : Stmt
+public sealed partial class DeclStmt20 : Stmt
 {
-    public DeclStmt20([Pattern(@"decl20", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl20", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt21 : Stmt
+public sealed partial class DeclStmt21 : Stmt
 {
-    public DeclStmt21([Pattern(@"decl21", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl21", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt22 : Stmt
+public sealed partial class DeclStmt22 : Stmt
 {
-    public DeclStmt22([Pattern(@"decl22", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl22", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt23 : Stmt
+public sealed partial class DeclStmt23 : Stmt
 {
-    public DeclStmt23([Pattern(@"decl23", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl23", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt24 : Stmt
+public sealed partial class DeclStmt24 : Stmt
 {
-    public DeclStmt24([Pattern(@"decl24", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl24", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt25 : Stmt
+public sealed partial class DeclStmt25 : Stmt
 {
-    public DeclStmt25([Pattern(@"decl25", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl25", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt26 : Stmt
+public sealed partial class DeclStmt26 : Stmt
 {
-    public DeclStmt26([Pattern(@"decl26", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl26", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt27 : Stmt
+public sealed partial class DeclStmt27 : Stmt
 {
-    public DeclStmt27([Pattern(@"decl27", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl27", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt28 : Stmt
+public sealed partial class DeclStmt28 : Stmt
 {
-    public DeclStmt28([Pattern(@"decl28", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl28", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class DeclStmt29 : Stmt
+public sealed partial class DeclStmt29 : Stmt
 {
-    public DeclStmt29([Pattern(@"decl29", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce([Pattern(@"decl29", Priority = 1)] Token kw, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class ExprStmt : Stmt
+public sealed partial class ExprStmt : Stmt
 {
-    public ExprStmt(Expr expr, [Pattern(@";")] Token semi) { }
+    [Rule]
+    public static void Reduce(Expr expr, [Pattern(@";")] Token semi) { }
 }
 
-public sealed class IfStmt : Stmt
+public sealed partial class IfStmt : Stmt
 {
-    public IfStmt([Pattern(@"if", Priority = 2)] Token kwIf, [Pattern(@"\(")] Token lp, Expr cond, [Pattern(@"\)")] Token rp, Stmt body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"if", Priority = 2)] Token kwIf, [Pattern(@"\(")] Token lp, Expr cond, [Pattern(@"\)")] Token rp, Stmt body) { }
 }
 
-public sealed class WhileStmt : Stmt
+public sealed partial class WhileStmt : Stmt
 {
-    public WhileStmt([Pattern(@"while", Priority = 2)] Token kwWhile, [Pattern(@"\(")] Token lp, Expr cond, [Pattern(@"\)")] Token rp, Stmt body) { }
+    [Rule]
+    public static void Reduce([Pattern(@"while", Priority = 2)] Token kwWhile, [Pattern(@"\(")] Token lp, Expr cond, [Pattern(@"\)")] Token rp, Stmt body) { }
 }
 
-public sealed class BlockStmt : Stmt
+public sealed partial class BlockStmt : Stmt
 {
-    public BlockStmt([Pattern(@"\{")] Token lb, MegaProgram body, [Pattern(@"\}")] Token rb) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\{")] Token lb, MegaProgram body, [Pattern(@"\}")] Token rb) { }
 }
 
-public abstract class Expr : AstNode { }
+public abstract partial class Expr : AstNode { }
 
-public sealed class NumExpr : Expr
+public sealed partial class NumExpr : Expr
 {
-    public NumExpr([Pattern(@"[0-9]+")] Token num) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[0-9]+")] Token num) { }
 }
 
-public sealed class VarExpr : Expr
+public sealed partial class VarExpr : Expr
 {
-    public VarExpr([Pattern(@"[A-Za-z_]\w*")] Token name) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name) { }
 }
 
-public sealed class ParenExpr : Expr
+public sealed partial class ParenExpr : Expr
 {
-    public ParenExpr([Pattern(@"\(")] Token lp, Expr inner, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, Expr inner, [Pattern(@"\)")] Token rp) { }
 }
 
 [Precedence(1, IsRightAssociative = true)]
-public sealed class AssignExpr : Expr
+public sealed partial class AssignExpr : Expr
 {
-    public AssignExpr(Expr left, [Pattern(@"=")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"=")] Token op, Expr right) { }
 }
 
 [Precedence(2)]
-public sealed class Op2Expr : Expr
+public sealed partial class Op2Expr : Expr
 {
-    public Op2Expr(Expr left, [Pattern(@"\+")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"\+")] Token op, Expr right) { }
 }
 
 [Precedence(3)]
-public sealed class Op3Expr : Expr
+public sealed partial class Op3Expr : Expr
 {
-    public Op3Expr(Expr left, [Pattern(@"-")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"-")] Token op, Expr right) { }
 }
 
 [Precedence(4)]
-public sealed class Op4Expr : Expr
+public sealed partial class Op4Expr : Expr
 {
-    public Op4Expr(Expr left, [Pattern(@"\*")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"\*")] Token op, Expr right) { }
 }
 
 [Precedence(5)]
-public sealed class Op5Expr : Expr
+public sealed partial class Op5Expr : Expr
 {
-    public Op5Expr(Expr left, [Pattern(@"/")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"/")] Token op, Expr right) { }
 }
 
 [Precedence(6)]
-public sealed class Op6Expr : Expr
+public sealed partial class Op6Expr : Expr
 {
-    public Op6Expr(Expr left, [Pattern(@"%")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"%")] Token op, Expr right) { }
 }
 
 [Precedence(7)]
-public sealed class Op7Expr : Expr
+public sealed partial class Op7Expr : Expr
 {
-    public Op7Expr(Expr left, [Pattern(@"&")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"&")] Token op, Expr right) { }
 }
 
 [Precedence(8)]
-public sealed class Op8Expr : Expr
+public sealed partial class Op8Expr : Expr
 {
-    public Op8Expr(Expr left, [Pattern(@"\|")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"\|")] Token op, Expr right) { }
 }
 
 [Precedence(9)]
-public sealed class Op9Expr : Expr
+public sealed partial class Op9Expr : Expr
 {
-    public Op9Expr(Expr left, [Pattern(@"\^")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"\^")] Token op, Expr right) { }
 }
 
 [Precedence(10)]
-public sealed class Op10Expr : Expr
+public sealed partial class Op10Expr : Expr
 {
-    public Op10Expr(Expr left, [Pattern(@"<")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"<")] Token op, Expr right) { }
 }
 
 [Precedence(11)]
-public sealed class Op11Expr : Expr
+public sealed partial class Op11Expr : Expr
 {
-    public Op11Expr(Expr left, [Pattern(@">")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@">")] Token op, Expr right) { }
 }
 
 [Precedence(12)]
-public sealed class Op12Expr : Expr
+public sealed partial class Op12Expr : Expr
 {
-    public Op12Expr(Expr left, [Pattern(@"~")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"~")] Token op, Expr right) { }
 }
 
 [Precedence(13)]
-public sealed class Op13Expr : Expr
+public sealed partial class Op13Expr : Expr
 {
-    public Op13Expr(Expr left, [Pattern(@"!")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"!")] Token op, Expr right) { }
 }
 
 [Precedence(14)]
-public sealed class Op14Expr : Expr
+public sealed partial class Op14Expr : Expr
 {
-    public Op14Expr(Expr left, [Pattern(@"@")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"@")] Token op, Expr right) { }
 }
 
 [Precedence(15)]
-public sealed class Op15Expr : Expr
+public sealed partial class Op15Expr : Expr
 {
-    public Op15Expr(Expr left, [Pattern(@"#")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"#")] Token op, Expr right) { }
 }
 
 [Precedence(16)]
-public sealed class Op16Expr : Expr
+public sealed partial class Op16Expr : Expr
 {
-    public Op16Expr(Expr left, [Pattern(@"\$")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"\$")] Token op, Expr right) { }
 }
 
 [Precedence(17)]
-public sealed class Op17Expr : Expr
+public sealed partial class Op17Expr : Expr
 {
-    public Op17Expr(Expr left, [Pattern(@"\?")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"\?")] Token op, Expr right) { }
 }
 
 [Precedence(18)]
-public sealed class Op18Expr : Expr
+public sealed partial class Op18Expr : Expr
 {
-    public Op18Expr(Expr left, [Pattern(@"`")] Token op, Expr right) { }
+    [Rule]
+    public static void Reduce(Expr left, [Pattern(@"`")] Token op, Expr right) { }
 }
 
