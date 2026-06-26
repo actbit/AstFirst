@@ -2,6 +2,8 @@
 
 English / [日本語](../ja/semantic-analysis.md)
 
+> **Note: this document still describes the old (constructor / Listener-based) model.** For the current `[Rule]` static model (`OnReduce` / `OnSecondPass` / `Accept`/`Reject` / partial child retention), see [README](../../README.en.md). A full update of this document is planned for a follow-up PR.
+
 AstFirst lets you layer semantic analysis on top of parsing (AST construction). Standard helpers: scoped symbol table, Listener, symbol resolution, type checking, binding, diagnostics.
 
 ## SemanticContext injection

@@ -2,6 +2,8 @@
 
 [English](../en/architecture.md) / 日本語
 
+> **注: 本ドキュメントは旧モデル（コンストラクタベース）の記述を含みます。** 現行の `[Rule]` static モデル（`OnReduce` / `OnSecondPass` / `Accept`/`Reject` / partial 子保持）については [README](../../README.md) を参照してください。本ドキュメントの全面更新は後続 PR で行います。
+
 AstFirst は 3 層 + Generator で構成されるパーサジェネレータ。
 
 ## 層構造

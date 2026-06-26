@@ -2,6 +2,8 @@
 
 English / [日本語](../ja/grammar-reference.md)
 
+> **Note: this document still describes the old (constructor-based) model.** For the current `[Rule]` static model (`OnReduce` / `OnSecondPass` / `Accept`/`Reject` / partial child retention), see [README](../../README.en.md). A full update of this document is planned for a follow-up PR.
+
 In AstFirst you write the grammar in C# classes and attributes. The generator emits Lexer / Parser / Listener at compile time.
 
 ## Attribute overview
