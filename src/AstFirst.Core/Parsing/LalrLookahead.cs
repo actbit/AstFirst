@@ -103,26 +103,43 @@ public sealed class LalrLookahead
         }
 
         // Step 2: spontaneous で初期化し、propagation リンクで不動点まで伝播。
+        // Worklist アルゴリズム: 変化があった箇所のみを処理（全走査を回避）。
         foreach (var kv in spontaneous)
             _lookahead[kv.Key] = new HashSet<int>(kv.Value);
 
-        bool changed = true;
-        while (changed)
+        // Worklist: 変化が伝播された可能性のある項目（ソース側）
+        var worklist = new Queue<(int, Lr0Item)>();
+        var inWorklist = new HashSet<(int, Lr0Item)>();
+
+        foreach (var kv in spontaneous)
         {
-            changed = false;
-            foreach (var kv in propagation)
+            worklist.Enqueue(kv.Key);
+            inWorklist.Add(kv.Key);
+        }
+
+        while (worklist.Count > 0)
+        {
+            var current = worklist.Dequeue();
+            inWorklist.Remove(current);
+
+            if (!_lookahead.TryGetValue(current, out var sourceLa) || sourceLa.Count == 0) continue;
+            if (!propagation.TryGetValue(current, out var targets)) continue;
+
+            foreach (var target in targets)
             {
-                if (!_lookahead.TryGetValue(kv.Key, out var sourceLa) || sourceLa.Count == 0) continue;
-                foreach (var target in kv.Value)
+                if (!_lookahead.TryGetValue(target, out var targetLa))
                 {
-                    if (!_lookahead.TryGetValue(target, out var targetLa))
-                    {
-                        targetLa = new HashSet<int>();
-                        _lookahead[target] = targetLa;
-                    }
-                    foreach (var a in sourceLa)
-                        if (targetLa.Add(a)) changed = true;
+                    targetLa = new HashSet<int>();
+                    _lookahead[target] = targetLa;
                 }
+
+                // ターゲットの lookahead が変化したら worklist に追加
+                int countBefore = targetLa.Count;
+                foreach (var a in sourceLa)
+                    targetLa.Add(a);
+
+                if (targetLa.Count > countBefore && inWorklist.Add(target))
+                    worklist.Enqueue(target);
             }
         }
     }
