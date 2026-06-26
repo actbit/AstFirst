@@ -26,21 +26,26 @@ public class ModelExtractionTests
     private const string CalcSource = @"
 using AstFirst;
 
-[Grammar] public abstract class Expr : AstNode { }
+[Grammar] public abstract partial class Expr : AstNode { }
 
-public sealed class NumExpr : Expr
+public sealed partial class NumExpr : Expr
 {
-    public NumExpr([Pattern(""[0-9]+"")] Token num) { Span = num.Span; }
+    [Rule] public static void Num([Pattern(""[0-9]+"")] Token num) { }
 }
 
-public sealed class AddExpr : Expr
+public sealed partial class AddExpr : Expr
 {
-    public AddExpr(Expr left, [Pattern(""\\+"")] Token op, Expr right) { Span = left.Span; }
+    [Rule] public static void Add(Expr left, [Pattern(""\\+"")] Token op, Expr right) { }
 }
 
+// Token 派生型を [Rule] 引数で使うと Key=型名 で TokenDef 抽出 (TokenDerivedPatternCollected 用)。
 public sealed class NumToken : Token
 {
-    public NumToken([Pattern(""[0-9]+"")] string text) : base(text, default) { }
+    public NumToken(string text) : base(text, default) { }
+}
+public sealed partial class NumTokenExpr : Expr
+{
+    [Rule] public static void NumTokenRule([Pattern(""[0-9]+"")] NumToken num) { }
 }
 ";
 
@@ -84,7 +89,7 @@ public sealed class NumToken : Token
     {
         var model = Extract();
         var add = model.Nodes.First(n => n.FullName == "AddExpr");
-        var ctor = Assert.Single(add.Constructors);
+        var ctor = Assert.Single(add.Rules);
         Assert.Equal(3, ctor.Parameters.Count);
         Assert.Equal("Expr", ctor.Parameters[0].TypeFullName);
         Assert.Null(ctor.Parameters[0].Pattern);

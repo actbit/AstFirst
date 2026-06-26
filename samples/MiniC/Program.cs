@@ -42,19 +42,18 @@ Console.WriteLine("=== Done ===");
 void Run(string title, string code)
 {
     Console.WriteLine($"--- {title} ---");
-    var result = ProgramParser.Parse(code);
-    if (result.HasErrors)
+    var result = ProgramParser.Parse(code, new MiniCContext());
+    if (result.Errors.Count > 0)
     {
         Console.WriteLine("  構文エラー:");
         foreach (var err in result.Errors) Console.WriteLine($"    {err}");
     }
-    var diagnostics = new SemanticAnalyzer().Analyze(result.Ast as MiniC.Program);
-    if (diagnostics.Count == 0)
+    if (result.Diagnostics.Count == 0)
         Console.WriteLine("  意味解析: 診断なし (OK)");
     else
     {
         Console.WriteLine("  意味解析の診断:");
-        foreach (var d in diagnostics) Console.WriteLine($"    {d.Severity}: {d.Message} @ {d.Span}");
+        foreach (var d in result.Diagnostics) Console.WriteLine($"    {d.Severity}: {d.Message} @ {d.Span}");
     }
     Console.WriteLine();
 }

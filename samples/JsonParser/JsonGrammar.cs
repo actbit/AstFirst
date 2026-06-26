@@ -4,43 +4,44 @@ using AstFirst;
 
 namespace SampleJson;
 
-/// <summary>JSON パーサのサンプル。AstFirst で JSON (RFC 8259) をパースする。</summary>
+/// <summary>JSON パーサのサンプル。AstFirst で JSON (RFC 8259) をパースする ([Rule] static モデル)。</summary>
 
 [Grammar]
 [Skip(@"\s+")]
-public abstract class Json : AstNode { }
+public abstract partial class Json : AstNode { }
 
 // --- 値の型 ---
 
-public sealed class JsonNull : Json
+public sealed partial class JsonNull : Json
 {
-    public JsonNull([Pattern(@"null", Priority = 1)] Token kw) { }
+    [Rule]
+    public static void Null([Token(@"null", Priority = 1)] Token kw) { }
 }
 
-public sealed class JsonBool : Json
+public sealed partial class JsonBool : Json
 {
-    public bool Value { get; }
-    public JsonBool([Pattern(@"true|false", Priority = 1)] Token kw) { Value = kw.Text == "true"; }
+    public bool Value { get; private set; }
+    [Rule]
+    public static void Bool([Token(@"true|false", Priority = 1)] Token kw) { }
+    partial void OnReduce() { Value = Kw.Text == "true"; }
 }
 
-public sealed class JsonNumber : Json
+public sealed partial class JsonNumber : Json
 {
-    public double Value { get; }
+    public double Value { get; private set; }
     // 整数部は 0 単独、または 1-9 始まり。先頭ゼロ (01, 00) を拒否する。
-    public JsonNumber([Pattern(@"-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?")] Token num)
-    {
-        Value = double.Parse(num.Text, CultureInfo.InvariantCulture);
-    }
+    [Rule]
+    public static void Number([Token(@"-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?")] Token num) { }
+    partial void OnReduce() { Value = double.Parse(Num.Text, CultureInfo.InvariantCulture); }
 }
 
-public sealed class JsonString : Json
+public sealed partial class JsonString : Json
 {
-    public string Value { get; }
+    public string Value { get; private set; } = "";
     // 許可されたエスケープ (\" \\ \/ \b \f \n \r \t \uXXXX) のみ受理。不正エスケープは字句エラー。
-    public JsonString([Pattern(@"""([^""\\]|\\[""\\/bfnrt]|\\u[0-9a-fA-F]{4})*""")] Token str)
-    {
-        Value = Unescape(str.Text[1..^1]);
-    }
+    [Rule]
+    public static void StrToken([Token(@"""([^""\\]|\\[""\\/bfnrt]|\\u[0-9a-fA-F]{4})*""")] Token str) { }
+    partial void OnReduce() { Value = Unescape(Str.Text[1..^1]); }
 
     /// <summary>JSON 文字列のエスケープを解除する (RFC 8259 §7)。キーでも共有。</summary>
     internal static string Unescape(string raw)
@@ -81,66 +82,78 @@ public sealed class JsonString : Json
 
 // --- 配列: [ Elements ] ---
 
-public sealed class JsonArray : Json
+public sealed partial class JsonArray : Json
 {
-    public JsonElements Elements { get; }
-    public JsonArray([Pattern(@"\[")] Token lb, JsonElements elements, [Pattern(@"\]")] Token rb) { Elements = elements; }
+    [Rule]
+    public static void Array([Token(@"\[")] Token lb, JsonElements elements, [Token(@"\]")] Token rb) { }
 }
 
 // 要素リスト: 空 | 先頭要素 , 残り (カンマ区切り、末尾カンマ不可)。
 // 先頭はカンマなし、2 個目以降を Tail でカンマ付きで連ねることで [v,] を構文エラーにする。
-public abstract class JsonElements : AstNode { }
-public sealed class NoElements : JsonElements { public NoElements() { } }
-public sealed class ConsElements : JsonElements
+public abstract partial class JsonElements : AstNode { }
+public sealed partial class NoElements : JsonElements
 {
-    public Json Head { get; }
-    public JsonElementsTail Tail { get; }
-    public ConsElements(Json head, JsonElementsTail tail) { Head = head; Tail = tail; }
+    [Rule]
+    public static void Empty() { }
 }
-public abstract class JsonElementsTail : AstNode { }
-public sealed class EndElementsTail : JsonElementsTail { public EndElementsTail() { } }
-public sealed class ConsElementsTail : JsonElementsTail
+public sealed partial class ConsElements : JsonElements
 {
-    public Json Head { get; }
-    public JsonElementsTail Tail { get; }
-    public ConsElementsTail([Pattern(@",")] Token sep, Json head, JsonElementsTail tail) { Head = head; Tail = tail; }
+    [Rule]
+    public static void Cons(Json head, JsonElementsTail tail) { }
+}
+public abstract partial class JsonElementsTail : AstNode { }
+public sealed partial class EndElementsTail : JsonElementsTail
+{
+    [Rule]
+    public static void End() { }
+}
+public sealed partial class ConsElementsTail : JsonElementsTail
+{
+    [Rule]
+    public static void Cons([Token(@",")] Token sep, Json head, JsonElementsTail tail) { }
 }
 
 // --- オブジェクト: { Members } または { } ---
-// 空は括弧のみの専用規則に分離している (NoMembers ε を置くと "{" の直後の文字列キーを
+// 空は括弧のみの専用規則 (JsonObjectEmpty) に分離している (NoMembers ε を置くと "{" の直後の文字列キーを
 // 誤って空リストへ還元してしまう LALR(1) lookahead の問題を回避するため)。
-public sealed class JsonObject : Json
+// 新モデルは 1クラス1 [Rule] のため、空/非空を別クラスへ分割する。
+public sealed partial class JsonObject : Json
 {
-    public JsonMembers? Members { get; }   // null = 空オブジェクト
-    public JsonObject([Pattern(@"\{")] Token lb, [Pattern(@"\}")] Token rb) { Members = null; }
-    public JsonObject([Pattern(@"\{")] Token lb, JsonMembers members, [Pattern(@"\}")] Token rb) { Members = members; }
+    [Rule]
+    public static void Object([Token(@"\{")] Token lb, JsonMembers members, [Token(@"\}")] Token rb) { }
+}
+public sealed partial class JsonObjectEmpty : Json
+{
+    [Rule]
+    public static void Empty([Token(@"\{")] Token lb, [Token(@"\}")] Token rb) { }
 }
 
-// メンバーリスト: 1つ以上。空は JsonObject の括弧のみ規則で処理する。
-public abstract class JsonMembers : AstNode { }
-public sealed class ConsMembers : JsonMembers
+// メンバーリスト: 1つ以上。空は JsonObjectEmpty で処理する。
+public abstract partial class JsonMembers : AstNode { }
+public sealed partial class ConsMembers : JsonMembers
 {
-    public JsonMember Head { get; }
-    public JsonMembersTail Tail { get; }
-    public ConsMembers(JsonMember head, JsonMembersTail tail) { Head = head; Tail = tail; }
+    [Rule]
+    public static void Cons(JsonMember head, JsonMembersTail tail) { }
 }
-public abstract class JsonMembersTail : AstNode { }
-public sealed class EndMembersTail : JsonMembersTail { public EndMembersTail() { } }
-public sealed class ConsMembersTail : JsonMembersTail
+public abstract partial class JsonMembersTail : AstNode { }
+public sealed partial class EndMembersTail : JsonMembersTail
 {
-    public JsonMember Head { get; }
-    public JsonMembersTail Tail { get; }
-    public ConsMembersTail([Pattern(@",")] Token sep, JsonMember head, JsonMembersTail tail) { Head = head; Tail = tail; }
+    [Rule]
+    public static void End() { }
+}
+public sealed partial class ConsMembersTail : JsonMembersTail
+{
+    [Rule]
+    public static void Cons([Token(@",")] Token sep, JsonMember head, JsonMembersTail tail) { }
 }
 
 // メンバー: "key" : value。キーは生トークンで受け取り JsonString.Unescape で解除。
-public sealed class JsonMember : AstNode
+// keyTok → partial プロパティ KeyTok。ユーザー宣言の文字列プロパティは Key (衝突回避)。
+public sealed partial class JsonMember : AstNode
 {
-    public string Key { get; }
-    public Json Value { get; }
-    public JsonMember([Pattern(@"""([^""\\]|\\[""\\/bfnrt]|\\u[0-9a-fA-F]{4})*""")] Token key, [Pattern(@":")] Token colon, Json value)
-    {
-        Key = JsonString.Unescape(key.Text[1..^1]);
-        Value = value;
-    }
+    public string Key { get; private set; } = "";
+    [Rule]
+    public static void Member([Token(@"""([^""\\]|\\[""\\/bfnrt]|\\u[0-9a-fA-F]{4})*""")] Token keyTok,
+                              [Token(@":")] Token colon, Json value) { }
+    partial void OnReduce() { Key = JsonString.Unescape(KeyTok.Text[1..^1]); }
 }

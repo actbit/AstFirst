@@ -33,9 +33,9 @@ public static class ModelToGrammar
         foreach (var n in model.Nodes)
         {
             if (n.IsAbstract || n.PrecedencePriority == 0) continue;
-            foreach (var ctor in n.Constructors)
+            foreach (var rule in n.Rules)
             {
-                foreach (var p in ctor.Parameters)
+                foreach (var p in rule.Parameters)
                 {
                     if (p.IsContext) continue;
                     if (p.Pattern is not null && terminals.TryGetValue(p.Pattern, out var t))
@@ -78,12 +78,12 @@ public static class ModelToGrammar
                 if (!nonTerminals.TryGetValue(n.FullName, out lhs))
                     continue; // 自身も非終端でなければ文法記号にならない (念のため)
             }
-            foreach (var ctor in n.Constructors)
+            foreach (var rule in n.Rules)
             {
                 var rhs = new List<Symbol>();
                 var reduceParams = new List<ReduceParamModel>();
                 int childIndex = 0;
-                foreach (var p in ctor.Parameters)
+                foreach (var p in rule.Parameters)
                 {
                     if (p.IsContext)
                     {

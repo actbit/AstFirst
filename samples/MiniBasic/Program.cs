@@ -40,6 +40,9 @@ else
             case IfStmt f:
                 Console.WriteLine($"  IF ... THEN {f.TargetLine}");
                 break;
+            case IfGotoStmt f:
+                Console.WriteLine($"  IF ... THEN GOTO {f.TargetLine}");
+                break;
             case GotoStmt g:
                 Console.WriteLine($"  GOTO {g.TargetLine}");
                 break;

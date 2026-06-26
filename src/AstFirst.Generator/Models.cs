@@ -53,25 +53,25 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     }
 }
 
-/// <summary>AstNode 派生の1クラス。複数コンストラクタ = 複数生成規則。</summary>
+/// <summary>AstNode 派生の1クラス。1つの [Rule] static メソッド = 1つの生成規則。</summary>
 public sealed class NodeModel : IEquatable<NodeModel>
 {
     public string FullName { get; }
-    public string BaseFullName { get; }       // 直接の基底 (非終端)
+    public string BaseFullName { get; }       // 直接の基底 (非終端 = 親)
     public bool IsAbstract { get; }
-    public IReadOnlyList<CtorModel> Constructors { get; }
-    public IReadOnlyList<ChildModel> Children { get; }   // AstNode 派生の子プロパティ (Listener 生成用)
+    public IReadOnlyList<RuleModel> Rules { get; }      // [Rule] static メソッド (1クラス1つだがリストで保持)
+    public IReadOnlyList<ChildModel> Children { get; }   // [Rule] 引数の子 (partial プロパティ + Listener 用)
     public int PrecedencePriority { get; }    // [Precedence] の Priority (0=未設定)
     public AstFirst.Core.Parsing.Associativity PrecedenceAssoc { get; }
 
-    public NodeModel(string fullName, string baseFullName, bool isAbstract, IReadOnlyList<CtorModel> constructors,
+    public NodeModel(string fullName, string baseFullName, bool isAbstract, IReadOnlyList<RuleModel> rules,
         IReadOnlyList<ChildModel>? children = null,
         int precedencePriority = 0, AstFirst.Core.Parsing.Associativity precedenceAssoc = AstFirst.Core.Parsing.Associativity.Left)
     {
         FullName = fullName;
         BaseFullName = baseFullName;
         IsAbstract = isAbstract;
-        Constructors = constructors;
+        Rules = rules;
         Children = children ?? Array.Empty<ChildModel>();
         PrecedencePriority = precedencePriority;
         PrecedenceAssoc = precedenceAssoc;
@@ -79,48 +79,55 @@ public sealed class NodeModel : IEquatable<NodeModel>
 
     public bool Equals(NodeModel? other) =>
         other is not null && FullName == other.FullName && BaseFullName == other.BaseFullName
-        && IsAbstract == other.IsAbstract && Constructors.SequenceEqual(other.Constructors) && Children.SequenceEqual(other.Children)
+        && IsAbstract == other.IsAbstract && Rules.SequenceEqual(other.Rules) && Children.SequenceEqual(other.Children)
         && PrecedencePriority == other.PrecedencePriority && PrecedenceAssoc == other.PrecedenceAssoc;
     public override bool Equals(object? obj) => obj is NodeModel n && Equals(n);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(FullName);
 }
 
-/// <summary>1つのコンストラクタ = 1つの生成規則の右辺。</summary>
-public sealed class CtorModel : IEquatable<CtorModel>
+/// <summary>[Rule] static メソッド = 1つの生成規則の右辺。</summary>
+public sealed class RuleModel : IEquatable<RuleModel>
 {
+    /// <summary>[Rule] メソッドの名前 (任意・識別用)。</summary>
+    public string MethodName { get; }
     public IReadOnlyList<ParamModel> Parameters { get; }
-    public CtorModel(IReadOnlyList<ParamModel> parameters) => Parameters = parameters;
-    public bool Equals(CtorModel? other) => other is not null && Parameters.SequenceEqual(other.Parameters);
-    public override bool Equals(object? obj) => obj is CtorModel c && Equals(c);
-    public override int GetHashCode() => Parameters.Count;
+    public RuleModel(string methodName, IReadOnlyList<ParamModel> parameters) { MethodName = methodName; Parameters = parameters; }
+    public bool Equals(RuleModel? other) => other is not null && MethodName == other.MethodName && Parameters.SequenceEqual(other.Parameters);
+    public override bool Equals(object? obj) => obj is RuleModel r && Equals(r);
+    public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(MethodName);
 }
 
-/// <summary>コンストラクタ引数。</summary>
+/// <summary>[Rule] メソッドの引数。型ベースで分類。</summary>
 public sealed class ParamModel : IEquatable<ParamModel>
 {
     public string TypeFullName { get; }
     public string? Name { get; }
-    public string? Pattern { get; }     // [Pattern]
-    public bool IsContext { get; }      // SemanticContext 派生型の引数
-    public int Priority { get; }        // [Priority]
+    public string? Pattern { get; }     // [Token]/[Pattern] (終端)
+    public bool IsContext { get; }      // SemanticContext 派生型の引数 (ctx・最後)
+    public bool IsChild { get; }        // AstNode 派生 (右辺の子・partial プロパティ生成対象)
+    public bool IsToken { get; }        // Token 派生型 (共通 Token 以外)。TokenDef の Key を型名にする。
+    public int Priority { get; }        // [Token]/[Pattern] の Priority
 
-    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, int priority)
+    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, bool isChild, int priority, bool isToken = false)
     {
         TypeFullName = typeFullName;
         Name = name;
         Pattern = pattern;
         IsContext = isContext;
+        IsChild = isChild;
+        IsToken = isToken;
         Priority = priority;
     }
 
     public bool Equals(ParamModel? other) =>
         other is not null && TypeFullName == other.TypeFullName && Name == other.Name
-        && Pattern == other.Pattern && IsContext == other.IsContext && Priority == other.Priority;
+        && Pattern == other.Pattern && IsContext == other.IsContext && IsChild == other.IsChild
+        && IsToken == other.IsToken && Priority == other.Priority;
     public override bool Equals(object? obj) => obj is ParamModel p && Equals(p);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(TypeFullName);
 }
 
-/// <summary>字句定義: [Pattern] の正規表現と優先度。</summary>
+/// <summary>字句定義: [Token]/[Pattern] の正規表現と優先度。</summary>
 public sealed class TokenDefModel : IEquatable<TokenDefModel>
 {
     public string Key { get; }          // トークン種別の識別キー (型名 or 引数名)
@@ -143,10 +150,10 @@ public sealed class TokenDefModel : IEquatable<TokenDefModel>
     public override int GetHashCode() => (Key, Pattern).GetHashCode();
 }
 
-/// <summary>AST ノードの子 (AstNode 派生の public プロパティ)。Listener 生成で子の再帰ウォークに使う。</summary>
+/// <summary>AST ノードの子 (AstNode 派生の [Rule] 引数 = partial プロパティ)。Listener 生成で子の再帰ウォークにも使う。</summary>
 public sealed class ChildModel : IEquatable<ChildModel>
 {
-    public string PropertyName { get; }
+    public string PropertyName { get; }     // [Rule] 引数名 (= partial プロパティ名)
     public string TypeFullName { get; }
     public bool IsNullable { get; }
 

@@ -12,21 +12,21 @@ public class ModelToTableTests
     {
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, false, 0)
                 })
             }),
-            new NodeModel("AddExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("AddExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("Expr", "left", null, false, 0),
-                    new ParamModel("AstFirst.Token", "op", "\\+", false, 0),
-                    new ParamModel("Expr", "right", null, false, 0)
+                    new ParamModel("Expr", "left", null, false, false, 0),
+                    new ParamModel("AstFirst.Token", "op", "\\+", false, false, 0),
+                    new ParamModel("Expr", "right", null, false, false, 0)
                 })
             }),
         };
@@ -88,30 +88,30 @@ public class ModelToTableTests
         // Expr -> Expr + Expr (AddExpr, prec 1) | Expr * Expr (MulExpr, prec 2) | num
         var nodes = new List<NodeModel>
         {
-            new NodeModel("Expr", "AstFirst.AstNode", true, new List<CtorModel>()),
-            new NodeModel("NumExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("Expr", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("NumExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, 0)
+                    new ParamModel("AstFirst.Token", "num", "[0-9]+", false, false, 0)
                 })
             }),
-            new NodeModel("AddExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("AddExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("Expr", "left", null, false, 0),
-                    new ParamModel("AstFirst.Token", "op", "\\+", false, 0),
-                    new ParamModel("Expr", "right", null, false, 0),
+                    new ParamModel("Expr", "left", null, false, false, 0),
+                    new ParamModel("AstFirst.Token", "op", "\\+", false, false, 0),
+                    new ParamModel("Expr", "right", null, false, false, 0),
                 })
             }, precedencePriority: 1),
-            new NodeModel("MulExpr", "Expr", false, new List<CtorModel>
+            new NodeModel("MulExpr", "Expr", false, new List<RuleModel>
             {
-                new CtorModel(new List<ParamModel>
+                new RuleModel("Reduce", new List<ParamModel>
                 {
-                    new ParamModel("Expr", "left", null, false, 0),
-                    new ParamModel("AstFirst.Token", "op", "\\*", false, 0),
-                    new ParamModel("Expr", "right", null, false, 0),
+                    new ParamModel("Expr", "left", null, false, false, 0),
+                    new ParamModel("AstFirst.Token", "op", "\\*", false, false, 0),
+                    new ParamModel("Expr", "right", null, false, false, 0),
                 })
             }, precedencePriority: 2),
         };

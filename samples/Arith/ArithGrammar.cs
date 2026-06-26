@@ -2,85 +2,79 @@ using AstFirst;
 
 namespace Arith;
 
-/// <summary>括弧付き四則演算のサンプル。式をパースして AST を得る。</summary>
+/// <summary>括弧付き四則演算のサンプル。式をパースして AST を得る ([Rule] static モデル)。</summary>
 
 [Grammar]
 [Skip(@"\s+")]
-public abstract class Expr : AstNode { }
+public abstract partial class Expr : AstNode { }
 
 // --- 値 ---
 
-public sealed class NumExpr : Expr
+public sealed partial class NumExpr : Expr
 {
-    public int Value { get; }
-    public NumExpr([Pattern(@"[0-9]+")] Token num)
+    public int Value { get; private set; }
+    [Rule]
+    public static void NumToken([Token(@"[0-9]+")] Token num) { }
+    partial void OnReduce()
     {
-        Value = int.Parse(num.Text);
-        Span = num.Span;
+        Value = int.Parse(Num.Text);
+        Span = Num.Span;
     }
 }
 
 // ( Expr )
-public sealed class ParenExpr : Expr
+public sealed partial class ParenExpr : Expr
 {
-    public Expr Inner { get; }
-    public ParenExpr([Pattern(@"\(")] Token lp, Expr inner, [Pattern(@"\)")] Token rp)
+    [Rule]
+    public static void Group([Token(@"\(")] Token lp, Expr inner, [Token(@"\)")] Token rp) { }
+    partial void OnReduce()
     {
-        Inner = inner;
-        Span = inner.Span;
+        Span = Inner.Span;
     }
 }
 
 // --- 二項演算 (優先度: + - が 1、* / が 2。左結合) ---
 
 [Precedence(1)]
-public sealed class AddExpr : Expr
+public sealed partial class AddExpr : Expr
 {
-    public Expr Left { get; }
-    public Expr Right { get; }
-    public AddExpr(Expr left, [Pattern(@"\+")] Token op, Expr right)
+    [Rule]
+    public static void Add(Expr left, [Token(@"\+")] Token op, Expr right) { }
+    partial void OnReduce()
     {
-        Left = left;
-        Right = right;
-        Span = SourceSpan.Merge(left.Span, right.Span);
+        Span = SourceSpan.Merge(Left.Span, Right.Span);
     }
 }
 
 [Precedence(1)]
-public sealed class SubExpr : Expr
+public sealed partial class SubExpr : Expr
 {
-    public Expr Left { get; }
-    public Expr Right { get; }
-    public SubExpr(Expr left, [Pattern(@"-")] Token op, Expr right)
+    [Rule]
+    public static void Sub(Expr left, [Token(@"-")] Token op, Expr right) { }
+    partial void OnReduce()
     {
-        Left = left;
-        Right = right;
-        Span = SourceSpan.Merge(left.Span, right.Span);
+        Span = SourceSpan.Merge(Left.Span, Right.Span);
     }
 }
 
 [Precedence(2)]
-public sealed class MulExpr : Expr
+public sealed partial class MulExpr : Expr
 {
-    public Expr Left { get; }
-    public Expr Right { get; }
-    public MulExpr(Expr left, [Pattern(@"\*")] Token op, Expr right)
+    [Rule]
+    public static void Mul(Expr left, [Token(@"\*")] Token op, Expr right) { }
+    partial void OnReduce()
     {
-        Left = left;
-        Right = right;
-        Span = SourceSpan.Merge(left.Span, right.Span);
+        Span = SourceSpan.Merge(Left.Span, Right.Span);
     }
 }
 
 [Precedence(2)]
-public sealed class DivExpr : Expr
+public sealed partial class DivExpr : Expr
 {
-    public Expr Left { get; }
-    public Expr Right { get; }
-    public DivExpr(Expr left, [Pattern(@"/")] Token op, Expr right)
+    [Rule]
+    public static void Div(Expr left, [Token(@"/")] Token op, Expr right) { }
+    partial void OnReduce()
     {
-        Left = left;
-        Right = right;
-        Span = SourceSpan.Merge(left.Span, right.Span);
+        Span = SourceSpan.Merge(Left.Span, Right.Span);
     }
 }

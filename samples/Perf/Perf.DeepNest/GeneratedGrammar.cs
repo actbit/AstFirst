@@ -5,15 +5,17 @@ namespace PerfDeepNest;
 
 [Grammar]
 [Skip(@"\s+")]
-public abstract class NestExpr : AstNode { }
+public abstract partial class NestExpr : AstNode { }
 
-public sealed class NumExpr : NestExpr
+public sealed partial class NumExpr : NestExpr
 {
-    public NumExpr([Pattern(@"[0-9]+")] Token num) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[0-9]+")] Token num) { }
 }
 
-public sealed class ParenExpr : NestExpr
+public sealed partial class ParenExpr : NestExpr
 {
-    public ParenExpr([Pattern(@"\(")] Token lp, NestExpr inner, [Pattern(@"\)")] Token rp) { }
+    [Rule]
+    public static void Reduce([Pattern(@"\(")] Token lp, NestExpr inner, [Pattern(@"\)")] Token rp) { }
 }
 

@@ -5,7 +5,7 @@ using Microsoft.CodeAnalysis;
 namespace AstFirst.Generator;
 
 /// <summary>
-/// [Grammar] ルートクラスから AstNode/Token 派生と [Pattern] を走査し
+/// [Grammar] ルートクラスから [Rule] static メソッドと [Token]/[Pattern] を走査し
 /// <see cref="GrammarModel"/> に変換する。Roslyn シンボルを文字列/整数の POCO に落とす
 /// (IncrementalGenerator のキャッシュが壊れないように)。
 /// </summary>
@@ -40,20 +40,22 @@ public static class ModelExtraction
             if (!SymbolEqualityComparer.Default.Equals(type.ContainingNamespace, rootType.ContainingNamespace)) continue;
 
             if (astNodeBase is not null && InheritsFrom(type, astNodeBase))
-                nodes.Add(ExtractNode(type, contextBase, astNodeBase));
+                nodes.Add(ExtractNode(type, contextBase, astNodeBase, tokenBase));
 
             if (tokenBase is not null && InheritsFrom(type, tokenBase))
             {
-                foreach (var td in ExtractTokenDefsFromCtors(type)) tokenDefs.Add(td);
                 // G7: Token派生型に (string) コンストラクタが必要 (new DerivedType(token.Text) の生成)。
                 if (!HasStringConstructor(type))
                     tokenDerivedWarnings.Add(type.ToDisplayString());
             }
-            else
-                foreach (var td in ExtractInlineTokenDefs(type, tokenBase)) tokenDefs.Add(td);
         }
 
         nodes.Sort((a, b) => string.CompareOrdinal(a.FullName, b.FullName));
+
+        // AstNode 派生クラスの [Rule] メソッドからトークン定義を抽出 (Token 型+[Token]/[Pattern] 引数)。
+        foreach (var n in nodes)
+            foreach (var td in ExtractTokenDefsFromRules(n))
+                tokenDefs.Add(td);
 
         // [Skip] パターン ([Grammar] クラスまたはアセンブリ) を収集。
         var skipPatterns = new List<string>();
@@ -71,14 +73,19 @@ public static class ModelExtraction
         return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings);
     }
 
-    private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase)
+    /// <summary>[Rule] 属性付き static メソッドを抽出して NodeModel を構築。</summary>
+    private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase, INamedTypeSymbol? tokenBase)
     {
-        var ctors = new List<CtorModel>();
-        foreach (var ctor in type.Constructors)
+        var rules = new List<RuleModel>();
+        foreach (var member in type.GetMembers())
         {
-            if (ctor.IsStatic || ctor.DeclaredAccessibility == Accessibility.Private) continue;
-            ctors.Add(new CtorModel(ExtractParams(ctor.Parameters, contextBase).ToList()));
+            if (member is not IMethodSymbol method) continue;
+            if (!method.IsStatic) continue;
+            if (!HasAttribute(method, "RuleAttribute")) continue;
+            var ps = ExtractParams(method.Parameters, contextBase, astNodeBase, tokenBase).ToList();
+            rules.Add(new RuleModel(method.Name, ps));
         }
+
         var baseName = type.BaseType?.ToDisplayString() ?? "";
 
         int precPriority = 0;
@@ -93,26 +100,29 @@ public static class ModelExtraction
                 else if (na.Key == "IsRightAssociative" && na.Value.Value is bool ir && ir) precAssoc = AstFirst.Core.Parsing.Associativity.Right;
             }
         }
-        var children = astNodeBase is not null ? ExtractChildren(type, astNodeBase) : System.Array.Empty<ChildModel>();
-        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, ctors, children, precPriority, precAssoc);
+        var children = ExtractChildrenFromRules(rules);
+        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, rules, children, precPriority, precAssoc);
     }
 
-    private static IEnumerable<ParamModel> ExtractParams(IEnumerable<IParameterSymbol> parameters, INamedTypeSymbol? contextBase)
+    /// <summary>[Rule] メソッドの引数を型ベースで分類。</summary>
+    private static IEnumerable<ParamModel> ExtractParams(IEnumerable<IParameterSymbol> parameters, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase, INamedTypeSymbol? tokenBase)
     {
         foreach (var p in parameters)
         {
             var isContext = contextBase is not null && InheritsFromOrEquals(p.Type, contextBase);
+            var isChild = astNodeBase is not null && p.Type.TypeKind == TypeKind.Class && InheritsFromOrEquals(p.Type, astNodeBase);
+            var isToken = tokenBase is not null && InheritsFrom(p.Type, tokenBase);
             var (pattern, priority) = GetPattern(p);
-            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, priority);
+            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, isChild, priority, isToken);
         }
     }
 
-    /// <summary>[Pattern] から (Regex, Priority) を取得。未設定なら (null,0)。</summary>
+    /// <summary>[Token]/[Pattern] から (Regex, Priority) を取得。未設定なら (null,0)。</summary>
     private static (string? regex, int priority) GetPattern(ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
-            if (a.AttributeClass?.Name != "PatternAttribute") continue;
+            if (a.AttributeClass?.Name is not ("PatternAttribute" or "TokenAttribute")) continue;
             string? regex = a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string s ? s : null;
             int priority = 0;
             foreach (var na in a.NamedArguments)
@@ -124,84 +134,47 @@ public static class ModelExtraction
         return (null, 0);
     }
 
-    private static IEnumerable<TokenDefModel> ExtractTokenDefsFromCtors(INamedTypeSymbol tokenType)
+    /// <summary>[Rule] の引数から AstNode 派生の子を収集 (partial プロパティ + Listener 用)。</summary>
+    private static IReadOnlyList<ChildModel> ExtractChildrenFromRules(IReadOnlyList<RuleModel> rules)
     {
-        foreach (var ctor in tokenType.Constructors)
-        {
-            foreach (var p in ctor.Parameters)
+        var children = new List<ChildModel>();
+        foreach (var r in rules)
+            foreach (var p in r.Parameters)
             {
-                var (pattern, priority) = GetPattern(p);
-                if (pattern is null) continue;
-                yield return new TokenDefModel(tokenType.ToDisplayString(), pattern, priority, isHidden: false);
+                if (!p.IsChild || p.Name is null) continue;
+                bool isNullable = p.TypeFullName.EndsWith("?");
+                var prop = CodeEmitter.Pascalize(p.Name);
+                if (children.Exists(c => c.PropertyName == prop)) continue;
+                children.Add(new ChildModel(prop, p.TypeFullName, isNullable));
             }
-        }
+        children.Sort((a, b) => string.CompareOrdinal(a.PropertyName, b.PropertyName));
+        return children;
     }
 
-    private static IEnumerable<TokenDefModel> ExtractInlineTokenDefs(INamedTypeSymbol type, INamedTypeSymbol? tokenBase)
+    /// <summary>全 [Rule] メソッドの Token 型+[Token]/[Pattern] 引数からトークン定義を抽出。</summary>
+    private static IEnumerable<TokenDefModel> ExtractTokenDefsFromRules(NodeModel node)
     {
-        foreach (var ctor in type.Constructors)
-        {
-            foreach (var p in ctor.Parameters)
+        foreach (var r in node.Rules)
+            foreach (var p in r.Parameters)
             {
-                var (pattern, priority) = GetPattern(p);
-                if (pattern is null) continue;
-                if (tokenBase is not null && !InheritsFromOrEquals(p.Type, tokenBase)) continue;
-                var key = p.Type.ToDisplayString();
-                yield return new TokenDefModel(key, pattern, priority, isHidden: false);
+                if (p.Pattern is null) continue;
+                // Token 派生型 (共通 Token 以外) ならその型をキーに、それ以外は共通 Token 型。
+                var key = p.IsToken ? p.TypeFullName : TokenFullName;
+                yield return new TokenDefModel(key, p.Pattern, p.Priority, isHidden: false);
             }
-        }
     }
 
-    private static string? GetStringAttribute(ISymbol symbol, string attrName, int ctorArgIndex)
+    private static bool HasAttribute(ISymbol symbol, string attrName)
     {
         foreach (var a in symbol.GetAttributes())
-        {
-            if (a.AttributeClass?.Name == attrName)
-            {
-                if (a.ConstructorArguments.Length > ctorArgIndex
-                    && a.ConstructorArguments[ctorArgIndex].Value is string s)
-                    return s;
-            }
-        }
-        return null;
-    }
-
-    private static int GetIntAttribute(ISymbol symbol, string attrName, int ctorArgIndex)
-    {
-        foreach (var a in symbol.GetAttributes())
-        {
-            if (a.AttributeClass?.Name == attrName)
-            {
-                if (a.ConstructorArguments.Length > ctorArgIndex
-                    && a.ConstructorArguments[ctorArgIndex].Value is int i)
-                    return i;
-            }
-        }
-        return 0;
+            if (a.AttributeClass?.Name == attrName) return true;
+        return false;
     }
 
     private static bool InheritsFromOrEquals(ITypeSymbol type, INamedTypeSymbol baseType)
     {
         if (SymbolEqualityComparer.Default.Equals(type, baseType)) return true;
         return InheritsFrom(type, baseType);
-    }
-
-    /// <summary>ノードの public プロパティから AstNode 派生の子を収集する (Listener 生成で子の再帰ウォークに使う)。</summary>
-    private static IReadOnlyList<ChildModel> ExtractChildren(INamedTypeSymbol type, INamedTypeSymbol astNodeBase)
-    {
-        var children = new List<ChildModel>();
-        foreach (var member in type.GetMembers())
-        {
-            if (member is not IPropertySymbol prop) continue;
-            var get = prop.GetMethod;
-            if (get is null || get.DeclaredAccessibility != Accessibility.Public) continue;
-            if (prop.Type is not INamedTypeSymbol nt) continue;
-            if (!InheritsFromOrEquals(nt, astNodeBase)) continue;
-            bool isNullable = nt.NullableAnnotation == NullableAnnotation.Annotated;
-            children.Add(new ChildModel(prop.Name, nt.ToDisplayString(), isNullable));
-        }
-        children.Sort((a, b) => string.CompareOrdinal(a.PropertyName, b.PropertyName));
-        return children;
     }
 
     private static bool InheritsFrom(ITypeSymbol type, INamedTypeSymbol baseType)

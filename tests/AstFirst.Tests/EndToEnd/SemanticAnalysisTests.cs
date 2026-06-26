@@ -7,8 +7,8 @@ public class SemanticAnalysisTests
 {
     private static IReadOnlyList<Diagnostic> Analyze(string code)
     {
-        var result = ProgramParser.Parse(code);
-        return new SemanticAnalyzer().Analyze(result.Ast as Program);
+        var result = ProgramParser.Parse(code, new MiniCContext());
+        return result.Diagnostics;
     }
 
     private static int ErrorCount(string code) => Analyze(code).Count(d => d.Severity == Severity.Error);

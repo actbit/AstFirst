@@ -58,6 +58,7 @@ public sealed class LalrTable
     private readonly LrAction[,] _action;
     private readonly int[,] _goto;
     private readonly int[] _defaultReduce;
+    private readonly Dictionary<(int, int), List<LrAction>> _alternatives;
 
     public Grammar Grammar { get; }
     public int StateCount { get; }
@@ -65,7 +66,7 @@ public sealed class LalrTable
     public IReadOnlyList<LrConflict> Conflicts { get; }
 
     public LalrTable(Grammar grammar, LrAction[,] action, int[,] gotoTable, IReadOnlyList<LrConflict> conflicts,
-        int[]? defaultReduce = null)
+        int[]? defaultReduce = null, Dictionary<(int, int), List<LrAction>>? alternatives = null)
     {
         Grammar = grammar;
         _action = action;
@@ -74,9 +75,24 @@ public sealed class LalrTable
         SymbolCount = action.GetLength(1);
         Conflicts = conflicts;
         _defaultReduce = defaultReduce ?? System.Array.Empty<int>();
+        _alternatives = alternatives ?? new Dictionary<(int, int), List<LrAction>>();
     }
 
     public LrAction Action(int state, int symbolId) => _action[state, symbolId];
+
+    /// <summary>その状態/記号のアクション候補（優先度順・先頭=デフォルト）。
+    /// Accept/Reject で Reject されたときのフォールバック先（2番目以降）。</summary>
+    public IReadOnlyList<LrAction> Alternatives(int state, int symbolId)
+    {
+        var winner = _action[state, symbolId];
+        if (!_alternatives.TryGetValue((state, symbolId), out var list))
+            return winner.Kind == LrActionKind.Error ? System.Array.Empty<LrAction>() : new[] { winner };
+        // 勝者 (デフォルト) を先頭に、残りを登場順で (Reject 時のフォールバック順)。
+        var result = new List<LrAction> { winner };
+        foreach (var a in list) if (!a.Equals(winner)) result.Add(a);
+        return result;
+    }
+
     public int Goto(int state, int symbolId) => _goto[state, symbolId];
     /// <summary>状態のデフォルト reduce (productionId)。-1 = なし。</summary>
     public int DefaultReduce(int state) => state < _defaultReduce.Length ? _defaultReduce[state] : -1;
@@ -105,6 +121,7 @@ public static class LalrTableBuilder
             }
 
         var conflicts = new List<LrConflict>();
+        var alternatives = new Dictionary<(int, int), List<LrAction>>();
 
         for (int state = 0; state < states; state++)
         {
@@ -120,12 +137,12 @@ public static class LalrTableBuilder
                     if (item.ProductionId == grammar.AugmentedProduction.Id)
                     {
                         // S' -> S $ の受け入れ ($ で Accept)。
-                        SetAction(action, conflicts, grammar, auto, state, grammar.EndOfFile.Id, LrAction.Accept, prod);
+                        SetAction(action, alternatives, conflicts, grammar, auto, state, grammar.EndOfFile.Id, LrAction.Accept, prod);
                     }
                     else
                     {
                         foreach (var a in lookahead.Lookahead(state, item))
-                            SetAction(action, conflicts, grammar, auto, state, a, LrAction.Reduce(item.ProductionId), prod);
+                            SetAction(action, alternatives, conflicts, grammar, auto, state, a, LrAction.Reduce(item.ProductionId), prod);
                     }
                 }
                 else
@@ -134,7 +151,7 @@ public static class LalrTableBuilder
                     int target = auto.Goto(state, sym.Id);
                     if (target < 0) continue;
                     if (sym.IsTerminal)
-                        SetAction(action, conflicts, grammar, auto, state, sym.Id, LrAction.Shift(target), prod);
+                        SetAction(action, alternatives, conflicts, grammar, auto, state, sym.Id, LrAction.Shift(target), prod);
                     else
                         gotoT[state, sym.Id] = target;
                 }
@@ -161,19 +178,21 @@ public static class LalrTableBuilder
             defaultReduce[s] = bestProd;
         }
 
-        return new LalrTable(grammar, action, gotoT, conflicts, defaultReduce);
+        return new LalrTable(grammar, action, gotoT, conflicts, defaultReduce, alternatives);
     }
 
-    private static void SetAction(LrAction[,] action, List<LrConflict> conflicts, Grammar grammar,
+    private static void SetAction(LrAction[,] action, Dictionary<(int, int), List<LrAction>> alternatives, List<LrConflict> conflicts, Grammar grammar,
         Lr0Automaton auto, int state, int symbolId, LrAction newAction, Production prod)
     {
         var existing = action[state, symbolId];
         if (existing.Kind == LrActionKind.Error)
         {
             action[state, symbolId] = newAction;
+            AddAlternative(alternatives, state, symbolId, newAction);
             return;
         }
         if (existing.Equals(newAction)) return;
+        AddAlternative(alternatives, state, symbolId, newAction);
 
         bool shiftReduce = (existing.Kind == LrActionKind.Shift && newAction.Kind == LrActionKind.Reduce)
                         || (existing.Kind == LrActionKind.Reduce && newAction.Kind == LrActionKind.Shift);
@@ -241,6 +260,18 @@ public static class LalrTableBuilder
             var reduceAction = existing.Kind == LrActionKind.Reduce ? existing : newAction;
             action[state, symbolId] = reduceAction;
         }
+    }
+
+    /// <summary>フォールバック候補リストにアクションを追加（重複除外）。</summary>
+    private static void AddAlternative(Dictionary<(int, int), List<LrAction>> alternatives, int state, int symbolId, LrAction action)
+    {
+        if (!alternatives.TryGetValue((state, symbolId), out var list))
+        {
+            list = new List<LrAction>();
+            alternatives[(state, symbolId)] = list;
+        }
+        foreach (var a in list) if (a.Equals(action)) return;
+        list.Add(action);
     }
 
     /// <summary>規則の優先度。

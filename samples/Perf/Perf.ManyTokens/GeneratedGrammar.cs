@@ -5,515 +5,617 @@ namespace PerfManyTokens;
 
 [Grammar]
 [Skip(@"\s+")]
-public abstract class TokenProgram : AstNode { }
+public abstract partial class TokenProgram : AstNode { }
 
-public sealed class NilProgram : TokenProgram
+public sealed partial class NilProgram : TokenProgram
 {
-    public NilProgram() { }
+    [Rule]
+    public static void Reduce() { }
 }
 
-public sealed class Kw0 : TokenProgram
+public sealed partial class Kw0 : TokenProgram
 {
-    public Kw0([Pattern(@"kw0", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw0", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw1 : TokenProgram
+public sealed partial class Kw1 : TokenProgram
 {
-    public Kw1([Pattern(@"kw1", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw1", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw2 : TokenProgram
+public sealed partial class Kw2 : TokenProgram
 {
-    public Kw2([Pattern(@"kw2", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw2", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw3 : TokenProgram
+public sealed partial class Kw3 : TokenProgram
 {
-    public Kw3([Pattern(@"kw3", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw3", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw4 : TokenProgram
+public sealed partial class Kw4 : TokenProgram
 {
-    public Kw4([Pattern(@"kw4", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw4", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw5 : TokenProgram
+public sealed partial class Kw5 : TokenProgram
 {
-    public Kw5([Pattern(@"kw5", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw5", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw6 : TokenProgram
+public sealed partial class Kw6 : TokenProgram
 {
-    public Kw6([Pattern(@"kw6", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw6", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw7 : TokenProgram
+public sealed partial class Kw7 : TokenProgram
 {
-    public Kw7([Pattern(@"kw7", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw7", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw8 : TokenProgram
+public sealed partial class Kw8 : TokenProgram
 {
-    public Kw8([Pattern(@"kw8", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw8", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw9 : TokenProgram
+public sealed partial class Kw9 : TokenProgram
 {
-    public Kw9([Pattern(@"kw9", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw9", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw10 : TokenProgram
+public sealed partial class Kw10 : TokenProgram
 {
-    public Kw10([Pattern(@"kw10", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw10", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw11 : TokenProgram
+public sealed partial class Kw11 : TokenProgram
 {
-    public Kw11([Pattern(@"kw11", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw11", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw12 : TokenProgram
+public sealed partial class Kw12 : TokenProgram
 {
-    public Kw12([Pattern(@"kw12", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw12", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw13 : TokenProgram
+public sealed partial class Kw13 : TokenProgram
 {
-    public Kw13([Pattern(@"kw13", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw13", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw14 : TokenProgram
+public sealed partial class Kw14 : TokenProgram
 {
-    public Kw14([Pattern(@"kw14", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw14", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw15 : TokenProgram
+public sealed partial class Kw15 : TokenProgram
 {
-    public Kw15([Pattern(@"kw15", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw15", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw16 : TokenProgram
+public sealed partial class Kw16 : TokenProgram
 {
-    public Kw16([Pattern(@"kw16", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw16", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw17 : TokenProgram
+public sealed partial class Kw17 : TokenProgram
 {
-    public Kw17([Pattern(@"kw17", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw17", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw18 : TokenProgram
+public sealed partial class Kw18 : TokenProgram
 {
-    public Kw18([Pattern(@"kw18", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw18", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw19 : TokenProgram
+public sealed partial class Kw19 : TokenProgram
 {
-    public Kw19([Pattern(@"kw19", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw19", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw20 : TokenProgram
+public sealed partial class Kw20 : TokenProgram
 {
-    public Kw20([Pattern(@"kw20", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw20", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw21 : TokenProgram
+public sealed partial class Kw21 : TokenProgram
 {
-    public Kw21([Pattern(@"kw21", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw21", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw22 : TokenProgram
+public sealed partial class Kw22 : TokenProgram
 {
-    public Kw22([Pattern(@"kw22", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw22", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw23 : TokenProgram
+public sealed partial class Kw23 : TokenProgram
 {
-    public Kw23([Pattern(@"kw23", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw23", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw24 : TokenProgram
+public sealed partial class Kw24 : TokenProgram
 {
-    public Kw24([Pattern(@"kw24", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw24", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw25 : TokenProgram
+public sealed partial class Kw25 : TokenProgram
 {
-    public Kw25([Pattern(@"kw25", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw25", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw26 : TokenProgram
+public sealed partial class Kw26 : TokenProgram
 {
-    public Kw26([Pattern(@"kw26", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw26", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw27 : TokenProgram
+public sealed partial class Kw27 : TokenProgram
 {
-    public Kw27([Pattern(@"kw27", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw27", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw28 : TokenProgram
+public sealed partial class Kw28 : TokenProgram
 {
-    public Kw28([Pattern(@"kw28", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw28", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw29 : TokenProgram
+public sealed partial class Kw29 : TokenProgram
 {
-    public Kw29([Pattern(@"kw29", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw29", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw30 : TokenProgram
+public sealed partial class Kw30 : TokenProgram
 {
-    public Kw30([Pattern(@"kw30", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw30", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw31 : TokenProgram
+public sealed partial class Kw31 : TokenProgram
 {
-    public Kw31([Pattern(@"kw31", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw31", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw32 : TokenProgram
+public sealed partial class Kw32 : TokenProgram
 {
-    public Kw32([Pattern(@"kw32", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw32", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw33 : TokenProgram
+public sealed partial class Kw33 : TokenProgram
 {
-    public Kw33([Pattern(@"kw33", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw33", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw34 : TokenProgram
+public sealed partial class Kw34 : TokenProgram
 {
-    public Kw34([Pattern(@"kw34", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw34", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw35 : TokenProgram
+public sealed partial class Kw35 : TokenProgram
 {
-    public Kw35([Pattern(@"kw35", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw35", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw36 : TokenProgram
+public sealed partial class Kw36 : TokenProgram
 {
-    public Kw36([Pattern(@"kw36", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw36", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw37 : TokenProgram
+public sealed partial class Kw37 : TokenProgram
 {
-    public Kw37([Pattern(@"kw37", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw37", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw38 : TokenProgram
+public sealed partial class Kw38 : TokenProgram
 {
-    public Kw38([Pattern(@"kw38", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw38", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw39 : TokenProgram
+public sealed partial class Kw39 : TokenProgram
 {
-    public Kw39([Pattern(@"kw39", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw39", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw40 : TokenProgram
+public sealed partial class Kw40 : TokenProgram
 {
-    public Kw40([Pattern(@"kw40", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw40", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw41 : TokenProgram
+public sealed partial class Kw41 : TokenProgram
 {
-    public Kw41([Pattern(@"kw41", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw41", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw42 : TokenProgram
+public sealed partial class Kw42 : TokenProgram
 {
-    public Kw42([Pattern(@"kw42", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw42", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw43 : TokenProgram
+public sealed partial class Kw43 : TokenProgram
 {
-    public Kw43([Pattern(@"kw43", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw43", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw44 : TokenProgram
+public sealed partial class Kw44 : TokenProgram
 {
-    public Kw44([Pattern(@"kw44", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw44", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw45 : TokenProgram
+public sealed partial class Kw45 : TokenProgram
 {
-    public Kw45([Pattern(@"kw45", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw45", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw46 : TokenProgram
+public sealed partial class Kw46 : TokenProgram
 {
-    public Kw46([Pattern(@"kw46", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw46", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw47 : TokenProgram
+public sealed partial class Kw47 : TokenProgram
 {
-    public Kw47([Pattern(@"kw47", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw47", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw48 : TokenProgram
+public sealed partial class Kw48 : TokenProgram
 {
-    public Kw48([Pattern(@"kw48", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw48", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw49 : TokenProgram
+public sealed partial class Kw49 : TokenProgram
 {
-    public Kw49([Pattern(@"kw49", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw49", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw50 : TokenProgram
+public sealed partial class Kw50 : TokenProgram
 {
-    public Kw50([Pattern(@"kw50", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw50", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw51 : TokenProgram
+public sealed partial class Kw51 : TokenProgram
 {
-    public Kw51([Pattern(@"kw51", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw51", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw52 : TokenProgram
+public sealed partial class Kw52 : TokenProgram
 {
-    public Kw52([Pattern(@"kw52", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw52", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw53 : TokenProgram
+public sealed partial class Kw53 : TokenProgram
 {
-    public Kw53([Pattern(@"kw53", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw53", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw54 : TokenProgram
+public sealed partial class Kw54 : TokenProgram
 {
-    public Kw54([Pattern(@"kw54", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw54", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw55 : TokenProgram
+public sealed partial class Kw55 : TokenProgram
 {
-    public Kw55([Pattern(@"kw55", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw55", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw56 : TokenProgram
+public sealed partial class Kw56 : TokenProgram
 {
-    public Kw56([Pattern(@"kw56", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw56", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw57 : TokenProgram
+public sealed partial class Kw57 : TokenProgram
 {
-    public Kw57([Pattern(@"kw57", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw57", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw58 : TokenProgram
+public sealed partial class Kw58 : TokenProgram
 {
-    public Kw58([Pattern(@"kw58", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw58", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw59 : TokenProgram
+public sealed partial class Kw59 : TokenProgram
 {
-    public Kw59([Pattern(@"kw59", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw59", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw60 : TokenProgram
+public sealed partial class Kw60 : TokenProgram
 {
-    public Kw60([Pattern(@"kw60", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw60", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw61 : TokenProgram
+public sealed partial class Kw61 : TokenProgram
 {
-    public Kw61([Pattern(@"kw61", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw61", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw62 : TokenProgram
+public sealed partial class Kw62 : TokenProgram
 {
-    public Kw62([Pattern(@"kw62", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw62", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw63 : TokenProgram
+public sealed partial class Kw63 : TokenProgram
 {
-    public Kw63([Pattern(@"kw63", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw63", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw64 : TokenProgram
+public sealed partial class Kw64 : TokenProgram
 {
-    public Kw64([Pattern(@"kw64", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw64", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw65 : TokenProgram
+public sealed partial class Kw65 : TokenProgram
 {
-    public Kw65([Pattern(@"kw65", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw65", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw66 : TokenProgram
+public sealed partial class Kw66 : TokenProgram
 {
-    public Kw66([Pattern(@"kw66", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw66", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw67 : TokenProgram
+public sealed partial class Kw67 : TokenProgram
 {
-    public Kw67([Pattern(@"kw67", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw67", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw68 : TokenProgram
+public sealed partial class Kw68 : TokenProgram
 {
-    public Kw68([Pattern(@"kw68", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw68", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw69 : TokenProgram
+public sealed partial class Kw69 : TokenProgram
 {
-    public Kw69([Pattern(@"kw69", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw69", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw70 : TokenProgram
+public sealed partial class Kw70 : TokenProgram
 {
-    public Kw70([Pattern(@"kw70", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw70", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw71 : TokenProgram
+public sealed partial class Kw71 : TokenProgram
 {
-    public Kw71([Pattern(@"kw71", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw71", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw72 : TokenProgram
+public sealed partial class Kw72 : TokenProgram
 {
-    public Kw72([Pattern(@"kw72", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw72", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw73 : TokenProgram
+public sealed partial class Kw73 : TokenProgram
 {
-    public Kw73([Pattern(@"kw73", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw73", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw74 : TokenProgram
+public sealed partial class Kw74 : TokenProgram
 {
-    public Kw74([Pattern(@"kw74", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw74", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw75 : TokenProgram
+public sealed partial class Kw75 : TokenProgram
 {
-    public Kw75([Pattern(@"kw75", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw75", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw76 : TokenProgram
+public sealed partial class Kw76 : TokenProgram
 {
-    public Kw76([Pattern(@"kw76", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw76", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw77 : TokenProgram
+public sealed partial class Kw77 : TokenProgram
 {
-    public Kw77([Pattern(@"kw77", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw77", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw78 : TokenProgram
+public sealed partial class Kw78 : TokenProgram
 {
-    public Kw78([Pattern(@"kw78", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw78", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw79 : TokenProgram
+public sealed partial class Kw79 : TokenProgram
 {
-    public Kw79([Pattern(@"kw79", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw79", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw80 : TokenProgram
+public sealed partial class Kw80 : TokenProgram
 {
-    public Kw80([Pattern(@"kw80", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw80", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw81 : TokenProgram
+public sealed partial class Kw81 : TokenProgram
 {
-    public Kw81([Pattern(@"kw81", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw81", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw82 : TokenProgram
+public sealed partial class Kw82 : TokenProgram
 {
-    public Kw82([Pattern(@"kw82", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw82", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw83 : TokenProgram
+public sealed partial class Kw83 : TokenProgram
 {
-    public Kw83([Pattern(@"kw83", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw83", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw84 : TokenProgram
+public sealed partial class Kw84 : TokenProgram
 {
-    public Kw84([Pattern(@"kw84", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw84", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw85 : TokenProgram
+public sealed partial class Kw85 : TokenProgram
 {
-    public Kw85([Pattern(@"kw85", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw85", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw86 : TokenProgram
+public sealed partial class Kw86 : TokenProgram
 {
-    public Kw86([Pattern(@"kw86", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw86", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw87 : TokenProgram
+public sealed partial class Kw87 : TokenProgram
 {
-    public Kw87([Pattern(@"kw87", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw87", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw88 : TokenProgram
+public sealed partial class Kw88 : TokenProgram
 {
-    public Kw88([Pattern(@"kw88", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw88", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw89 : TokenProgram
+public sealed partial class Kw89 : TokenProgram
 {
-    public Kw89([Pattern(@"kw89", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw89", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw90 : TokenProgram
+public sealed partial class Kw90 : TokenProgram
 {
-    public Kw90([Pattern(@"kw90", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw90", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw91 : TokenProgram
+public sealed partial class Kw91 : TokenProgram
 {
-    public Kw91([Pattern(@"kw91", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw91", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw92 : TokenProgram
+public sealed partial class Kw92 : TokenProgram
 {
-    public Kw92([Pattern(@"kw92", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw92", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw93 : TokenProgram
+public sealed partial class Kw93 : TokenProgram
 {
-    public Kw93([Pattern(@"kw93", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw93", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw94 : TokenProgram
+public sealed partial class Kw94 : TokenProgram
 {
-    public Kw94([Pattern(@"kw94", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw94", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw95 : TokenProgram
+public sealed partial class Kw95 : TokenProgram
 {
-    public Kw95([Pattern(@"kw95", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw95", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw96 : TokenProgram
+public sealed partial class Kw96 : TokenProgram
 {
-    public Kw96([Pattern(@"kw96", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw96", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw97 : TokenProgram
+public sealed partial class Kw97 : TokenProgram
 {
-    public Kw97([Pattern(@"kw97", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw97", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw98 : TokenProgram
+public sealed partial class Kw98 : TokenProgram
 {
-    public Kw98([Pattern(@"kw98", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw98", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class Kw99 : TokenProgram
+public sealed partial class Kw99 : TokenProgram
 {
-    public Kw99([Pattern(@"kw99", Priority = 1)] Token kw, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"kw99", Priority = 1)] Token kw, TokenProgram rest) { }
 }
 
-public sealed class IdentNode : TokenProgram
+public sealed partial class IdentNode : TokenProgram
 {
-    public IdentNode([Pattern(@"[A-Za-z_]\w*")] Token name, TokenProgram rest) { }
+    [Rule]
+    public static void Reduce([Pattern(@"[A-Za-z_]\w*")] Token name, TokenProgram rest) { }
 }
 

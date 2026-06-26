@@ -74,6 +74,7 @@ string Render(Json? json) => json switch
     JsonString s => "\"" + s.Value + "\"",
     JsonArray a => "[" + string.Join(", ", RenderElems(a.Elements)) + "]",
     JsonObject o => o.Members is { } m ? "{" + string.Join(", ", RenderMembers(m)) + "}" : "{}",
+    JsonObjectEmpty => "{}",
     _ => json.GetType().Name,
 };
 
