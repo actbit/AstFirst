@@ -8,9 +8,10 @@ namespace AstFirst.Generator;
 /// <summary>
 /// GrammarModel からパーサの C# コードを生成する。
 /// LalrTable (ACTION/GOTO/Alternatives) と Productions を static 配列に直列化し、
-/// shift/reduce/accept を駆動する。reduce は「仮想 reduce」: PeekN (Pop せず参照) で
-/// partial コンストラクタ new → OnReduce(ctx) → Accept/Reject を判定。Reject なら
-/// Alternatives の次候補へフォールバック。Parse 後に 2パス目 (OnSecondPassEnter/Exit) を自動呼出。
+/// shift/reduce/accept を駆動する。スタックは配列 + top 指数 (再確保を削減)。
+/// reduce は「仮想 reduce」: top から右辺長分を Pop せず参照し、partial コンストラクタ new →
+/// OnReduce(ctx) → Accept/Reject を判定。Reject なら Alternatives の次候補へフォールバック。
+/// Parse 後に 2パス目 (OnSecondPassEnter/Exit) を自動呼出。
 /// </summary>
 public static class ParserEmitter
 {
@@ -131,16 +132,17 @@ public static class ParserEmitter
         sb.AppendLine("    {");
         sb.AppendLine("        var ctx = context ?? new AstFirst.BasicSemanticContext();");
         sb.AppendLine("        var tokens = " + lexerName + ".Tokenize(input);");
-        sb.AppendLine("        var states = new Stack<int>();");
-        sb.AppendLine("        var values = new Stack<object?>();");
+        sb.AppendLine("        var states = new int[64];");
+        sb.AppendLine("        var values = new object?[64];");
+        sb.AppendLine("        int top = 0;");
         sb.AppendLine("        var errors = new System.Collections.Generic.List<AstFirst.ParseError>();");
         sb.AppendLine("        object? result = null;");
-        sb.AppendLine("        states.Push(0);");
+        sb.AppendLine("        states[top++] = 0;");
         sb.AppendLine("        int i = 0;");
         sb.AppendLine("        int lastErrorPos = -10;");
         sb.AppendLine("        while (true)");
         sb.AppendLine("        {");
-        sb.AppendLine("            int state = states.Peek();");
+        sb.AppendLine("            int state = states[top - 1];");
         sb.AppendLine("            int sym = (i < tokens.Count) ? TokenIdToSym[tokens[i].TokenId] : EofSym;");
         sb.AppendLine("            if (sym < 0) { errors.Add(new AstFirst.ParseError(\"未知のトークンです\", tokens[i].Start)); i++; continue; }");
         sb.AppendLine("            byte kind = ActionKind[state, sym];");
@@ -152,30 +154,31 @@ public static class ParserEmitter
         sb.AppendLine("");
         sb.AppendLine("            if (dk == 1) // Shift");
         sb.AppendLine("            {");
-        sb.AppendLine("                values.Push(sym == EofSym ? null : (object)ToToken(tokens[i]));");
-        sb.AppendLine("                states.Push(dv);");
+        sb.AppendLine("                if (top >= states.Length) Grow(ref states, ref values);");
+        sb.AppendLine("                values[top] = sym == EofSym ? null : (object)ToToken(tokens[i]);");
+        sb.AppendLine("                states[top] = dv; top++;");
         sb.AppendLine("                i++;");
         sb.AppendLine("            }");
         sb.AppendLine("            else if (dk == 2) // Reduce (仮想 reduce)");
         sb.AppendLine("            {");
-        sb.AppendLine("                var node = ReduceNode(dv, values, ctx);");
+        sb.AppendLine("                var node = ReduceNode(dv, values, top, ctx);");
         sb.AppendLine("                if (node is not null && !((AstFirst.AstNode)node).IsAccepted)");
         sb.AppendLine("                {");
         sb.AppendLine("                    // Reject: フォールバック候補を試す");
-        sb.AppendLine("                    if (!TryFallback(state, sym, values, states, ctx, tokens, ref i)) goto panic;");
+        sb.AppendLine("                    if (!TryFallback(state, sym, values, ref top, states, ctx, tokens, ref i)) goto panic;");
         sb.AppendLine("                }");
         sb.AppendLine("                else");
         sb.AppendLine("                {");
         sb.AppendLine("                    int len = ProdLen[dv];");
-        sb.AppendLine("                    for (int k = 0; k < len; k++) { values.Pop(); states.Pop(); }");
-        sb.AppendLine("                    values.Push(node);");
-        sb.AppendLine("                    states.Push(Goto[states.Peek(), ProdLhs[dv]]);");
+        sb.AppendLine("                    top -= len;");
+        sb.AppendLine("                    values[top] = node;");
+        sb.AppendLine("                    states[top] = Goto[states[top - 1], ProdLhs[dv]]; top++;");
         sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("            else if (dk == 3) // Accept");
         sb.AppendLine("            {");
-        sb.AppendLine("                values.Pop(); // $ を捨てる");
-        sb.AppendLine("                result = values.Peek();");
+        sb.AppendLine("                top--; // $ を捨てる");
+        sb.AppendLine("                result = values[top - 1];");
         sb.AppendLine("                break;");
         sb.AppendLine("            }");
         sb.AppendLine("            else { goto panic; }");
@@ -196,16 +199,16 @@ public static class ParserEmitter
         sb.AppendLine("                    lastErrorPos = i;");
         sb.AppendLine("                }");
         sb.AppendLine("                bool recovered = false;");
-        sb.AppendLine("                while (states.Count > 1 && i < tokens.Count)");
+        sb.AppendLine("                while (top > 1 && i < tokens.Count)");
         sb.AppendLine("                {");
-        sb.AppendLine("                    states.Pop(); values.Pop();");
-        sb.AppendLine("                    int topState = states.Peek();");
+        sb.AppendLine("                    top--;");
+        sb.AppendLine("                    int topState = states[top - 1];");
         sb.AppendLine("                    int curSym = TokenIdToSym[tokens[i].TokenId];");
         sb.AppendLine("                    if (curSym >= 0 && ActionKind[topState, curSym] != 0) { recovered = true; break; }");
         sb.AppendLine("                }");
         sb.AppendLine("                if (!recovered)");
         sb.AppendLine("                {");
-        sb.AppendLine("                    if (states.Count <= 1) { while (states.Count > 0) states.Pop(); while (values.Count > 0) values.Pop(); states.Push(0); }");
+        sb.AppendLine("                    if (top <= 1) { top = 0; states[top++] = 0; }");
         sb.AppendLine("                    if (i < tokens.Count) i++; else break;");
         sb.AppendLine("                }");
         sb.AppendLine("            }");
@@ -218,8 +221,15 @@ public static class ParserEmitter
 
     private static void EmitHelpers(StringBuilder sb, Grammar grammar, GrammarModel model, HashSet<string> tokenDerivedTypes)
     {
+        // Grow: スタック配列が足りなくなったら 2 倍に拡張。
+        sb.AppendLine("    private static void Grow(ref int[] states, ref object?[] values)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        System.Array.Resize(ref states, states.Length * 2);");
+        sb.AppendLine("        System.Array.Resize(ref values, values.Length * 2);");
+        sb.AppendLine("    }");
+
         // TryFallback: Reject された reduce の代わりにコンフリクト候補を試す。
-        sb.AppendLine("    private static bool TryFallback(int state, int sym, Stack<object?> values, Stack<int> states, AstFirst.SemanticContext ctx, System.Collections.Generic.List<AstFirst.Core.Lexing.LexToken> tokens, ref int i)");
+        sb.AppendLine("    private static bool TryFallback(int state, int sym, object?[] values, ref int top, int[] states, AstFirst.SemanticContext ctx, System.Collections.Generic.List<AstFirst.Core.Lexing.LexToken> tokens, ref int i)");
         sb.AppendLine("    {");
         sb.AppendLine("        int key = state * SymbolCount + sym;");
         sb.AppendLine("        for (int a = 0; a < AltKeys.Length; a++)");
@@ -230,19 +240,20 @@ public static class ParserEmitter
         sb.AppendLine("                int k = e / 1000000; int v = e % 1000000;");
         sb.AppendLine("                if (k == 1) // Shift 候補");
         sb.AppendLine("                {");
-        sb.AppendLine("                    values.Push(sym == EofSym ? null : (object)ToToken(tokens[i]));");
-        sb.AppendLine("                    states.Push(v);");
+        sb.AppendLine("                    if (top >= states.Length) Grow(ref states, ref values);");
+        sb.AppendLine("                    values[top] = sym == EofSym ? null : (object)ToToken(tokens[i]);");
+        sb.AppendLine("                    states[top] = v; top++;");
         sb.AppendLine("                    i++;");
         sb.AppendLine("                    return true;");
         sb.AppendLine("                }");
         sb.AppendLine("                if (k == 2) // Reduce 候補");
         sb.AppendLine("                {");
-        sb.AppendLine("                    var node = ReduceNode(v, values, ctx);");
+        sb.AppendLine("                    var node = ReduceNode(v, values, top, ctx);");
         sb.AppendLine("                    if (node is not null && !((AstFirst.AstNode)node).IsAccepted) continue; // さらに Reject → 次");
         sb.AppendLine("                    int len = ProdLen[v];");
-        sb.AppendLine("                    for (int x = 0; x < len; x++) { values.Pop(); states.Pop(); }");
-        sb.AppendLine("                    values.Push(node);");
-        sb.AppendLine("                    states.Push(Goto[states.Peek(), ProdLhs[v]]);");
+        sb.AppendLine("                    top -= len;");
+        sb.AppendLine("                    values[top] = node;");
+        sb.AppendLine("                    states[top] = Goto[states[top - 1], ProdLhs[v]]; top++;");
         sb.AppendLine("                    return true;");
         sb.AppendLine("                }");
         sb.AppendLine("            }");
@@ -251,31 +262,24 @@ public static class ParserEmitter
         sb.AppendLine("        return false;");
         sb.AppendLine("    }");
 
-        // PeekN: Pop せずスタックトップ n 個を参照 (仮想 reduce 用)。
-        sb.AppendLine("    private static object?[] PeekN(Stack<object?> s, int n)");
-        sb.AppendLine("    {");
-        sb.AppendLine("        var a = new object?[n];");
-        sb.AppendLine("        int idx = n - 1;");
-        sb.AppendLine("        foreach (var v in s) { if (idx < 0) break; a[idx--] = v; }");
-        sb.AppendLine("        return a;");
-        sb.AppendLine("    }");
-
-        // ReduceNode: 規則 prodId で仮想 reduce。PeekN で子を参照 → partial コンストラクタ new → OnReduce(ctx)。
-        sb.AppendLine("    private static object? ReduceNode(int val, Stack<object?> values, AstFirst.SemanticContext ctx)");
+        // ReduceNode: 規則 prodId で仮想 reduce。スタック top から右辺長分を Pop せず参照 → partial コンストラクタ new → OnReduce(ctx)。
+        sb.AppendLine("    private static object? ReduceNode(int val, object?[] values, int top, AstFirst.SemanticContext ctx)");
         sb.AppendLine("    {");
         sb.AppendLine("        switch (val)");
         sb.AppendLine("        {");
         foreach (var prod in grammar.Productions)
         {
             if (prod.Tag is not ReduceActionModel action) continue;
-            sb.Append("            case ").Append(prod.Id).Append(": { var c = PeekN(values, ").Append(prod.Rhs.Length).Append("); return new ").Append(action.AstTypeName).Append("(");
+            int len = prod.Rhs.Length;
+            sb.Append("            case ").Append(prod.Id).Append(": { return new ").Append(action.AstTypeName).Append("(");
             for (int j = 0; j < action.Parameters.Count; j++)
             {
                 if (j > 0) sb.Append(", ");
                 var p = action.Parameters[j];
+                // 子は values[top - len + ChildIndex] で参照 (Pop せず)。右辺の ChildIndex 番目の記号。
                 if (p.IsContext) sb.Append("(").Append(p.CastTypeName).Append(")ctx");
-                else if (tokenDerivedTypes.Contains(p.CastTypeName)) sb.Append("new ").Append(p.CastTypeName).Append("(((AstFirst.Token)c[").Append(p.ChildIndex).Append("]!).Text)");
-                else sb.Append("(").Append(p.CastTypeName).Append(")c[").Append(p.ChildIndex).Append("]!");
+                else if (tokenDerivedTypes.Contains(p.CastTypeName)) sb.Append("new ").Append(p.CastTypeName).Append("(((AstFirst.Token)values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!).Text)");
+                else sb.Append("(").Append(p.CastTypeName).Append(")values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!");
             }
             sb.AppendLine("); }");
         }
