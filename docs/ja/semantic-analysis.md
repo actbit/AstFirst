@@ -2,6 +2,8 @@
 
 [English](../en/semantic-analysis.md) / 日本語
 
+> **注: 本ドキュメントは旧モデル（コンストラクタ・Listener ベース）の記述を含みます。** 現行の `[Rule]` static モデル（`OnReduce` / `OnSecondPass` / `Accept`/`Reject` / partial 子保持）については [README](../../README.md) を参照してください。本ドキュメントの全面更新は後続 PR で行います。
+
 AstFirst は構文解析（AST 構築）後に意味解析を乗せられる。標準ヘルパー: スコープ付きシンボル表、Listener、シンボル解決、型チェック、束縛、診断。
 
 ## SemanticContext の注入

@@ -2,6 +2,8 @@
 
 English / [日本語](../ja/architecture.md)
 
+> **Note: this document still describes the old (constructor-based) model.** For the current `[Rule]` static model (`OnReduce` / `OnSecondPass` / `Accept`/`Reject` / partial child retention), see [README](../../README.en.md). A full update of this document is planned for a follow-up PR.
+
 AstFirst is a parser generator built as three layers plus a generator.
 
 ## Layers

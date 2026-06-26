@@ -2,6 +2,8 @@
 
 [English](../en/grammar-reference.md) / 日本語
 
+> **注: 本ドキュメントは旧モデル（コンストラクタベース）の記述を含みます。** 現行の `[Rule]` static モデル（`OnReduce` / `OnSecondPass` / `Accept`/`Reject` / partial 子保持）については [README](../../README.md) を参照してください。本ドキュメントの全面更新は後続 PR で行います。
+
 AstFirst では C# のクラスと属性で文法を書く。Generator がコンパイル時に Lexer / Parser / Listener を生成する。
 
 ## 属性一覧
