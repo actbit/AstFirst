@@ -81,7 +81,7 @@ var result2 = ExprParser.Parse("1+");
 AstFirst は構文解析（AST 構築）に加え、意味解析のための標準ヘルパーと 2パスの枠組みを提供する。詳細は [docs/ja/semantic-analysis.md](docs/ja/semantic-analysis.md)。
 
 - **1パス目 `OnReduce` (ボトムアップ)**: reduce 時に呼ばれる。`Accept()`/`Reject()` でこの構文を受け入れるか判定（既定 Accept）。`Reject` すると別候補へフォールバック。
-- **2パス目 `OnSecondPassEnter`/`Exit` (トップダウン)**: `Parse` 後に AST ルートから順に自動呼出（Enter → 子再帰 → Exit）。スコープ Push/Pop 等の正確な意味解析が書ける。
+- **2パス目 `OnSecondPassEnter`/`Exit` (トップダウン)**: `IOnSecondPassEnter`/`IOnSecondPassExit` インターフェースを実装したノードで、`Parse` 後に AST ルートから順に自動呼出（Enter → 子再帰 → Exit）。スコープ Push/Pop 等の正確な意味解析が書ける。未実装文法では走査を省略しオーバーヘッドなし。
 - **スコープ付きシンボル表** (`ScopedSymbolTable`) — レキシカルスコープの管理
 - **シンボル解決** (`ResolveOrError`) — 未宣言参照の検出
 - **型チェック** (`TypeSymbol` / `TypeContext`) — 型の表現と検査
@@ -106,15 +106,15 @@ public sealed partial class CastExpr : Expr
 
 ### 2パス目（OnSecondPass）
 
-各ノードで `public override void OnSecondPassEnter(SemanticContext ctx)` / `OnSecondPassExit` を書くと、`Parse` 後にトップダウン（子の前/後）で呼ばれる。ブロックスコープの Push/Pop に適する。
+`IOnSecondPassEnter` / `IOnSecondPassExit` インターフェースを実装したノードで、`Parse` 後にトップダウン（子の前/後）で自動呼出される。ブロックスコープの Push/Pop に適する。**1つも実装しない文法では AST 走査ごと省略**され、Parse のオーバーヘッドが発生しない。
 
 ```csharp
 // MiniC: BlockStmt でスコープを開閉
-public sealed partial class BlockStmt : Stmt
+public sealed partial class BlockStmt : Stmt, IOnSecondPassEnter, IOnSecondPassExit
 {
     [Rule] public static void Block([Token(@"\{")] Token lb, Program body, [Token(@"\}")] Token rb, MiniCContext ctx) { }
-    public override void OnSecondPassEnter(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PushScope();
-    public override void OnSecondPassExit(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PopScope();
+    public void OnSecondPassEnter(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PushScope();
+    public void OnSecondPassExit(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PopScope();
 }
 ```
 
@@ -306,7 +306,7 @@ AstFirst.slnx
 ```
 
 - Generator は Roslyn で C# コードを読み、等価比較可能な POCO モデルに変換してから（キャッシュの生命線）、Core の純粋ロジックで DFA/LALR テーブルを構築し、Lexer/Parser/partial の C# コードを生成する。
-- 生成コードは Runtime に依存。Lexer/Parser は DFA/LALR テーブルを `static readonly` 配列に埋め込み shift/reduce を駆動。reduce 時に partial コンストラクタが子をセットして `OnReduce` を呼び、Reject ならフォールバック候補へ。`Parse` 後に `OnSecondPassEnter/Exit` をトップダウンで呼ぶ。
+- 生成コードは Runtime に依存。Lexer/Parser は DFA/LALR テーブルを `static readonly` 配列に埋め込み shift/reduce を駆動。reduce 時に partial コンストラクタが子をセットして `OnReduce` を呼び、Reject ならフォールバック候補へ。`Parse` 後、`IOnSecondPassEnter`/`IOnSecondPassExit` 実装ノードがあれば `WalkSecondPass`（反復的スタック実装）でトップダウン呼出（未実装なら走査自体を省略）。
 - Generator は Core のソースを Compile Include して単一アセンブリ化（Analyzer 実行時の依存ロード問題を回避）。
 
 ## ドキュメント
