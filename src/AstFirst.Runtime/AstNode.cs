@@ -39,13 +39,19 @@ public abstract class AstNode
 
     /// <summary>受領されたか (Accepted、または既定の Undecided)。パーサ生成コードが参照。</summary>
     public bool IsAccepted => AcceptState != AcceptState.Rejected;
+}
 
-    /// <summary>2パス目: 子の前 (トップダウン)。override して意味解析 (スコープ Push 等)。</summary>
-    /// <remarks>派生 ctx 型を使う場合は <paramref name="ctx"/> をキャスト。</remarks>
-    public virtual void OnSecondPassEnter(SemanticContext ctx) { }
+/// <summary>2パス目: 子の前 (トップダウン) に呼ばれる。実装したいノードだけこのインターフェースを実装する。
+/// Generator は1つでも実装があれば WalkSecondPass を生成し、未実装なら走査そのものを省く (空呼び回避)。</summary>
+public interface IOnSecondPassEnter
+{
+    void OnSecondPassEnter(SemanticContext ctx);
+}
 
-    /// <summary>2パス目: 子の後。override してスコープ Pop 等。</summary>
-    public virtual void OnSecondPassExit(SemanticContext ctx) { }
+/// <summary>2パス目: 子の後に呼ばれる。実装したいノードだけこのインターフェースを実装する。</summary>
+public interface IOnSecondPassExit
+{
+    void OnSecondPassExit(SemanticContext ctx);
 }
 
 public enum Severity { Error, Warning }

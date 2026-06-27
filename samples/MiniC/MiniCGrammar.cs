@@ -29,35 +29,35 @@ public sealed partial class NilProgram : Program
 public abstract partial class Stmt : AstNode { }
 
 // int x; (宣言のみ)
-public sealed partial class DeclStmt : Stmt
+public sealed partial class DeclStmt : Stmt, IOnSecondPassEnter
 {
     public string Name { get; private set; } = "";
     [Rule]
     public static void Decl([Token(@"int", Priority = 1)] Token kw, [Token(@"[A-Za-z_]\w*")] Token nameTok, [Token(@";")] Token semi, MiniCContext ctx) { }
     partial void OnReduce(MiniCContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
-    public override void OnSecondPassEnter(SemanticContext ctx) => SemanticAnalyzer.EnterDecl(this, (MiniCContext)ctx);
+    public void OnSecondPassEnter(SemanticContext ctx) => SemanticAnalyzer.EnterDecl(this, (MiniCContext)ctx);
 }
 
 // int x = expr; (初期化付き)
-public sealed partial class DeclStmtInit : Stmt
+public sealed partial class DeclStmtInit : Stmt, IOnSecondPassEnter, IOnSecondPassExit
 {
     public string Name { get; private set; } = "";
     [Rule]
     public static void DeclInit([Token(@"int", Priority = 1)] Token kw, [Token(@"[A-Za-z_]\w*")] Token nameTok, [Token(@"=")] Token eq, Expr init, [Token(@";")] Token semi, MiniCContext ctx) { }
     partial void OnReduce(MiniCContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
-    public override void OnSecondPassEnter(SemanticContext ctx) => SemanticAnalyzer.EnterDeclInit(this, (MiniCContext)ctx);
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitDeclInit(this, (MiniCContext)ctx);
+    public void OnSecondPassEnter(SemanticContext ctx) => SemanticAnalyzer.EnterDeclInit(this, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitDeclInit(this, (MiniCContext)ctx);
 }
 
 // x = expr;
-public sealed partial class AssignStmt : Stmt
+public sealed partial class AssignStmt : Stmt, IOnSecondPassEnter, IOnSecondPassExit
 {
     public string Name { get; private set; } = "";
     [Rule]
     public static void Assign([Token(@"[A-Za-z_]\w*")] Token nameTok, [Token(@"=")] Token eq, Expr value, [Token(@";")] Token semi, MiniCContext ctx) { }
     partial void OnReduce(MiniCContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
-    public override void OnSecondPassEnter(SemanticContext ctx) => SemanticAnalyzer.EnterAssign(this, (MiniCContext)ctx);
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitAssign(this, (MiniCContext)ctx);
+    public void OnSecondPassEnter(SemanticContext ctx) => SemanticAnalyzer.EnterAssign(this, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitAssign(this, (MiniCContext)ctx);
 }
 
 // print(expr);
@@ -68,104 +68,104 @@ public sealed partial class PrintStmt : Stmt
 }
 
 // if (expr) stmt
-public sealed partial class IfStmt : Stmt
+public sealed partial class IfStmt : Stmt, IOnSecondPassExit
 {
     [Rule]
     public static void If([Token(@"if", Priority = 1)] Token kw, [Token(@"\(")] Token lp, Expr cond, [Token(@"\)")] Token rp, Stmt body, MiniCContext ctx) { }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitCondition(this.Cond, this.Cond.Span, "if", (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitCondition(this.Cond, this.Cond.Span, "if", (MiniCContext)ctx);
 }
 
 // while (expr) stmt
-public sealed partial class WhileStmt : Stmt
+public sealed partial class WhileStmt : Stmt, IOnSecondPassExit
 {
     [Rule]
     public static void While([Token(@"while", Priority = 1)] Token kw, [Token(@"\(")] Token lp, Expr cond, [Token(@"\)")] Token rp, Stmt body, MiniCContext ctx) { }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitCondition(this.Cond, this.Cond.Span, "while", (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitCondition(this.Cond, this.Cond.Span, "while", (MiniCContext)ctx);
 }
 
 // { stmt... }
-public sealed partial class BlockStmt : Stmt
+public sealed partial class BlockStmt : Stmt, IOnSecondPassEnter, IOnSecondPassExit
 {
     [Rule]
     public static void Block([Token(@"\{")] Token lb, Program body, [Token(@"\}")] Token rb, MiniCContext ctx) { }
     partial void OnReduce(MiniCContext ctx) { Span = SourceSpan.Merge(Lb.Span, Rb.Span); }
-    public override void OnSecondPassEnter(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PushScope();
-    public override void OnSecondPassExit(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PopScope();
+    public void OnSecondPassEnter(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PushScope();
+    public void OnSecondPassExit(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PopScope();
 }
 
 // --- 式 ---
 public abstract partial class Expr : AstNode { }
 
-public sealed partial class NumExpr : Expr
+public sealed partial class NumExpr : Expr, IOnSecondPassExit
 {
     public int Value { get; private set; }
     [Rule]
     public static void NumToken([Token(@"[0-9]+")] Token num, MiniCContext ctx) { }
     partial void OnReduce(MiniCContext ctx) { Value = int.Parse(Num.Text); Span = Num.Span; }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
 }
 
-public sealed partial class BoolExpr : Expr
+public sealed partial class BoolExpr : Expr, IOnSecondPassExit
 {
     public bool Value { get; private set; }
     [Rule]
     public static void Bool([Token(@"true|false", Priority = 1)] Token kw, MiniCContext ctx) { }
     partial void OnReduce(MiniCContext ctx) { Value = Kw.Text == "true"; Span = Kw.Span; }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Bool, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Bool, (MiniCContext)ctx);
 }
 
-public sealed partial class VarExpr : Expr
+public sealed partial class VarExpr : Expr, IOnSecondPassEnter
 {
     public string Name { get; private set; } = "";
     [Rule]
     public static void Var([Token(@"[A-Za-z_]\w*")] Token nameTok, MiniCContext ctx) { }
     partial void OnReduce(MiniCContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
-    public override void OnSecondPassEnter(SemanticContext ctx) => SemanticAnalyzer.EnterVar(this, (MiniCContext)ctx);
+    public void OnSecondPassEnter(SemanticContext ctx) => SemanticAnalyzer.EnterVar(this, (MiniCContext)ctx);
 }
 
 [Precedence(1)]
-public sealed partial class AddExpr : Expr
+public sealed partial class AddExpr : Expr, IOnSecondPassExit
 {
     [Rule]
     public static void Add(Expr left, [Token(@"\+")] Token op, Expr right, MiniCContext ctx) { }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
 }
 
 [Precedence(1)]
-public sealed partial class SubExpr : Expr
+public sealed partial class SubExpr : Expr, IOnSecondPassExit
 {
     [Rule]
     public static void Sub(Expr left, [Token(@"-")] Token op, Expr right, MiniCContext ctx) { }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
 }
 
 [Precedence(2)]
-public sealed partial class MulExpr : Expr
+public sealed partial class MulExpr : Expr, IOnSecondPassExit
 {
     [Rule]
     public static void Mul(Expr left, [Token(@"\*")] Token op, Expr right, MiniCContext ctx) { }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
 }
 
 [Precedence(2)]
-public sealed partial class DivExpr : Expr
+public sealed partial class DivExpr : Expr, IOnSecondPassExit
 {
     [Rule]
     public static void Div(Expr left, [Token(@"/")] Token op, Expr right, MiniCContext ctx) { }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.SetType(this, SemanticAnalyzer.Int, (MiniCContext)ctx);
 }
 
 [Precedence(3)]
-public sealed partial class NegExpr : Expr
+public sealed partial class NegExpr : Expr, IOnSecondPassExit
 {
     [Rule]
     public static void Neg([Token(@"-")] Token op, Expr inner, MiniCContext ctx) { }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.PropagateType(this, this.Inner, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.PropagateType(this, this.Inner, (MiniCContext)ctx);
 }
 
-public sealed partial class ParenExpr : Expr
+public sealed partial class ParenExpr : Expr, IOnSecondPassExit
 {
     [Rule]
     public static void Paren([Token(@"\(")] Token lp, Expr inner, [Token(@"\)")] Token rp, MiniCContext ctx) { }
-    public override void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.PropagateType(this, this.Inner, (MiniCContext)ctx);
+    public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.PropagateType(this, this.Inner, (MiniCContext)ctx);
 }
