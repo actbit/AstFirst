@@ -210,7 +210,7 @@ public class NumExpr : Expr { public NumExpr(string ruleName, NumToken n) { } }
             {
                 new RuleModel("Body", new List<ParamModel>
                 {
-                    new ParamModel("StmtItem", "statements", null, false, true, 0, false, true)  // IsRepeat
+                    new ParamModel("StmtItem", "statements", null, false, true, 0, false, 1)  // RepeatMin=1 (Plus)
                 })
             }),
             new NodeModel("StmtItem", "AstFirst.AstNode", false, new List<RuleModel>

@@ -74,8 +74,14 @@ public sealed class TokenAttribute(string regex) : Attribute
 }
 
 /// <summary>
-/// 引数がリスト（1回以上の繰り返し）であることを示す。付いた引数は IReadOnlyList&lt;T&gt; として展開される。
-/// 例: [Rule] static void Body([Repeat] Stmt statements) → Program → Stmt+
+/// 引数がリスト（繰り返し）であることを示す。付いた引数は IReadOnlyList&lt;T&gt; として展開される。
+/// Min=1 (既定) は1回以上 (Plus)、Min=0 は0回以上 (Star、空リスト可)。
+/// 例: [Rule] static void Body([Repeat] Stmt statements) → Program → Stmt+ (List_T → Stmt | List_T Stmt)
+/// 例: [Rule] static void Body([Repeat(Min=0)] Stmt statements) → Stmt* (List_T → Stmt | List_T Stmt | ε)
 /// </summary>
 [AttributeUsage(AttributeTargets.Parameter)]
-public sealed class RepeatAttribute : Attribute { }
+public sealed class RepeatAttribute : Attribute
+{
+    /// <summary>最小繰り返し回数。1 = 1回以上 (Plus、既定)、0 = 0回以上 (Star、空リスト可)。</summary>
+    public int Min { get; set; } = 1;
+}

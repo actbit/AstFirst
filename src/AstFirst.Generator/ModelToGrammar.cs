@@ -62,18 +62,24 @@ public static class ModelToGrammar
                 + ") を文法記号に解決できません。[Pattern] またはトークン/AST の派生が必要です。");
         }
 
-        var listNonTerminals = new Dictionary<string, Symbol>();  // [Repeat] 要素型 -> リスト非終端
+        var listNonTerminals = new Dictionary<(string, int), Symbol>();  // (要素型, RepeatMin) -> リスト非終端
 
-        // [Repeat] 引数をリスト非終端に展開。要素型ごとに List_T → item | List_T item (1回以上) を生成。
+        // [Repeat] 引数をリスト非終端に展開。
+        // Plus (Min=1): List_T → item | List_T item。
+        // Star (Min=0): + ε (空リスト)。
         // 要素記号は ParamToSymbol で解決 (AstNode 派生の非終端)。
         Symbol GetOrCreateList(ParamModel p)
         {
-            if (listNonTerminals.TryGetValue(p.TypeFullName, out var existing)) return existing;
+            var key = (p.TypeFullName, p.RepeatMin);
+            if (listNonTerminals.TryGetValue(key, out var existing)) return existing;
             var elemSym = ParamToSymbol(p);
-            var list = b.NonTerminal("list:" + p.TypeFullName);
+            var suffix = p.RepeatMin == 0 ? ":star" : ":plus";
+            var list = b.NonTerminal("list:" + p.TypeFullName + suffix);
             b.Production(list, new[] { elemSym }, new ListReduceActionModel(p.TypeFullName, false));
             b.Production(list, new[] { list, elemSym }, new ListReduceActionModel(p.TypeFullName, true));
-            listNonTerminals[p.TypeFullName] = list;
+            if (p.RepeatMin == 0)
+                b.Production(list, Array.Empty<Symbol>(), new ListReduceActionModel(p.TypeFullName, false, isEmpty: true));
+            listNonTerminals[key] = list;
             return list;
         }
 

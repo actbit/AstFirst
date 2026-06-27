@@ -130,10 +130,12 @@ public sealed class ParamModel : IEquatable<ParamModel>
     public bool IsContext { get; }      // SemanticContext 派生型の引数 (ctx・最後)
     public bool IsChild { get; }        // AstNode 派生 (右辺の子・partial プロパティ生成対象)
     public bool IsToken { get; }        // Token 派生型 (共通 Token 以外)。TokenDef の Key を型名にする。
-    public bool IsRepeat { get; }       // [Repeat] (1回以上の繰り返し)。IReadOnlyList<T> に展開。
+    /// <summary>-1=非リスト、0=Star (0回以上)、1=Plus (1回以上)。[Repeat] 付き引数は IReadOnlyList&lt;T&gt; に展開。</summary>
+    public int RepeatMin { get; }
+    public bool IsRepeat => RepeatMin >= 0;  // [Repeat] 付き (IReadOnlyList<T> に展開)
     public int Priority { get; }        // [Token]/[Pattern] の Priority
 
-    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, bool isChild, int priority, bool isToken = false, bool isRepeat = false)
+    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, bool isChild, int priority, bool isToken = false, int repeatMin = -1)
     {
         TypeFullName = typeFullName;
         Name = name;
@@ -141,14 +143,14 @@ public sealed class ParamModel : IEquatable<ParamModel>
         IsContext = isContext;
         IsChild = isChild;
         IsToken = isToken;
-        IsRepeat = isRepeat;
+        RepeatMin = repeatMin;
         Priority = priority;
     }
 
     public bool Equals(ParamModel? other) =>
         other is not null && TypeFullName == other.TypeFullName && Name == other.Name
         && Pattern == other.Pattern && IsContext == other.IsContext && IsChild == other.IsChild
-        && IsToken == other.IsToken && IsRepeat == other.IsRepeat && Priority == other.Priority;
+        && IsToken == other.IsToken && RepeatMin == other.RepeatMin && Priority == other.Priority;
     public override bool Equals(object? obj) => obj is ParamModel p && Equals(p);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(TypeFullName);
 }
@@ -182,19 +184,21 @@ public sealed class ChildModel : IEquatable<ChildModel>
     public string PropertyName { get; }     // [Rule] 引数名 (= partial プロパティ名)
     public string TypeFullName { get; }
     public bool IsNullable { get; }
-    public bool IsRepeat { get; }           // [Repeat]: IReadOnlyList<T>。GetChildren で foreach 展開。
+    /// <summary>-1=非リスト、0=Star、1=Plus。[Repeat] 付きは IReadOnlyList&lt;T&gt;。GetChildren で foreach 展開。</summary>
+    public int RepeatMin { get; }
+    public bool IsRepeat => RepeatMin >= 0;  // [Repeat] 付き (GetChildren で foreach 展開)
 
-    public ChildModel(string propertyName, string typeFullName, bool isNullable, bool isRepeat = false)
+    public ChildModel(string propertyName, string typeFullName, bool isNullable, int repeatMin = -1)
     {
         PropertyName = propertyName;
         TypeFullName = typeFullName;
         IsNullable = isNullable;
-        IsRepeat = isRepeat;
+        RepeatMin = repeatMin;
     }
 
     public bool Equals(ChildModel? other) =>
         other is not null && PropertyName == other.PropertyName
-        && TypeFullName == other.TypeFullName && IsNullable == other.IsNullable && IsRepeat == other.IsRepeat;
+        && TypeFullName == other.TypeFullName && IsNullable == other.IsNullable && RepeatMin == other.RepeatMin;
     public override bool Equals(object? obj) => obj is ChildModel c && Equals(c);
     public override int GetHashCode() => (PropertyName, TypeFullName).GetHashCode();
 }

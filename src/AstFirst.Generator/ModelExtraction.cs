@@ -152,9 +152,9 @@ public static class ModelExtraction
             var isContext = contextBase is not null && InheritsFromOrEquals(p.Type, contextBase);
             var isChild = astNodeBase is not null && p.Type.TypeKind == TypeKind.Class && InheritsFromOrEquals(p.Type, astNodeBase);
             var isToken = tokenBase is not null && InheritsFrom(p.Type, tokenBase);
-            var isRepeat = HasAttribute(p, "RepeatAttribute");
+            int repeatMin = HasAttribute(p, "RepeatAttribute") ? GetRepeatMin(p) : -1;
             var (pattern, priority) = GetPattern(p);
-            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, isChild, priority, isToken, isRepeat);
+            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, isChild, priority, isToken, repeatMin);
         }
     }
 
@@ -175,6 +175,20 @@ public static class ModelExtraction
         return (null, 0);
     }
 
+    /// <summary>[Repeat] の Min (0=Star=0回以上、1=Plus=1回以上)。既定は 1 (Plus)。</summary>
+    private static int GetRepeatMin(ISymbol symbol)
+    {
+        foreach (var a in symbol.GetAttributes())
+        {
+            if (a.AttributeClass?.Name != "RepeatAttribute") continue;
+            int min = 1;
+            foreach (var na in a.NamedArguments)
+                if (na.Key == "Min" && na.Value.Value is int m) min = m;
+            return min;
+        }
+        return 1;
+    }
+
     /// <summary>[Rule] の引数から AstNode 派生の子を収集 (partial プロパティ + Listener 用)。</summary>
     private static IReadOnlyList<ChildModel> ExtractChildrenFromRules(IReadOnlyList<RuleModel> rules)
     {
@@ -190,7 +204,7 @@ public static class ModelExtraction
                 var typeFullName = p.IsRepeat
                     ? "System.Collections.Generic.IReadOnlyList<" + p.TypeFullName + ">"
                     : p.TypeFullName;
-                children.Add(new ChildModel(prop, typeFullName, isNullable, p.IsRepeat));
+                children.Add(new ChildModel(prop, typeFullName, isNullable, p.RepeatMin));
             }
         children.Sort((a, b) => string.CompareOrdinal(a.PropertyName, b.PropertyName));
         return children;

@@ -305,6 +305,11 @@ public static class ParserEmitter
                         sb.Append("var __list = (").Append(listType).Append(")values[top - ").Append(len).Append(" + 0]!; ");
                         sb.Append("__list.Add((").Append(elemType).Append(")values[top - ").Append(len).Append(" + 1]!); ");
                     }
+                    else if (listAction.IsEmpty)
+                    {
+                        // List_T → ε: 空リスト (Star のみ)。
+                        sb.Append("var __list = new ").Append(listType).Append("(0); ");
+                    }
                     else
                     {
                         // List_T → item: 1要素の新規リスト。
