@@ -277,10 +277,10 @@ public static class ParserEmitter
         {
             if (prod.Tag is not ReduceActionModel action) continue;
             int len = prod.Rhs.Length;
-            sb.Append("            case ").Append(prod.Id).Append(": { return new ").Append(action.AstTypeName).Append("(");
+            sb.Append("            case ").Append(prod.Id).Append(": { return new ").Append(action.AstTypeName).Append("(\"").Append(action.RuleName).Append("\"");
             for (int j = 0; j < action.Parameters.Count; j++)
             {
-                if (j > 0) sb.Append(", ");
+                sb.Append(", ");
                 var p = action.Parameters[j];
                 // 子は values[top - len + ChildIndex] で参照 (Pop せず)。右辺の ChildIndex 番目の記号。
                 if (p.IsContext) sb.Append("(").Append(p.CastTypeName).Append(")ctx");
@@ -346,7 +346,7 @@ public static class ParserEmitter
         sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
     }
 
-    /// <summary>各具象ノードの partial コード (子/終端プロパティ + OnReduce/OnSecondPass 宣言 + partial コンストラクタ) を生成。</summary>
+    /// <summary>各具象ノードの partial コード (子/終端 readonly フィールド + RuleName + OnReduce 宣言 + 各[Rule]の partial コンストラクタ) を生成。</summary>
     public static string EmitPartial(GrammarModel model, NodeModel node, string ns)
     {
         var (nodeNs, simple) = CodeEmitter.SplitFullName(node.FullName);
@@ -359,29 +359,42 @@ public static class ParserEmitter
         string? ctxArg = CtxArgOf(node);
         string ctxParam = ctxType is not null ? "(" + ctxType + " " + (ctxArg ?? "ctx") + ")" : "()";
         string ctxCall = ctxType is not null ? (ctxArg ?? "ctx") : "";
-        var rule = node.Rules.Count > 0 ? node.Rules[0] : null;
 
         sb.AppendLine("public partial class " + simple);
         sb.AppendLine("{");
-        // 子 (AstNode 派生) + 終端 (Token) プロパティ: [Rule] 引数の ctx 以外 (PascalCase)
-        if (rule is not null)
+        // 子 (AstNode 派生) + 終端 (Token): readonly フィールド (全[Rule]の引数から統合、PascalCase)。
+        var propSet = new HashSet<string>();
+        foreach (var rule in node.Rules)
             foreach (var p in rule.Parameters)
-                if (!p.IsContext && p.Name is not null)
-                    sb.AppendLine("    public " + p.TypeFullName + " " + CodeEmitter.Pascalize(p.Name) + " { get; private set; } = default!;");
-        sb.AppendLine("    partial void OnReduce" + ctxParam + ";");
-        // OnSecondPassEnter/Exit は AstNode の public virtual (override して使用)。ここでは宣言しない。
-
-        // partial コンストラクタ: [Rule] 引数を受け取り、子/終端をプロパティへセット → OnReduce。
-        if (rule is not null)
-        {
-            sb.Append("    internal " + simple + "(");
-            for (int j = 0; j < rule.Parameters.Count; j++)
             {
-                if (j > 0) sb.Append(", ");
-                sb.Append(rule.Parameters[j].TypeFullName).Append(" ").Append(rule.Parameters[j].Name ?? ("p" + j));
+                if (p.IsContext || p.Name is null) continue;
+                var prop = CodeEmitter.Pascalize(p.Name);
+                if (!propSet.Add(prop)) continue;
+                sb.AppendLine("    public readonly " + p.TypeFullName + " " + prop + ";");
+            }
+        // RuleName: どの[Rule]で reduce されたか (複数[Rule]クラスの OnReduce で分岐に使用)。
+        if (node.Rules.Count > 0)
+            sb.AppendLine("    public readonly string RuleName;");
+        sb.AppendLine("    partial void OnReduce" + ctxParam + ";");
+
+        // partial コンストラクタ: 各[Rule]ごとに生成 (第一引数 = ruleName)。
+        // 同じ引数型シグネチャの[Rule]が複数ある場合は1つに統合 (ruleName で実行時に区別)。
+        var seenSigs = new HashSet<string>();
+        foreach (var rule in node.Rules)
+        {
+            var sigBuilder = new StringBuilder();
+            foreach (var p in rule.Parameters) { if (sigBuilder.Length > 0) sigBuilder.Append(','); sigBuilder.Append(p.TypeFullName); }
+            if (!seenSigs.Add(sigBuilder.ToString())) continue;
+
+            sb.Append("    internal " + simple + "(string ruleName");
+            foreach (var p in rule.Parameters)
+            {
+                sb.Append(", ");
+                sb.Append(p.TypeFullName).Append(" ").Append(p.Name ?? "p");
             }
             sb.AppendLine(")");
             sb.AppendLine("    {");
+            sb.AppendLine("        RuleName = ruleName;");
             foreach (var p in rule.Parameters)
                 if (!p.IsContext && p.Name is not null)
                     sb.AppendLine("        this." + CodeEmitter.Pascalize(p.Name) + " = " + p.Name + ";");

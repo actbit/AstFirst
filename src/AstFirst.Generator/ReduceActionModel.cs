@@ -8,12 +8,16 @@ public sealed class ReduceActionModel
     /// <summary>AST クラスの完全修飾名 (new の対象)。</summary>
     public string AstTypeName { get; }
 
+    /// <summary>[Rule] メソッド名 (RuleName プロパティに設定、複数[Rule]クラスで OnReduce 内の分岐に使用)。</summary>
+    public string RuleName { get; }
+
     /// <summary>コンストラクタ引数 (右辺の子 or SemanticContext 派生型)。</summary>
     public IReadOnlyList<ReduceParamModel> Parameters { get; }
 
-    public ReduceActionModel(string astTypeName, IReadOnlyList<ReduceParamModel> parameters)
+    public ReduceActionModel(string astTypeName, string ruleName, IReadOnlyList<ReduceParamModel> parameters)
     {
         AstTypeName = astTypeName;
+        RuleName = ruleName;
         Parameters = parameters;
     }
 

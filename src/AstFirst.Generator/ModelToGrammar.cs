@@ -94,7 +94,7 @@ public static class ModelToGrammar
                     rhs.Add(ParamToSymbol(p));
                     childIndex++;
                 }
-                var action = new ReduceActionModel(n.FullName, reduceParams);
+                var action = new ReduceActionModel(n.FullName, rule.MethodName, reduceParams);
                 // [Precedence] を Production に直接設定（%prec 相当）。
                 // トークン経由でなく規則単位で precedence を持つことで、同じ終端を含む複数規則
                 // （generic の > と比較の > など）で別々の優先度を設定できる。

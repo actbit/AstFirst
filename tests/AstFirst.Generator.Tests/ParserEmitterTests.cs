@@ -76,8 +76,8 @@ namespace AstFirst {
     public sealed class BasicSemanticContext : SemanticContext { public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag(); }
 }
 public class Expr : AstFirst.AstNode { }
-public class NumExpr : Expr { public NumExpr(AstFirst.Token t) { } }
-public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) { } }
+public class NumExpr : Expr { public NumExpr(string ruleName, AstFirst.Token t) { } }
+public class AddExpr : Expr { public AddExpr(string ruleName, Expr a, AstFirst.Token b, Expr c) { } }
 ";
         var comp = Compile(stubs, lexerSource, parserSource);
         var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -160,7 +160,7 @@ namespace AstFirst {
 }
 public class NumToken : AstFirst.Token { public NumToken(string t) : base(t, default) { } }
 public class Expr : AstFirst.AstNode { }
-public class NumExpr : Expr { public NumExpr(NumToken n) { } }
+public class NumExpr : Expr { public NumExpr(string ruleName, NumToken n) { } }
 ";
         var comp = Compile(stubs, lexerSource, parserSource);
         var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
