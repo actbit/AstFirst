@@ -120,8 +120,8 @@ public static class ParserEmitter
         sb.AppendLine("            int state = states.Peek();");
         sb.AppendLine("            int sym = (i < tokens.Count) ? TokenIdToSym[tokens[i].TokenId] : EofSym;");
         sb.AppendLine("            if (sym < 0) { errors.Add(new AstFirst.ParseError(\"未知のトークンです\", tokens[i].Start)); i++; continue; }");
-        sb.AppendLine("            byte kind = ActionKind[state, sym];");
-        sb.AppendLine("            int val = ActionValue[state, sym];");
+        sb.AppendLine("            byte kind = ActionKind[state * SymbolCount + sym];");
+        sb.AppendLine("            int val = ActionValue[state * SymbolCount + sym];");
         sb.AppendLine("            if (kind == 1) // Shift");
         sb.AppendLine("            {");
         sb.AppendLine("                values.Push(sym == EofSym ? null : (object)ToToken(tokens[i]));");
@@ -133,7 +133,7 @@ public static class ParserEmitter
         sb.AppendLine("                int prodId = (kind == 2) ? val : DefaultReduce[state];");
         sb.AppendLine("                var node = ReduceNode(prodId, values, states, ctx);");
         sb.AppendLine("                values.Push(node);");
-        sb.AppendLine("                states.Push(Goto[states.Peek(), ProdLhs[prodId]]);");
+        sb.AppendLine("                states.Push(Goto[states.Peek() * SymbolCount + ProdLhs[prodId]]);");
         sb.AppendLine("            }");
         sb.AppendLine("            else if (kind == 3) // Accept");
         sb.AppendLine("            {");
@@ -151,7 +151,7 @@ public static class ParserEmitter
         sb.AppendLine("                    var exp = new System.Text.StringBuilder();");
         sb.AppendLine("                    for (int e = 0; e < SymbolCount; e++)");
         sb.AppendLine("                    {");
-        sb.AppendLine("                        if (ActionKind[state, e] == 0) continue;");
+        sb.AppendLine("                        if (ActionKind[state * SymbolCount + e] == 0) continue;");
         sb.AppendLine("                        if (exp.Length > 0) exp.Append(\", \");");
         sb.AppendLine("                        exp.Append(e == EofSym ? \"EOF\" : e < SymNames.Length ? SymNames[e] : \"#\" + e);");
         sb.AppendLine("                    }");
@@ -165,7 +165,7 @@ public static class ParserEmitter
         sb.AppendLine("                    states.Pop(); values.Pop();");
         sb.AppendLine("                    int topState = states.Peek();");
         sb.AppendLine("                    int curSym = TokenIdToSym[tokens[i].TokenId];");
-        sb.AppendLine("                    if (curSym >= 0 && ActionKind[topState, curSym] != 0) { recovered = true; break; }");
+        sb.AppendLine("                    if (curSym >= 0 && ActionKind[topState * SymbolCount + curSym] != 0) { recovered = true; break; }");
         sb.AppendLine("                }");
         sb.AppendLine("                if (!recovered)");
         sb.AppendLine("                {");
@@ -235,14 +235,15 @@ public static class ParserEmitter
     private static void EmitMatrixByte(StringBuilder sb, string name, LalrTable _, int rows, int cols,
         System.Func<int, System.Func<int, byte>> cell)
     {
-        sb.Append("    public static readonly byte[,] ").Append(name).Append(" = new byte[").Append(rows).Append(", ").Append(cols).AppendLine("]");
+        // 1次元配列に平坦化: index = state * SymbolCount + sym
+        // 2次元配列 (byte[,]) は境界チェックが2回入るが、1次元配列 (byte[]) は1回で済む。
+        sb.Append("    public static readonly byte[] ").Append(name).Append(" = new byte[").Append(rows * cols).AppendLine("]");
         sb.AppendLine("    {");
         for (int r = 0; r < rows; r++)
         {
             var row = cell(r);
-            sb.Append("        { ");
+            sb.Append("        ");
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(", "); sb.Append(row(c)); }
-            sb.Append(" }");
             sb.AppendLine(r < rows - 1 ? "," : "");
         }
         sb.AppendLine("    };");
@@ -255,14 +256,13 @@ public static class ParserEmitter
     private static void EmitMatrixIntRaw(StringBuilder sb, string name, int rows, int cols,
         System.Func<int, System.Func<int, int>> cell)
     {
-        sb.Append("    public static readonly int[,] ").Append(name).Append(" = new int[").Append(rows).Append(", ").Append(cols).AppendLine("]");
+        sb.Append("    public static readonly int[] ").Append(name).Append(" = new int[").Append(rows * cols).AppendLine("]");
         sb.AppendLine("    {");
         for (int r = 0; r < rows; r++)
         {
             var row = cell(r);
-            sb.Append("        { ");
+            sb.Append("        ");
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(", "); sb.Append(row(c)); }
-            sb.Append(" }");
             sb.AppendLine(r < rows - 1 ? "," : "");
         }
         sb.AppendLine("    };");
