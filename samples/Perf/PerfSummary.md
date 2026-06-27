@@ -32,13 +32,13 @@ C# 完全文法（365 規則 / 798 状態）を最大規模のストレステス
 | ManyTokens | 103 | 73.0 ms | 1.14 ms | 2.5 MB |
 | DeepNest | 3 | 0.011 ms | 0.104 ms | 338 KB |
 | MegaLang | 58 | 4.02 ms | 0.193 ms | 401 KB |
-| **CSharp** | **365** | **231 ms** | **0.33 ms** | **779 KB** |
+| **CSharp** | **365** | **190 ms** | **0.68 ms** | **627 KB** |
 
 ### 所見
 
-- **Parse_CSharp 0.33 ms**（50 クラス ≈ 7KB 入力、≈ 21 MB/s）。テーブル駆動 LALR として高速。実行時は配列インデックスアクセス（O(1)）で、テーブルが 798 状態と大きくても速度に依存しない。
-- **Build_CSharp 231 ms** は `LalrLookahead` の不動点反復（798状態×365規則、O(n²)〜O(n³) 寄り）の規模限界。WideRules（103 規則）2.7 ms → CSharp（365 規則）231 ms と非線形に増大。ただし Generator 実行時のみの1回コストで、実行時ではない。
-- **Parse のアロケーション 779 KB**（入力の ≈111 倍）は AST 構築（reduce ごとにノードを `new`）。仕組み上（AST は結果として返るためオブジェクト寿命 = AST 寿命）抑制が困難。詳細は README「C# 完全文法ベンチマーク」章。
+- **Parse_CSharp 0.68 ms**（50 クラス ≈ 7KB 入力、≈ 10 MB/s）。[Rule] モデル移行後（Reject/TryFallback + Span スタック）。スタックを Span でラップし境界チェックを最適化。
+- **Build_CSharp 190 ms** は `LalrLookahead` の不動点反復を Worklist アルゴリズムで最適化（798状態×365規則）。WideRules（103 規則）2.7 ms → CSharp（365 規則）190 ms と非線形に増大。ただし Generator 実行時のみの1回コストで、実行時ではない。
+- **Parse のアロケーション 627 KB**（入力の ≈90 倍）は AST 構築（reduce ごとにノードを `new`）。仕組み上（AST は結果として返るためオブジェクト寿命 = AST 寿命）抑制が困難。詳細は README「C# 完全文法ベンチマーク」章。
 
 ### 計測環境
 
