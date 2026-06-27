@@ -44,3 +44,34 @@ public sealed class ReduceParamModel
         ChildIndex = childIndex;
     }
 }
+
+/// <summary>
+/// [Repeat] から展開したリスト非終端 (List_T → item | List_T item) の reduce アクション。
+/// List&lt;T&gt; を構築して返す (破壊的に Add。LALR では各リスト値は1回だけ消費されるため安全)。
+/// </summary>
+public sealed class ListReduceActionModel
+{
+    /// <summary>リスト要素の完全修飾型名。</summary>
+    public string ElementType { get; }
+
+    /// <summary>true = List_T item (再帰・既存リストに Add)、false = item (1要素の新規リスト)。</summary>
+    public bool IsRecursive { get; }
+
+    public ListReduceActionModel(string elementType, bool isRecursive)
+    {
+        ElementType = elementType;
+        IsRecursive = isRecursive;
+    }
+
+    public override string ToString() => "List<" + ElementType + ">";
+}
+
+/// <summary>
+/// 抽象クラス経由の単位規則 (Base → N、N は抽象非終端) の reduce アクション。
+/// N の値 (実際は具象サブクラスのインスタンス) をそのまま返す (新規 AST は作らない)。
+/// 中間抽象クラス (Root → Mid → Leaf) の Mid を文法非終端として機能させるため。
+/// </summary>
+public sealed class PassThroughActionModel
+{
+    public override string ToString() => "pass-through";
+}

@@ -49,10 +49,12 @@ public sealed class ParserGenerator : IIncrementalGenerator
 
                 spc.AddSource(typeName + suffix + "Lexer.g.cs", CodeEmitter.EmitLexer(model, dfa, rules, typeName + suffix + "Lexer", ns));
                 spc.AddSource(typeName + suffix + "Parser.g.cs", ParserEmitter.EmitParser(model, grammar, table, rules, ns));
-                // 各具象ノードの partial (子プロパティ + OnReduce/OnSecondPass 宣言 + partial コンストラクタ)
+                // 各ノードの partial (子プロパティ + OnReduce/OnSecondPass 宣言 + partial コンストラクタ)。
+                // [Rule] を持つ抽象基底 (中間抽象のプロパティ宣言) は protected コンストラクタ生成のため partial 必要。
+                // [Rule] のない抽象クラスはフィールド/コンストラクタがないので partial 不要。
                 foreach (var node in model.Nodes)
                 {
-                    if (node.IsAbstract) continue;
+                    if (node.IsAbstract && node.Rules.Count == 0) continue;
                     var simple = CodeEmitter.SplitFullName(node.FullName).type;
                     spc.AddSource(typeName + suffix + "_" + simple + ".partial.g.cs", ParserEmitter.EmitPartial(model, node, ns));
                 }

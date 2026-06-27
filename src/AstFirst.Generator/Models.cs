@@ -72,6 +72,8 @@ public sealed class NodeModel : IEquatable<NodeModel>
     public bool IsAbstract { get; }
     public IReadOnlyList<RuleModel> Rules { get; }      // [Rule] static メソッド (1クラス1つだがリストで保持)
     public IReadOnlyList<ChildModel> Children { get; }   // [Rule] 引数の子 (partial プロパティ + Listener 用)
+    /// <summary>基底クラスから継承するプロパティ名 (PascalCase・順序付き)。具象クラスの partial で再定義を避け、: base(...) に渡す。</summary>
+    public IReadOnlyList<string> InheritedPropertyNames { get; }
     public int PrecedencePriority { get; }    // [Precedence] の Priority (0=未設定)
     public AstFirst.Core.Parsing.Associativity PrecedenceAssoc { get; }
     /// <summary>IOnSecondPassEnter を実装するか (WalkSecondPass 生成判定・呼び分け用)。</summary>
@@ -81,6 +83,7 @@ public sealed class NodeModel : IEquatable<NodeModel>
 
     public NodeModel(string fullName, string baseFullName, bool isAbstract, IReadOnlyList<RuleModel> rules,
         IReadOnlyList<ChildModel>? children = null,
+        IReadOnlyList<string>? inheritedPropertyNames = null,
         int precedencePriority = 0, AstFirst.Core.Parsing.Associativity precedenceAssoc = AstFirst.Core.Parsing.Associativity.Left,
         bool hasSecondPassEnter = false, bool hasSecondPassExit = false)
     {
@@ -89,6 +92,7 @@ public sealed class NodeModel : IEquatable<NodeModel>
         IsAbstract = isAbstract;
         Rules = rules;
         Children = children ?? Array.Empty<ChildModel>();
+        InheritedPropertyNames = inheritedPropertyNames ?? Array.Empty<string>();
         PrecedencePriority = precedencePriority;
         PrecedenceAssoc = precedenceAssoc;
         HasSecondPassEnter = hasSecondPassEnter;
@@ -98,6 +102,7 @@ public sealed class NodeModel : IEquatable<NodeModel>
     public bool Equals(NodeModel? other) =>
         other is not null && FullName == other.FullName && BaseFullName == other.BaseFullName
         && IsAbstract == other.IsAbstract && Rules.SequenceEqual(other.Rules) && Children.SequenceEqual(other.Children)
+        && InheritedPropertyNames.SequenceEqual(other.InheritedPropertyNames)
         && PrecedencePriority == other.PrecedencePriority && PrecedenceAssoc == other.PrecedenceAssoc
         && HasSecondPassEnter == other.HasSecondPassEnter && HasSecondPassExit == other.HasSecondPassExit;
     public override bool Equals(object? obj) => obj is NodeModel n && Equals(n);
@@ -125,9 +130,10 @@ public sealed class ParamModel : IEquatable<ParamModel>
     public bool IsContext { get; }      // SemanticContext 派生型の引数 (ctx・最後)
     public bool IsChild { get; }        // AstNode 派生 (右辺の子・partial プロパティ生成対象)
     public bool IsToken { get; }        // Token 派生型 (共通 Token 以外)。TokenDef の Key を型名にする。
+    public bool IsRepeat { get; }       // [Repeat] (1回以上の繰り返し)。IReadOnlyList<T> に展開。
     public int Priority { get; }        // [Token]/[Pattern] の Priority
 
-    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, bool isChild, int priority, bool isToken = false)
+    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, bool isChild, int priority, bool isToken = false, bool isRepeat = false)
     {
         TypeFullName = typeFullName;
         Name = name;
@@ -135,13 +141,14 @@ public sealed class ParamModel : IEquatable<ParamModel>
         IsContext = isContext;
         IsChild = isChild;
         IsToken = isToken;
+        IsRepeat = isRepeat;
         Priority = priority;
     }
 
     public bool Equals(ParamModel? other) =>
         other is not null && TypeFullName == other.TypeFullName && Name == other.Name
         && Pattern == other.Pattern && IsContext == other.IsContext && IsChild == other.IsChild
-        && IsToken == other.IsToken && Priority == other.Priority;
+        && IsToken == other.IsToken && IsRepeat == other.IsRepeat && Priority == other.Priority;
     public override bool Equals(object? obj) => obj is ParamModel p && Equals(p);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(TypeFullName);
 }
@@ -175,17 +182,19 @@ public sealed class ChildModel : IEquatable<ChildModel>
     public string PropertyName { get; }     // [Rule] 引数名 (= partial プロパティ名)
     public string TypeFullName { get; }
     public bool IsNullable { get; }
+    public bool IsRepeat { get; }           // [Repeat]: IReadOnlyList<T>。GetChildren で foreach 展開。
 
-    public ChildModel(string propertyName, string typeFullName, bool isNullable)
+    public ChildModel(string propertyName, string typeFullName, bool isNullable, bool isRepeat = false)
     {
         PropertyName = propertyName;
         TypeFullName = typeFullName;
         IsNullable = isNullable;
+        IsRepeat = isRepeat;
     }
 
     public bool Equals(ChildModel? other) =>
         other is not null && PropertyName == other.PropertyName
-        && TypeFullName == other.TypeFullName && IsNullable == other.IsNullable;
+        && TypeFullName == other.TypeFullName && IsNullable == other.IsNullable && IsRepeat == other.IsRepeat;
     public override bool Equals(object? obj) => obj is ChildModel c && Equals(c);
     public override int GetHashCode() => (PropertyName, TypeFullName).GetHashCode();
 }

@@ -72,3 +72,10 @@ public sealed class TokenAttribute(string regex) : Attribute
     /// <summary>演算子/トークン優先度。同一入力で複数トークン受理時のレクサ優先度。</summary>
     public int Priority { get; set; }
 }
+
+/// <summary>
+/// 引数がリスト（1回以上の繰り返し）であることを示す。付いた引数は IReadOnlyList&lt;T&gt; として展開される。
+/// 例: [Rule] static void Body([Repeat] Stmt statements) → Program → Stmt+
+/// </summary>
+[AttributeUsage(AttributeTargets.Parameter)]
+public sealed class RepeatAttribute : Attribute { }
