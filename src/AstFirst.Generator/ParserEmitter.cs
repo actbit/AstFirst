@@ -118,14 +118,14 @@ public static class ParserEmitter
         }
         sb.AppendLine("    };");
 
-        EmitParse(sb, lexerName);
+        EmitParse(sb, lexerName, model);
         EmitHelpers(sb, grammar, model, tokenDerivedTypes);
 
         sb.AppendLine("}");
         return sb.ToString();
     }
 
-    private static void EmitParse(StringBuilder sb, string lexerName)
+    private static void EmitParse(StringBuilder sb, string lexerName, GrammarModel model)
     {
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input) => Parse(input, null);");
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)");
@@ -145,8 +145,8 @@ public static class ParserEmitter
         sb.AppendLine("            int state = states[top - 1];");
         sb.AppendLine("            int sym = (i < tokens.Count) ? TokenIdToSym[tokens[i].TokenId] : EofSym;");
         sb.AppendLine("            if (sym < 0) { errors.Add(new AstFirst.ParseError(\"未知のトークンです\", tokens[i].Start)); i++; continue; }");
-        sb.AppendLine("            byte kind = ActionKind[state, sym];");
-        sb.AppendLine("            int val = ActionValue[state, sym];");
+        sb.AppendLine("            byte kind = ActionKind[state * SymbolCount + sym];");
+        sb.AppendLine("            int val = ActionValue[state * SymbolCount + sym];");
         sb.AppendLine("            int dr = DefaultReduce[state];");
         sb.AppendLine("            // デフォルトアクション決定 (テーブル圧縮のデフォルト reduce を展開)");
         sb.AppendLine("            byte dk = kind; int dv = val;");
@@ -172,7 +172,7 @@ public static class ParserEmitter
         sb.AppendLine("                    int len = ProdLen[dv];");
         sb.AppendLine("                    top -= len;");
         sb.AppendLine("                    values[top] = node;");
-        sb.AppendLine("                    states[top] = Goto[states[top - 1], ProdLhs[dv]]; top++;");
+        sb.AppendLine("                    states[top] = Goto[states[top - 1] * SymbolCount + ProdLhs[dv]]; top++;");
         sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("            else if (dk == 3) // Accept");
@@ -191,7 +191,7 @@ public static class ParserEmitter
         sb.AppendLine("                    var exp = new System.Text.StringBuilder();");
         sb.AppendLine("                    for (int e = 0; e < SymbolCount; e++)");
         sb.AppendLine("                    {");
-        sb.AppendLine("                        if (ActionKind[state, e] == 0) continue;");
+        sb.AppendLine("                        if (ActionKind[state * SymbolCount + e] == 0) continue;");
         sb.AppendLine("                        if (exp.Length > 0) exp.Append(\", \");");
         sb.AppendLine("                        exp.Append(e == EofSym ? \"EOF\" : e < SymNames.Length ? SymNames[e] : \"#\" + e);");
         sb.AppendLine("                    }");
@@ -204,7 +204,7 @@ public static class ParserEmitter
         sb.AppendLine("                    top--;");
         sb.AppendLine("                    int topState = states[top - 1];");
         sb.AppendLine("                    int curSym = TokenIdToSym[tokens[i].TokenId];");
-        sb.AppendLine("                    if (curSym >= 0 && ActionKind[topState, curSym] != 0) { recovered = true; break; }");
+        sb.AppendLine("                    if (curSym >= 0 && ActionKind[topState * SymbolCount + curSym] != 0) { recovered = true; break; }");
         sb.AppendLine("                }");
         sb.AppendLine("                if (!recovered)");
         sb.AppendLine("                {");
@@ -213,8 +213,10 @@ public static class ParserEmitter
         sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
-        sb.AppendLine("        // 2パス目: AST 全体をトップダウンで OnSecondPassEnter/Exit");
-        sb.AppendLine("        if (result is AstFirst.AstNode root) WalkSecondPass(root, ctx);");
+        // 2パス目: IOnSecondPassEnter/Exit を実装するノードが1つでもあれば WalkSecondPass を生成・呼出。
+        // 未実装文法では走査ごと省略 (空呼びによる Parse 時間の無駄を回避)。
+        if (model.HasSecondPass)
+            sb.AppendLine("        if (result is AstFirst.AstNode root) WalkSecondPass(root, ctx);");
         sb.AppendLine("        return new AstFirst.ParseResult(result, errors, ctx.Diagnostics.Items);");
         sb.AppendLine("    }");
     }
@@ -253,7 +255,7 @@ public static class ParserEmitter
         sb.AppendLine("                    int len = ProdLen[v];");
         sb.AppendLine("                    top -= len;");
         sb.AppendLine("                    values[top] = node;");
-        sb.AppendLine("                    states[top] = Goto[states[top - 1], ProdLhs[v]]; top++;");
+        sb.AppendLine("                    states[top] = Goto[states[top - 1] * SymbolCount + ProdLhs[v]]; top++;");
         sb.AppendLine("                    return true;");
         sb.AppendLine("                }");
         sb.AppendLine("            }");
@@ -287,29 +289,54 @@ public static class ParserEmitter
         sb.AppendLine("        }");
         sb.AppendLine("    }");
 
-        // WalkSecondPass: AST をトップダウンで OnSecondPassEnter/Exit 呼出。
-        sb.AppendLine("    private static void WalkSecondPass(AstFirst.AstNode node, AstFirst.SemanticContext ctx)");
+        // WalkSecondPass / GetChildren は IOnSecondPassEnter/Exit を実装するノードが1つでもある場合のみ生成。
+        if (model.HasSecondPass)
+        {
+        // WalkSecondPass: AST をトップダウンで IOnSecondPassEnter/Exit 呼出。
+        // 反復的 (明示的スタック) 実装: 深い/広い AST でも再帰によるスタックオーバーフローを起こさない。
+        // Enter→子(逆順push)→Exit の順序を保つため、(node, isExit) を積む。
+        sb.AppendLine("    private static void WalkSecondPass(AstFirst.AstNode root, AstFirst.SemanticContext ctx)");
         sb.AppendLine("    {");
-        sb.AppendLine("        if (node is null) return;");
+        sb.AppendLine("        if (root is null) return;");
+        sb.AppendLine("        var stack = new System.Collections.Generic.Stack<(AstFirst.AstNode node, bool isExit)>();");
+        sb.AppendLine("        stack.Push((root, false));");
+        sb.AppendLine("        while (stack.Count > 0)");
+        sb.AppendLine("        {");
+        sb.AppendLine("            var (node, isExit) = stack.Pop();");
+        sb.AppendLine("            if (isExit)");
+        sb.AppendLine("            {");
+        sb.AppendLine("                if (node is AstFirst.IOnSecondPassExit ex) ex.OnSecondPassExit(ctx);");
+        sb.AppendLine("                continue;");
+        sb.AppendLine("            }");
+        sb.AppendLine("            if (node is AstFirst.IOnSecondPassEnter en) en.OnSecondPassEnter(ctx);");
+        sb.AppendLine("            stack.Push((node, true)); // Exit 用");
+        sb.AppendLine("            // 子を逆順で積む (pop 順 = 元の順序を維持)");
+        sb.AppendLine("            var children = GetChildren(node);");
+        sb.AppendLine("            for (int i = children.Count - 1; i >= 0; i--) stack.Push((children[i], false));");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        // GetChildren: ノードの子を List で返す (switch で型ごとにプロパティから収集)。
+        sb.AppendLine("    private static System.Collections.Generic.List<AstFirst.AstNode> GetChildren(AstFirst.AstNode node)");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var children = new System.Collections.Generic.List<AstFirst.AstNode>();");
         sb.AppendLine("        switch (node)");
         sb.AppendLine("        {");
         foreach (var n in model.Nodes)
         {
             if (n.IsAbstract) continue;
             sb.AppendLine("            case " + n.FullName + " __n:");
-            sb.AppendLine("            {");
-            sb.AppendLine("                __n.OnSecondPassEnter(ctx);");
             foreach (var c in n.Children)
             {
-                if (c.IsNullable) sb.AppendLine("                if (__n." + c.PropertyName + " is not null) WalkSecondPass(__n." + c.PropertyName + ", ctx);");
-                else sb.AppendLine("                WalkSecondPass(__n." + c.PropertyName + ", ctx);");
+                if (c.IsNullable) sb.AppendLine("                if (__n." + c.PropertyName + " is not null) children.Add(__n." + c.PropertyName + ");");
+                else sb.AppendLine("                children.Add(__n." + c.PropertyName + ");");
             }
-            sb.AppendLine("                __n.OnSecondPassExit(ctx);");
             sb.AppendLine("                break;");
-            sb.AppendLine("            }");
         }
         sb.AppendLine("        }");
+        sb.AppendLine("        return children;");
         sb.AppendLine("    }");
+        }
 
         sb.AppendLine("    private static AstFirst.Token ToToken(AstFirst.Core.Lexing.LexToken t)");
         sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
@@ -405,14 +432,15 @@ public static class ParserEmitter
     private static void EmitMatrixByte(StringBuilder sb, string name, LalrTable _, int rows, int cols,
         System.Func<int, System.Func<int, byte>> cell)
     {
-        sb.Append("    public static readonly byte[,] ").Append(name).Append(" = new byte[").Append(rows).Append(", ").Append(cols).AppendLine("]");
+        // 1次元配列に平坦化: index = state * SymbolCount + sym
+        // 2次元配列 (byte[,]) は境界チェックが2回入るが、1次元配列 (byte[]) は1回で済む。
+        sb.Append("    public static readonly byte[] ").Append(name).Append(" = new byte[").Append(rows * cols).AppendLine("]");
         sb.AppendLine("    {");
         for (int r = 0; r < rows; r++)
         {
             var row = cell(r);
-            sb.Append("        { ");
+            sb.Append("        ");
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(", "); sb.Append(row(c)); }
-            sb.Append(" }");
             sb.AppendLine(r < rows - 1 ? "," : "");
         }
         sb.AppendLine("    };");
@@ -421,14 +449,13 @@ public static class ParserEmitter
     private static void EmitMatrixIntRaw(StringBuilder sb, string name, int rows, int cols,
         System.Func<int, System.Func<int, int>> cell)
     {
-        sb.Append("    public static readonly int[,] ").Append(name).Append(" = new int[").Append(rows).Append(", ").Append(cols).AppendLine("]");
+        sb.Append("    public static readonly int[] ").Append(name).Append(" = new int[").Append(rows * cols).AppendLine("]");
         sb.AppendLine("    {");
         for (int r = 0; r < rows; r++)
         {
             var row = cell(r);
-            sb.Append("        { ");
+            sb.Append("        ");
             for (int c = 0; c < cols; c++) { if (c > 0) sb.Append(", "); sb.Append(row(c)); }
-            sb.Append(" }");
             sb.AppendLine(r < rows - 1 ? "," : "");
         }
         sb.AppendLine("    };");

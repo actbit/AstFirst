@@ -81,7 +81,7 @@ var result2 = ExprParser.Parse("1+");
 AstFirst provides standard helpers and a two-pass framework for semantic analysis on top of parsing. See [docs/en/semantic-analysis.md](docs/en/semantic-analysis.md) for details.
 
 - **First pass `OnReduce` (bottom-up)**: called at reduce time. `Accept()`/`Reject()` decides whether to accept this interpretation (default Accept). `Reject` falls back to the next candidate.
-- **Second pass `OnSecondPassEnter`/`Exit` (top-down)**: called automatically from the AST root after `Parse` (Enter -> recurse children -> Exit). Accurate semantic analysis like scope Push/Pop fits here.
+- **Second pass `OnSecondPassEnter`/`Exit` (top-down)**: nodes implementing `IOnSecondPassEnter`/`IOnSecondPassExit` are called automatically from the AST root after `Parse` (Enter -> recurse children -> Exit). Accurate semantic analysis like scope Push/Pop fits here. Grammars with no implementations skip the traversal entirely (no overhead).
 - **Scoped symbol table** (`ScopedSymbolTable`) — lexical scope management
 - **Symbol resolution** (`ResolveOrError`) — detect undeclared references
 - **Type checking** (`TypeSymbol` / `TypeContext`) — represent and check types
@@ -106,15 +106,15 @@ public sealed partial class CastExpr : Expr
 
 ### Second pass (OnSecondPass)
 
-Write `public override void OnSecondPassEnter(SemanticContext ctx)` / `OnSecondPassExit` on a node; they are called top-down (before/after children) after `Parse`. Ideal for block-scope Push/Pop.
+Implement `IOnSecondPassEnter` / `IOnSecondPassExit` on a node; they are called automatically top-down (before/after children) after `Parse`. Ideal for block-scope Push/Pop. **Grammars with no implementations skip the traversal entirely**, so there is no Parse overhead.
 
 ```csharp
 // MiniC: open/close a scope on BlockStmt
-public sealed partial class BlockStmt : Stmt
+public sealed partial class BlockStmt : Stmt, IOnSecondPassEnter, IOnSecondPassExit
 {
     [Rule] public static void Block([Token(@"\{")] Token lb, Program body, [Token(@"\}")] Token rb, MiniCContext ctx) { }
-    public override void OnSecondPassEnter(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PushScope();
-    public override void OnSecondPassExit(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PopScope();
+    public void OnSecondPassEnter(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PushScope();
+    public void OnSecondPassExit(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PopScope();
 }
 ```
 
@@ -257,7 +257,7 @@ AstFirst.slnx
 ```
 
 - The generator reads C# via Roslyn, converts it to an equality-comparable POCO model (the lifeline of caching), builds DFA/LALR tables via Core's pure logic, and emits Lexer/Parser/partial C# code.
-- Generated code depends on Runtime. Lexer/Parser embed DFA/LALR tables in `static readonly` arrays and drive shift/reduce. At reduce, a partial constructor sets the children and calls `OnReduce`; on Reject it falls back to the next candidate. After `Parse`, `OnSecondPassEnter/Exit` are called top-down.
+- Generated code depends on Runtime. Lexer/Parser embed DFA/LALR tables in `static readonly` arrays and drive shift/reduce. At reduce, a partial constructor sets the children and calls `OnReduce`; on Reject it falls back to the next candidate. After `Parse`, if any node implements `IOnSecondPassEnter`/`IOnSecondPassExit`, `WalkSecondPass` (iterative stack-based) calls them top-down; otherwise the traversal is skipped entirely.
 - The generator Compile-Includes Core sources into a single assembly (avoids dependency loading issues for analyzers).
 
 ## Documentation

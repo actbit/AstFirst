@@ -37,6 +37,17 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
         other is not null && RootTypeFullName == other.RootTypeFullName
         && SeqEqual(Nodes, other.Nodes) && SeqEqual(TokenDefs, other.TokenDefs);
 
+    /// <summary>いずれかのノードが IOnSecondPassEnter/Exit を実装するか。未実装なら WalkSecondPass を生成しない (空走査回避)。</summary>
+    public bool HasSecondPass
+    {
+        get
+        {
+            for (int i = 0; i < Nodes.Count; i++)
+                if (Nodes[i].HasSecondPassEnter || Nodes[i].HasSecondPassExit) return true;
+            return false;
+        }
+    }
+
     public override bool Equals(object? obj) => obj is GrammarModel m && Equals(m);
     public override int GetHashCode()
     {
@@ -63,10 +74,15 @@ public sealed class NodeModel : IEquatable<NodeModel>
     public IReadOnlyList<ChildModel> Children { get; }   // [Rule] 引数の子 (partial プロパティ + Listener 用)
     public int PrecedencePriority { get; }    // [Precedence] の Priority (0=未設定)
     public AstFirst.Core.Parsing.Associativity PrecedenceAssoc { get; }
+    /// <summary>IOnSecondPassEnter を実装するか (WalkSecondPass 生成判定・呼び分け用)。</summary>
+    public bool HasSecondPassEnter { get; }
+    /// <summary>IOnSecondPassExit を実装するか。</summary>
+    public bool HasSecondPassExit { get; }
 
     public NodeModel(string fullName, string baseFullName, bool isAbstract, IReadOnlyList<RuleModel> rules,
         IReadOnlyList<ChildModel>? children = null,
-        int precedencePriority = 0, AstFirst.Core.Parsing.Associativity precedenceAssoc = AstFirst.Core.Parsing.Associativity.Left)
+        int precedencePriority = 0, AstFirst.Core.Parsing.Associativity precedenceAssoc = AstFirst.Core.Parsing.Associativity.Left,
+        bool hasSecondPassEnter = false, bool hasSecondPassExit = false)
     {
         FullName = fullName;
         BaseFullName = baseFullName;
@@ -75,12 +91,15 @@ public sealed class NodeModel : IEquatable<NodeModel>
         Children = children ?? Array.Empty<ChildModel>();
         PrecedencePriority = precedencePriority;
         PrecedenceAssoc = precedenceAssoc;
+        HasSecondPassEnter = hasSecondPassEnter;
+        HasSecondPassExit = hasSecondPassExit;
     }
 
     public bool Equals(NodeModel? other) =>
         other is not null && FullName == other.FullName && BaseFullName == other.BaseFullName
         && IsAbstract == other.IsAbstract && Rules.SequenceEqual(other.Rules) && Children.SequenceEqual(other.Children)
-        && PrecedencePriority == other.PrecedencePriority && PrecedenceAssoc == other.PrecedenceAssoc;
+        && PrecedencePriority == other.PrecedencePriority && PrecedenceAssoc == other.PrecedenceAssoc
+        && HasSecondPassEnter == other.HasSecondPassEnter && HasSecondPassExit == other.HasSecondPassExit;
     public override bool Equals(object? obj) => obj is NodeModel n && Equals(n);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(FullName);
 }

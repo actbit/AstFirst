@@ -27,6 +27,8 @@ public static class ModelExtraction
         var astNodeBase = compilation.GetTypeByMetadataName(AstNodeFullName);
         var tokenBase = compilation.GetTypeByMetadataName(TokenFullName);
         var contextBase = compilation.GetTypeByMetadataName(SemanticContextFullName);
+        var secondPassEnter = compilation.GetTypeByMetadataName("AstFirst.IOnSecondPassEnter");
+        var secondPassExit = compilation.GetTypeByMetadataName("AstFirst.IOnSecondPassExit");
 
         var nodes = new List<NodeModel>();
         var tokenDefs = new List<TokenDefModel>();
@@ -40,7 +42,7 @@ public static class ModelExtraction
             if (!SymbolEqualityComparer.Default.Equals(type.ContainingNamespace, rootType.ContainingNamespace)) continue;
 
             if (astNodeBase is not null && InheritsFrom(type, astNodeBase))
-                nodes.Add(ExtractNode(type, contextBase, astNodeBase, tokenBase));
+                nodes.Add(ExtractNode(type, contextBase, astNodeBase, tokenBase, secondPassEnter, secondPassExit));
 
             if (tokenBase is not null && InheritsFrom(type, tokenBase))
             {
@@ -74,7 +76,7 @@ public static class ModelExtraction
     }
 
     /// <summary>[Rule] 属性付き static メソッドを抽出して NodeModel を構築。</summary>
-    private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase, INamedTypeSymbol? tokenBase)
+    private static NodeModel ExtractNode(INamedTypeSymbol type, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase, INamedTypeSymbol? tokenBase, INamedTypeSymbol? secondPassEnter, INamedTypeSymbol? secondPassExit)
     {
         var rules = new List<RuleModel>();
         foreach (var member in type.GetMembers())
@@ -101,7 +103,17 @@ public static class ModelExtraction
             }
         }
         var children = ExtractChildrenFromRules(rules);
-        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, rules, children, precPriority, precAssoc);
+        bool hasEnter = secondPassEnter is not null && ImplementsInterface(type, secondPassEnter);
+        bool hasExit = secondPassExit is not null && ImplementsInterface(type, secondPassExit);
+        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, rules, children, precPriority, precAssoc, hasEnter, hasExit);
+    }
+
+    /// <summary>型が指定インターフェースを実装するか (継承含む)。</summary>
+    private static bool ImplementsInterface(INamedTypeSymbol type, INamedTypeSymbol iface)
+    {
+        foreach (var i in type.AllInterfaces)
+            if (SymbolEqualityComparer.Default.Equals(i, iface)) return true;
+        return false;
     }
 
     /// <summary>[Rule] メソッドの引数を型ベースで分類。</summary>
