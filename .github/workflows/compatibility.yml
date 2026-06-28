@@ -29,5 +29,13 @@ jobs:
         with:
           dotnet-version: ${{ matrix.sdk }}
 
+      - name: Pack Core/Runtime to local feed
+        # Generator が AstFirst.Runtime ($(Version)) に PackageReference するため、
+        # 事前に Core/Runtime を local フィード (artifacts/packages) に出力して解決可能にする。
+        run: |
+          mkdir -p artifacts/packages
+          dotnet pack src/AstFirst.Core/AstFirst.Core.csproj -c Release -o artifacts/packages
+          dotnet pack src/AstFirst.Runtime/AstFirst.Runtime.csproj -c Release -o artifacts/packages
+
       - name: Build & run compat project
         run: dotnet run --project tests/AstFirst.Compat --framework ${{ matrix.framework }} -c Release
