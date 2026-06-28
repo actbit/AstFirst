@@ -269,7 +269,7 @@ See [docs/en/architecture.md](docs/en/architecture.md) for details.
 AstFirst.slnx
 ├── src/
 │   ├── AstFirst.Core/        netstandard2.0  Pure logic (lexer DFA / LALR). No Roslyn dependency.
-│   ├── AstFirst.Runtime/     net10.0         Attributes, base classes, semantic analysis (ScopedSymbolTable / TypeSystem / SemanticContext / AstNode / Token)
+│   ├── AstFirst.Runtime/     netstandard2.0  Attributes, base classes, semantic analysis (ScopedSymbolTable / TypeSystem / SemanticContext / AstNode / Token). Depends on Core.
 │   ├── AstFirst.Generator/   netstandard2.0  IIncrementalGenerator. Includes Core sources into a single assembly.
 │   └── AstFirst/             net10.0         User code (calculator / MiniLang samples)
 ├── samples/                   net10.0         JsonParser / MiniC / MiniBasic / CSharpParser / Perf
@@ -290,7 +290,7 @@ Japanese versions are under `docs/ja/` and [README.md](README.md).
 
 ## Tests
 
-279 tests (AstFirst.Tests 236 + Generator.Tests 43). Covers lexer/DFA/LALR stages, end-to-end, error recovery, semantic analysis (scopes, two-pass, type checking, ctx -> `ParseResult.Diagnostics` integration), `Accept`/`Reject` fallback, and positions (line/column).
+293 tests (AstFirst.Tests 247 + Generator.Tests 46). Covers lexer/DFA/LALR stages, end-to-end, error recovery, semantic analysis (scopes, two-pass, type checking, ctx -> `ParseResult.Diagnostics` integration), `Accept`/`Reject` fallback, and positions (line/column).
 
 ## License
 

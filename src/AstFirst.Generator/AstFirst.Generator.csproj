@@ -15,7 +15,7 @@
     <NoWarn>$(NoWarn);NU5128</NoWarn>
     <PackageId>AstFirst</PackageId>
     <Title>AstFirst</Title>
-    <Description>C# のクラスと属性で文法を書くと、コンパイル時に Lexer / LALR(1) Parser / partial AST / OnSecondPass トラバーサル を生成するパーサージェネレーター。</Description>
+    <Description>Parser generator: write grammar in plain C# classes and attributes; a Source Generator emits a Lexer, an LALR(1) Parser, partial AST nodes, and an OnSecondPass traversal at compile time.</Description>
   </PropertyGroup>
 
   <ItemGroup>
