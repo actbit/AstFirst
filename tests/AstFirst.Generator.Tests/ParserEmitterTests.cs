@@ -273,4 +273,26 @@ public class StmtItem : AstFirst.AstNode { public StmtItem(string ruleName, AstF
         var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
         Assert.False(errors.Count > 0, "[Repeat] 展開の生成コードのコンパイルエラー:\n" + string.Join("\n", errors.Select(e => e.ToString())));
     }
+
+    [Fact]
+    public void EmitPartialInheritsRepeatPropertyToBaseCall()
+    {
+        // [Repeat] + 中間抽象: 抽象基底が IReadOnlyList<T> プロパティを宣言し、
+        // 具象は : base で IReadOnlyList<T> を渡す (フィールドは再定義しない)。
+        var model = CalcModel();  // EmitPartial は model を使わない (node のみ)
+
+        var concrete = new NodeModel("Test.EListBody", "Test.EList", false, new List<RuleModel>
+        {
+            new RuleModel("Body", new List<ParamModel>
+            {
+                new ParamModel("Test.EItem", "items", null, false, true, 0, false, 0)  // RepeatMin=0 (Star)
+            })
+        }, inheritedPropertyNames: new List<string> { "Items" });
+
+        var source = ParserEmitter.EmitPartial(model, concrete, "Test");
+        // 具象は : base(ruleName, items) で基底の Items (IReadOnlyList<EItem>) を初期化。
+        Assert.Contains(": base(ruleName, items)", source);
+        // Items フィールドは基底から継承するため、具象では再定義しない。
+        Assert.DoesNotContain("public readonly System.Collections.Generic.IReadOnlyList<Test.EItem> Items;", source);
+    }
 }
