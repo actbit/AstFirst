@@ -8,6 +8,10 @@
   <Project Path="samples/JsonParser/JsonParser.csproj" />
   <Project Path="samples/MiniC/MiniC.csproj" />
   <Project Path="samples/MiniBasic/MiniBasic.csproj" />
+  <Folder Name="/src/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/AstFirst.Compat/AstFirst.Compat.csproj" />
+  </Folder>
   <Project Path="samples/Arith/Arith.csproj" />
   <Project Path="samples/Perf/Perf.Grammars/Perf.Grammars.csproj" />
   <Project Path="samples/Perf/Perf.Gen/Perf.Gen.csproj" />

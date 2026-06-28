@@ -1,0 +1,33 @@
+name: compatibility
+
+# 各 SDK (.NET 6/8/10) で AstFirst の Source Generator + Runtime が動くか検証。
+# AstFirst.Generator は Microsoft.CodeAnalysis 4.13.0 でビルドしているため、
+# 古い SDK (Roslyn 4.x) での互換性を matrix で確認する。
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  compat:
+    name: ${{ matrix.sdk }} / ${{ matrix.framework }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - sdk: '6.0.x'
+            framework: net6.0
+          - sdk: '8.0.x'
+            framework: net8.0
+          - sdk: '10.0.x'
+            framework: net10.0
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.sdk }}
+
+      - name: Build & run compat project
+        run: dotnet run --project tests/AstFirst.Compat --framework ${{ matrix.framework }} -c Release
