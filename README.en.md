@@ -204,6 +204,7 @@ See [docs/en/grammar-reference.md](docs/en/grammar-reference.md) for details.
 | `[Rule]` | static method | A production (one per class). The method's **parameters** are the RHS. |
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority (higher wins). |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. `IsRightAssociative`/`IsNonAssociative`. |
+| `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more (empty list allowed). Expands to `IReadOnlyList<T>`. |
 | `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
 
 ### `[Rule]` method parameters (type-based classification)
@@ -228,7 +229,26 @@ See [docs/en/grammar-reference.md](docs/en/grammar-reference.md) for details.
 
 - **Inheritance tree = syntax**: `[Grammar] public abstract partial class Expr` is a nonterminal. `sealed partial class NumExpr : Expr` is the rule `Expr -> [0-9]+`.
 - **`[Rule]` method parameters = RHS**: types and order express the RHS. `[Rule] static void Add(Expr left, [Token(@"\+")] Token op, Expr right)` is `Expr -> Expr + Expr`.
-- **One `[Rule]` per class**: multiple rules go into separate classes (e.g. empty `JsonObjectEmpty` vs non-empty `JsonObject`). Avoid name clashes between the method name and the parameter's PascalCase property (e.g. param `name` -> property `NameTok`; method name `NumToken`).
+- **Multiple `[Rule]`s per class**: a class may have several `[Rule]` static methods, each an independent production. Which rule reduced is exposed via the `RuleName` property (method name); branch on it in `OnReduce` with a `switch`.
+- **Intermediate abstract classes**: inheritance hierarchies with abstract classes in between (`Root → Mid → Leaf`) are supported. Declare shared properties on the abstract base with a `[Rule]`; concrete subclasses initialize them via `: base(...)`, inheriting the properties while keeping them `readonly`.
+- **Lists (`[Repeat]`)**: a parameter marked `[Repeat]` expands to `IReadOnlyList<T>`. `Min=1` (default) = one or more, `Min=0` = zero or more (empty list allowed).
+
+```csharp
+// Multiple [Rule]s in one class: branch on RuleName
+public sealed partial class BinaryExpr : Expr
+{
+    [Rule] public static void Add(Expr left, [Token(@"\+")] Token op, Expr right) { }
+    [Rule] public static void Sub(Expr left, [Token(@"-")]  Token op, Expr right) { }
+    partial void OnReduce() { /* use this.RuleName to distinguish "Add"/"Sub" */ }
+}
+
+// List: [Repeat] expands to IReadOnlyList<T>
+public sealed partial class ProgramBody : Program
+{
+    [Rule] public static void Body([Repeat(Min = 0)] Stmt statements) { }
+    // → Program → Stmt* (Statements is IReadOnlyList<Stmt>)
+}
+```
 
 ## Samples
 
