@@ -59,9 +59,13 @@ jobs:
           ./build/transform-readme.ps1 -Source README.en.md -Output README.nuget.md `
             -BaseUrl "https://github.com/actbit/AstFirst/blob/v${{ steps.ver.outputs.version }}"
 
-      # Runtime を先に pack し、local フィード (./artifacts/packages) に出力する。
-      # Generator は Runtime へ PackageReference Version="$(Version)" で依存するため、
-      # Generator の pack/restore 時に同フィードから Runtime の nupkg を解決できる。
+      # 依存順に pack し、local フィード (./artifacts/packages) に出力する。
+      # Core → Runtime (Core 依存) → Generator (Runtime へ PackageReference Version="$(Version)")。
+      # 各 pack で同フィードから依存 nupkg を解決できる。
+      - name: Pack Core
+        if: steps.check.outputs.published == 'false'
+        run: dotnet pack src/AstFirst.Core/AstFirst.Core.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -o artifacts/packages
+
       # -p:PackageReadmePath で絶対 URL 化した README を NuGet 用 README として格納。
       - name: Pack Runtime
         if: steps.check.outputs.published == 'false'

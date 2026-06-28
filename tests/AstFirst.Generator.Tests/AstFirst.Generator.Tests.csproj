@@ -27,4 +27,14 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Generator が Core のソースを取り込んで単一アセンブリ化されているため、
+       Runtime 経由で推移参照される AstFirst.Core.dll と Generator 内の Core 型が
+       衝突する (CS0433)。推移で入った AstFirst.Core.dll をコンパイル参照から除外し、
+       Generator 側の Core を使う。 -->
+  <Target Name="RemoveTransitiveCore" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferencePath Remove="@(ReferencePath)" Condition="'%(Filename)' == 'AstFirst.Core'" />
+    </ItemGroup>
+  </Target>
+
 </Project>
