@@ -8,7 +8,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>AstFirst.Runtime</PackageId>
     <Title>AstFirst.Runtime</Title>
-    <Description>AstFirst の runtime: 文法属性 ([Grammar]/[Pattern]/[Precedence]/[Skip])、AstNode、Token、ParseResult、意味解析ヘルパー。</Description>
+    <Description>AstFirst runtime: grammar attributes ([Grammar]/[Pattern]/[Precedence]/[Skip]), AstNode, Token, ParseResult, and semantic-analysis helpers.</Description>
   </PropertyGroup>
 
   <ItemGroup>

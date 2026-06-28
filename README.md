@@ -318,7 +318,7 @@ C# の曖昧性を分類し、設計で解消（99 → 5）:
 AstFirst.slnx
 ├── src/
 │   ├── AstFirst.Core/        netstandard2.0  純粋ロジック (レクサ DFA / LALR)。Roslyn 非依存。
-│   ├── AstFirst.Runtime/     net10.0         属性・基底クラス・意味解析 (ScopedSymbolTable / TypeSystem / SemanticContext / AstNode / Token)
+│   ├── AstFirst.Runtime/     netstandard2.0  属性・基底クラス・意味解析 (ScopedSymbolTable / TypeSystem / SemanticContext / AstNode / Token)。Core に依存。
 │   ├── AstFirst.Generator/   netstandard2.0  IIncrementalGenerator。Core のソースを取り込み単一アセンブリ化。
 │   └── AstFirst/             net10.0         ユーザーコード (電卓・MiniLang サンプル)
 ├── samples/                   net10.0         JsonParser / MiniC / MiniBasic / CSharpParser / Perf
@@ -339,7 +339,7 @@ AstFirst.slnx
 
 ## テスト
 
-279 テスト（AstFirst.Tests 236 + Generator.Tests 43）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復、意味解析（スコープ・2パス目・型チェック・ctx → `ParseResult.Diagnostics` の統合）、`Accept`/`Reject` フォールバック、位置情報（行・列）を検証。
+293 テスト（AstFirst.Tests 247 + Generator.Tests 46）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復、意味解析（スコープ・2パス目・型チェック・ctx → `ParseResult.Diagnostics` の統合）、`Accept`/`Reject` フォールバック、位置情報（行・列）を検証。
 
 ## ライセンス
 
