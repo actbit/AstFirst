@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- 互換性検証用: net6.0/net8.0/net10.0 で Source Generator + Runtime が動くか。
+       AstFirst.Generator (analyzer) と AstFirst.Runtime のみ参照し、本体/samples に依存しない。 -->
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net8.0;net10.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AstFirst.Runtime\AstFirst.Runtime.csproj" />
+    <ProjectReference Include="..\..\src\AstFirst.Generator\AstFirst.Generator.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

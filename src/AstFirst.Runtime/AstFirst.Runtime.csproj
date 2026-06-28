@@ -15,4 +15,11 @@
     <PackageReference Include="System.Memory" Version="4.5.5" />
   </ItemGroup>
 
+  <!-- Core へ依存 (ProjectReference → パッケージ依存)。利用者は AstFirst.Runtime 経由で
+       AstFirst.Core.Lexing/Parsing を参照できる。Generator が Core を同梱するプロジェクト
+       (Generator.Tests) では、推移 Core を個別に除外して型重複 (CS0433) を回避する。 -->
+  <ItemGroup>
+    <ProjectReference Include="..\AstFirst.Core\AstFirst.Core.csproj" />
+  </ItemGroup>
+
 </Project>
