@@ -43,6 +43,10 @@
        Roslyn analyzer の慣行に従い analyzers フォルダへ明示的にパッキングする。 -->
   <ItemGroup>
     <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs" />
+    <!-- analyzer パッケージは lib/ を持たないが、NuGet の "no supported framework assets"
+         警告を回避するため、プレースホルダ (_._) で空の lib/netstandard2.0/ を置く。
+         実行時アセンブリは依存の AstFirst.Runtime から提供される。 -->
+    <None Include="..\..\build\_._" Pack="true" PackagePath="lib/netstandard2.0/" />
   </ItemGroup>
 
 </Project>
