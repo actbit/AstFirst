@@ -14,16 +14,11 @@ public sealed class MiniCContext : BasicSemanticContext
 [Skip(@"(\s|//[^\n]*)+")]
 public abstract partial class Program : AstNode { }
 
-// --- 文リスト ---
-public sealed partial class ConsStmt : Program
+// --- 文リスト ([Repeat(Min=0)] で0回以上の Stmt を IReadOnlyList<Stmt> に。旧 Cons セル廃止) ---
+public sealed partial class ProgramBody : Program
 {
     [Rule]
-    public static void Cons(Stmt first, Program rest, MiniCContext ctx) { }
-}
-public sealed partial class NilProgram : Program
-{
-    [Rule]
-    public static void Nil(MiniCContext ctx) { }
+    public static void Body([Repeat(Min = 0)] Stmt statements, MiniCContext ctx) { }
 }
 
 public abstract partial class Stmt : AstNode { }
@@ -83,11 +78,11 @@ public sealed partial class WhileStmt : Stmt, IOnSecondPassExit
     public void OnSecondPassExit(SemanticContext ctx) => SemanticAnalyzer.ExitCondition(this.Cond, this.Cond.Span, "while", (MiniCContext)ctx);
 }
 
-// { stmt... }
+// { stmt... } (ブロック内の文リストも [Repeat(Min=0)]。空ブロック可)
 public sealed partial class BlockStmt : Stmt, IOnSecondPassEnter, IOnSecondPassExit
 {
     [Rule]
-    public static void Block([Token(@"\{")] Token lb, Program body, [Token(@"\}")] Token rb, MiniCContext ctx) { }
+    public static void Block([Token(@"\{")] Token lb, [Repeat(Min = 0)] Stmt statements, [Token(@"\}")] Token rb, MiniCContext ctx) { }
     partial void OnReduce(MiniCContext ctx) { Span = SourceSpan.Merge(Lb.Span, Rb.Span); }
     public void OnSecondPassEnter(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PushScope();
     public void OnSecondPassExit(SemanticContext ctx) => ((MiniCContext)ctx).Symbols.PopScope();

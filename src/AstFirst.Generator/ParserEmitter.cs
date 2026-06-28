@@ -165,7 +165,7 @@ public static class ParserEmitter
         sb.AppendLine("            else if (dk == 2) // Reduce (仮想 reduce)");
         sb.AppendLine("            {");
         sb.AppendLine("                var node = ReduceNode(dv, valuesSpan, top, ctx);");
-        sb.AppendLine("                if (node is not null && !((AstFirst.AstNode)node).IsAccepted)");
+        sb.AppendLine("                if (node is AstFirst.AstNode __an && !__an.IsAccepted)");
         sb.AppendLine("                {");
         sb.AppendLine("                    // Reject: フォールバック候補を試す");
         sb.AppendLine("                    if (!TryFallback(state, sym, ref values, ref top, ref states, ctx, tokens, ref i)) goto panic;");
@@ -255,7 +255,7 @@ public static class ParserEmitter
         sb.AppendLine("                if (k == 2) // Reduce 候補");
         sb.AppendLine("                {");
         sb.AppendLine("                    var node = ReduceNode(v, values, top, ctx);");
-        sb.AppendLine("                    if (node is not null && !((AstFirst.AstNode)node).IsAccepted) continue; // さらに Reject → 次");
+        sb.AppendLine("                    if (node is AstFirst.AstNode __an && !__an.IsAccepted) continue; // さらに Reject → 次");
         sb.AppendLine("                    int len = ProdLen[v];");
         sb.AppendLine("                    top -= len;");
         sb.AppendLine("                    values[top] = node;");
@@ -275,19 +275,58 @@ public static class ParserEmitter
         sb.AppendLine("        {");
         foreach (var prod in grammar.Productions)
         {
-            if (prod.Tag is not ReduceActionModel action) continue;
-            int len = prod.Rhs.Length;
-            sb.Append("            case ").Append(prod.Id).Append(": { return new ").Append(action.AstTypeName).Append("(");
-            for (int j = 0; j < action.Parameters.Count; j++)
+            switch (prod.Tag)
             {
-                if (j > 0) sb.Append(", ");
-                var p = action.Parameters[j];
-                // 子は values[top - len + ChildIndex] で参照 (Pop せず)。右辺の ChildIndex 番目の記号。
-                if (p.IsContext) sb.Append("(").Append(p.CastTypeName).Append(")ctx");
-                else if (tokenDerivedTypes.Contains(p.CastTypeName)) sb.Append("new ").Append(p.CastTypeName).Append("(((AstFirst.Token)values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!).Text)");
-                else sb.Append("(").Append(p.CastTypeName).Append(")values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!");
+                case ReduceActionModel action:
+                {
+                    int len = prod.Rhs.Length;
+                    sb.Append("            case ").Append(prod.Id).Append(": { return new ").Append(action.AstTypeName).Append("(\"").Append(action.RuleName).Append("\"");
+                    for (int j = 0; j < action.Parameters.Count; j++)
+                    {
+                        sb.Append(", ");
+                        var p = action.Parameters[j];
+                        // 子は values[top - len + ChildIndex] で参照 (Pop せず)。右辺の ChildIndex 番目の記号。
+                        if (p.IsContext) sb.Append("(").Append(p.CastTypeName).Append(")ctx");
+                        else if (tokenDerivedTypes.Contains(p.CastTypeName)) sb.Append("new ").Append(p.CastTypeName).Append("(((AstFirst.Token)values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!).Text)");
+                        else sb.Append("(").Append(p.CastTypeName).Append(")values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!");
+                    }
+                    sb.AppendLine("); }");
+                    break;
+                }
+                case ListReduceActionModel listAction:
+                {
+                    int len = prod.Rhs.Length;
+                    string elemType = listAction.ElementType;
+                    string listType = "System.Collections.Generic.List<" + elemType + ">";
+                    sb.Append("            case ").Append(prod.Id).Append(": { ");
+                    if (listAction.IsRecursive)
+                    {
+                        // List_T → List_T item: 既存リスト (右辺0) に item (右辺1) を Add。
+                        sb.Append("var __list = (").Append(listType).Append(")values[top - ").Append(len).Append(" + 0]!; ");
+                        sb.Append("__list.Add((").Append(elemType).Append(")values[top - ").Append(len).Append(" + 1]!); ");
+                    }
+                    else if (listAction.IsEmpty)
+                    {
+                        // List_T → ε: 空リスト (Star のみ)。
+                        sb.Append("var __list = new ").Append(listType).Append("(0); ");
+                    }
+                    else
+                    {
+                        // List_T → item: 1要素の新規リスト。
+                        sb.Append("var __list = new ").Append(listType).Append("(4); ");
+                        sb.Append("__list.Add((").Append(elemType).Append(")values[top - ").Append(len).Append(" + 0]!); ");
+                    }
+                    sb.AppendLine("return __list; }");
+                    break;
+                }
+                case PassThroughActionModel:
+                {
+                    int len = prod.Rhs.Length;
+                    // 抽象クラス経由の単位規則 (Base → N): 右辺 N の値 (具象サブクラスのインスタンス) をそのまま返す。
+                    sb.Append("            case ").Append(prod.Id).Append(": { return values[top - ").Append(len).Append(" + 0]!; }").AppendLine();
+                    break;
+                }
             }
-            sb.AppendLine("); }");
         }
         sb.AppendLine("            default: return null;");
         sb.AppendLine("        }");
@@ -332,8 +371,12 @@ public static class ParserEmitter
             sb.AppendLine("            case " + n.FullName + " __n:");
             foreach (var c in n.Children)
             {
-                if (c.IsNullable) sb.AppendLine("                if (__n." + c.PropertyName + " is not null) children.Add(__n." + c.PropertyName + ");");
-                else sb.AppendLine("                children.Add(__n." + c.PropertyName + ");");
+                if (c.IsRepeat)
+                    sb.AppendLine("                foreach (var __c in __n." + c.PropertyName + ") children.Add(__c);");
+                else if (c.IsNullable)
+                    sb.AppendLine("                if (__n." + c.PropertyName + " is not null) children.Add(__n." + c.PropertyName + ");");
+                else
+                    sb.AppendLine("                children.Add(__n." + c.PropertyName + ");");
             }
             sb.AppendLine("                break;");
         }
@@ -346,7 +389,7 @@ public static class ParserEmitter
         sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
     }
 
-    /// <summary>各具象ノードの partial コード (子/終端プロパティ + OnReduce/OnSecondPass 宣言 + partial コンストラクタ) を生成。</summary>
+    /// <summary>各具象ノードの partial コード (子/終端 readonly フィールド + RuleName + OnReduce 宣言 + 各[Rule]の partial コンストラクタ) を生成。</summary>
     public static string EmitPartial(GrammarModel model, NodeModel node, string ns)
     {
         var (nodeNs, simple) = CodeEmitter.SplitFullName(node.FullName);
@@ -359,32 +402,81 @@ public static class ParserEmitter
         string? ctxArg = CtxArgOf(node);
         string ctxParam = ctxType is not null ? "(" + ctxType + " " + (ctxArg ?? "ctx") + ")" : "()";
         string ctxCall = ctxType is not null ? (ctxArg ?? "ctx") : "";
-        var rule = node.Rules.Count > 0 ? node.Rules[0] : null;
 
         sb.AppendLine("public partial class " + simple);
         sb.AppendLine("{");
-        // 子 (AstNode 派生) + 終端 (Token) プロパティ: [Rule] 引数の ctx 以外 (PascalCase)
-        if (rule is not null)
-            foreach (var p in rule.Parameters)
-                if (!p.IsContext && p.Name is not null)
-                    sb.AppendLine("    public " + p.TypeFullName + " " + CodeEmitter.Pascalize(p.Name) + " { get; private set; } = default!;");
-        sb.AppendLine("    partial void OnReduce" + ctxParam + ";");
-        // OnSecondPassEnter/Exit は AstNode の public virtual (override して使用)。ここでは宣言しない。
+        // 中間抽象のプロパティ継承: 抽象基底 ([Rule] でプロパティ宣言) は全プロパティを定義し、
+        // 具象サブクラスは継承プロパティを再定義せず : base(...) で初期化する (readonly 維持)。
+        bool isAbstractBase = node.IsAbstract && node.Rules.Count > 0;
+        var inheritedSet = new HashSet<string>(node.InheritedPropertyNames);
+        bool hasInherited = inheritedSet.Count > 0;
 
-        // partial コンストラクタ: [Rule] 引数を受け取り、子/終端をプロパティへセット → OnReduce。
-        if (rule is not null)
-        {
-            sb.Append("    internal " + simple + "(");
-            for (int j = 0; j < rule.Parameters.Count; j++)
+        // 子 (AstNode 派生) + 終端 (Token): readonly フィールド (全[Rule]の引数から統合、PascalCase)。
+        // 具象クラスは継承プロパティ (基底で定義済み) を再定義しない。
+        var propSet = new HashSet<string>();
+        foreach (var rule in node.Rules)
+            foreach (var p in rule.Parameters)
             {
-                if (j > 0) sb.Append(", ");
-                sb.Append(rule.Parameters[j].TypeFullName).Append(" ").Append(rule.Parameters[j].Name ?? ("p" + j));
+                if (p.IsContext || p.Name is null) continue;
+                var prop = CodeEmitter.Pascalize(p.Name);
+                if (!propSet.Add(prop)) continue;
+                if (!isAbstractBase && inheritedSet.Contains(prop)) continue;
+                var typeStr = p.IsRepeat
+                    ? "System.Collections.Generic.IReadOnlyList<" + p.TypeFullName + ">"
+                    : p.TypeFullName;
+                sb.AppendLine("    public readonly " + typeStr + " " + prop + ";");
+            }
+        // RuleName: 抽象基底、または継承プロパティがない (基底が RuleName を持たない) 場合のみ生成。
+        if (node.Rules.Count > 0 && (isAbstractBase || !hasInherited))
+            sb.AppendLine("    public readonly string RuleName;");
+        sb.AppendLine("    partial void OnReduce" + ctxParam + ";");
+
+        // コンストラクタ: 抽象基底は protected (派生から : base で呼ばれる)、具象は internal。
+        // 同じ引数型シグネチャの[Rule]が複数ある場合は1つに統合 (ruleName で実行時に区別)。
+        string ctorKind = isAbstractBase ? "protected" : "internal";
+        var seenSigs = new HashSet<string>();
+        foreach (var rule in node.Rules)
+        {
+            var sigBuilder = new StringBuilder();
+            foreach (var p in rule.Parameters) { if (sigBuilder.Length > 0) sigBuilder.Append(','); sigBuilder.Append(p.TypeFullName); }
+            if (!seenSigs.Add(sigBuilder.ToString())) continue;
+
+            sb.Append("    " + ctorKind + " " + simple + "(string ruleName");
+            foreach (var p in rule.Parameters)
+            {
+                sb.Append(", ");
+                var typeStr = p.IsRepeat
+                    ? "System.Collections.Generic.IReadOnlyList<" + p.TypeFullName + ">"
+                    : p.TypeFullName;
+                sb.Append(typeStr).Append(" ").Append(p.Name ?? "p");
             }
             sb.AppendLine(")");
+
+            // 継承ありの具象: : base(ruleName, 継承プロパティ...) を呼ぶ (基底のプロパティ順)。
+            if (hasInherited && !isAbstractBase)
+            {
+                sb.Append("        : base(ruleName");
+                foreach (var inheritedProp in node.InheritedPropertyNames)
+                {
+                    string? argName = null;
+                    foreach (var p in rule.Parameters)
+                        if (p.Name is not null && CodeEmitter.Pascalize(p.Name) == inheritedProp) { argName = p.Name; break; }
+                    if (argName is not null) sb.Append(", ").Append(argName);
+                }
+                sb.AppendLine(")");
+            }
+
             sb.AppendLine("    {");
+            // RuleName 代入: 抽象基底、または継承なし (基底が持たない) の場合。
+            if (isAbstractBase || !hasInherited)
+                sb.AppendLine("        RuleName = ruleName;");
             foreach (var p in rule.Parameters)
                 if (!p.IsContext && p.Name is not null)
-                    sb.AppendLine("        this." + CodeEmitter.Pascalize(p.Name) + " = " + p.Name + ";");
+                {
+                    var prop = CodeEmitter.Pascalize(p.Name);
+                    if (isAbstractBase || !inheritedSet.Contains(prop))
+                        sb.AppendLine("        this." + prop + " = " + p.Name + ";");
+                }
             sb.AppendLine("        OnReduce(" + ctxCall + ");");
             sb.AppendLine("    }");
         }

@@ -76,8 +76,8 @@ namespace AstFirst {
     public sealed class BasicSemanticContext : SemanticContext { public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag(); }
 }
 public class Expr : AstFirst.AstNode { }
-public class NumExpr : Expr { public NumExpr(AstFirst.Token t) { } }
-public class AddExpr : Expr { public AddExpr(Expr a, AstFirst.Token b, Expr c) { } }
+public class NumExpr : Expr { public NumExpr(string ruleName, AstFirst.Token t) { } }
+public class AddExpr : Expr { public AddExpr(string ruleName, Expr a, AstFirst.Token b, Expr c) { } }
 ";
         var comp = Compile(stubs, lexerSource, parserSource);
         var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -160,7 +160,7 @@ namespace AstFirst {
 }
 public class NumToken : AstFirst.Token { public NumToken(string t) : base(t, default) { } }
 public class Expr : AstFirst.AstNode { }
-public class NumExpr : Expr { public NumExpr(NumToken n) { } }
+public class NumExpr : Expr { public NumExpr(string ruleName, NumToken n) { } }
 ";
         var comp = Compile(stubs, lexerSource, parserSource);
         var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
@@ -197,5 +197,102 @@ public class NumExpr : Expr { public NumExpr(NumToken n) { } }
         // new DeclExpr(..., ctx) のように ctx が渡る。
         Assert.Contains("new DeclExpr(", source);
         Assert.Contains("ctx)", source);
+    }
+
+    private static GrammarModel RepeatModel()
+    {
+        // Program → [Repeat] Stmt を List_Stmt → Stmt | List_Stmt Stmt に展開。
+        // ProgramBody.Statements は IReadOnlyList<StmtItem>。
+        var nodes = new List<NodeModel>
+        {
+            new NodeModel("Program", "AstFirst.AstNode", true, new List<RuleModel>()),
+            new NodeModel("ProgramBody", "Program", false, new List<RuleModel>
+            {
+                new RuleModel("Body", new List<ParamModel>
+                {
+                    new ParamModel("StmtItem", "statements", null, false, true, 0, false, 1)  // RepeatMin=1 (Plus)
+                })
+            }),
+            new NodeModel("StmtItem", "AstFirst.AstNode", false, new List<RuleModel>
+            {
+                new RuleModel("Reduce", new List<ParamModel>
+                {
+                    new ParamModel("AstFirst.Token", "text", "[a-z]+", false, false, 0)
+                })
+            }),
+        };
+        var tokenDefs = new List<TokenDefModel> { new TokenDefModel("AstFirst.Token", "[a-z]+", 0, false) };
+        return new GrammarModel("Program", nodes, tokenDefs);
+    }
+
+    [Fact]
+    public void EmitParserExpandsRepeatIntoListConstruction()
+    {
+        // [Repeat] は List_T → item | List_T item に展開され、reduce で List<T> を構築する。
+        var model = RepeatModel();
+        ModelToDfa.Build(model, out var rules);
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        var source = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
+        // リスト構築: new List<StmtItem>(...) と __list.Add(...)。
+        Assert.Contains("new System.Collections.Generic.List<StmtItem>(4)", source);
+        Assert.Contains("__list.Add((StmtItem)", source);
+        // ProgramBody の reduce で IReadOnlyList<StmtItem> を渡す。
+        Assert.Contains("new ProgramBody(\"Body\"", source);
+        Assert.Contains("IReadOnlyList<StmtItem>", source);
+    }
+
+    [Fact]
+    public void EmitParserWithRepeatCompiles()
+    {
+        // [Repeat] 展開後の生成コード (List 構築 + IReadOnlyList 渡し) がコンパイル通り。
+        var model = RepeatModel();
+        var dfa = ModelToDfa.Build(model, out var rules);
+        var lexerSource = CodeEmitter.EmitLexer(model, dfa, rules, "ProgramLexer", "TestNs");
+        var (grammar, table) = ModelToTable.BuildWithGrammar(model);
+        var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
+        var stubs = @"
+namespace AstFirst {
+    public abstract class AstNode { public bool IsAccepted => true; public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
+    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
+    public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
+    public readonly struct Position { public Position(int o, int l, int c) { } }
+    public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
+    public enum Severity { Error, Warning }
+    public sealed class Diagnostic { public Severity Severity { get; } public Diagnostic(string m, SourceSpan s, Severity v) { Severity = v; } }
+    public sealed class DiagnosticBag { public System.Collections.Generic.IReadOnlyList<Diagnostic> Items { get; } = new System.Collections.Generic.List<Diagnostic>(); }
+    public sealed class ParseError { public ParseError(string m, int p) { } }
+    public sealed class ParseResult { public ParseResult(object? a, System.Collections.Generic.IReadOnlyList<ParseError> e, System.Collections.Generic.IReadOnlyList<Diagnostic>? d) { } }
+    public abstract class SemanticContext { public abstract DiagnosticBag Diagnostics { get; } }
+    public sealed class BasicSemanticContext : SemanticContext { public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag(); }
+}
+public class Program : AstFirst.AstNode { }
+public class ProgramBody : Program { public ProgramBody(string ruleName, System.Collections.Generic.IReadOnlyList<StmtItem> statements) { } }
+public class StmtItem : AstFirst.AstNode { public StmtItem(string ruleName, AstFirst.Token text) { } }
+";
+        var comp = Compile(stubs, lexerSource, parserSource);
+        var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+        Assert.False(errors.Count > 0, "[Repeat] 展開の生成コードのコンパイルエラー:\n" + string.Join("\n", errors.Select(e => e.ToString())));
+    }
+
+    [Fact]
+    public void EmitPartialInheritsRepeatPropertyToBaseCall()
+    {
+        // [Repeat] + 中間抽象: 抽象基底が IReadOnlyList<T> プロパティを宣言し、
+        // 具象は : base で IReadOnlyList<T> を渡す (フィールドは再定義しない)。
+        var model = CalcModel();  // EmitPartial は model を使わない (node のみ)
+
+        var concrete = new NodeModel("Test.EListBody", "Test.EList", false, new List<RuleModel>
+        {
+            new RuleModel("Body", new List<ParamModel>
+            {
+                new ParamModel("Test.EItem", "items", null, false, true, 0, false, 0)  // RepeatMin=0 (Star)
+            })
+        }, inheritedPropertyNames: new List<string> { "Items" });
+
+        var source = ParserEmitter.EmitPartial(model, concrete, "Test");
+        // 具象は : base(ruleName, items) で基底の Items (IReadOnlyList<EItem>) を初期化。
+        Assert.Contains(": base(ruleName, items)", source);
+        // Items フィールドは基底から継承するため、具象では再定義しない。
+        Assert.DoesNotContain("public readonly System.Collections.Generic.IReadOnlyList<Test.EItem> Items;", source);
     }
 }

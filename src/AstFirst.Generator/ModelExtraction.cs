@@ -54,6 +54,9 @@ public static class ModelExtraction
 
         nodes.Sort((a, b) => string.CompareOrdinal(a.FullName, b.FullName));
 
+        // 中間抽象のプロパティ継承: 各ノードの基底クラス (直接・間接) の Children を継承プロパティとして収集。
+        nodes = ResolveInheritedProperties(nodes);
+
         // AstNode 派生クラスの [Rule] メソッドからトークン定義を抽出 (Token 型+[Token]/[Pattern] 引数)。
         foreach (var n in nodes)
             foreach (var td in ExtractTokenDefsFromRules(n))
@@ -105,7 +108,7 @@ public static class ModelExtraction
         var children = ExtractChildrenFromRules(rules);
         bool hasEnter = secondPassEnter is not null && ImplementsInterface(type, secondPassEnter);
         bool hasExit = secondPassExit is not null && ImplementsInterface(type, secondPassExit);
-        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, rules, children, precPriority, precAssoc, hasEnter, hasExit);
+        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, rules, children, null, precPriority, precAssoc, hasEnter, hasExit);
     }
 
     /// <summary>型が指定インターフェースを実装するか (継承含む)。</summary>
@@ -116,6 +119,31 @@ public static class ModelExtraction
         return false;
     }
 
+    /// <summary>各ノードの基底クラス (直接・間接) の Children を継承プロパティとして収集し、NodeModel を再構築。
+    /// 抽象基底クラスの [Rule] で宣言したプロパティを、具象サブクラスが : base(...) で初期化できるようにする。</summary>
+    private static List<NodeModel> ResolveInheritedProperties(List<NodeModel> nodes)
+    {
+        var byFullName = new Dictionary<string, NodeModel>();
+        foreach (var n in nodes) byFullName[n.FullName] = n;
+        var result = new List<NodeModel>(nodes.Count);
+        foreach (var n in nodes)
+        {
+            var inherited = new List<string>();
+            var baseName = n.BaseFullName;
+            while (!string.IsNullOrEmpty(baseName) && baseName != AstNodeFullName)
+            {
+                if (!byFullName.TryGetValue(baseName, out var baseNode)) break;
+                foreach (var c in baseNode.Children)
+                    if (!inherited.Contains(c.PropertyName))
+                        inherited.Add(c.PropertyName);
+                baseName = baseNode.BaseFullName;
+            }
+            result.Add(new NodeModel(n.FullName, n.BaseFullName, n.IsAbstract, n.Rules, n.Children,
+                inherited, n.PrecedencePriority, n.PrecedenceAssoc, n.HasSecondPassEnter, n.HasSecondPassExit));
+        }
+        return result;
+    }
+
     /// <summary>[Rule] メソッドの引数を型ベースで分類。</summary>
     private static IEnumerable<ParamModel> ExtractParams(IEnumerable<IParameterSymbol> parameters, INamedTypeSymbol? contextBase, INamedTypeSymbol? astNodeBase, INamedTypeSymbol? tokenBase)
     {
@@ -124,8 +152,9 @@ public static class ModelExtraction
             var isContext = contextBase is not null && InheritsFromOrEquals(p.Type, contextBase);
             var isChild = astNodeBase is not null && p.Type.TypeKind == TypeKind.Class && InheritsFromOrEquals(p.Type, astNodeBase);
             var isToken = tokenBase is not null && InheritsFrom(p.Type, tokenBase);
+            int repeatMin = HasAttribute(p, "RepeatAttribute") ? GetRepeatMin(p) : -1;
             var (pattern, priority) = GetPattern(p);
-            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, isChild, priority, isToken);
+            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, isChild, priority, isToken, repeatMin);
         }
     }
 
@@ -146,6 +175,20 @@ public static class ModelExtraction
         return (null, 0);
     }
 
+    /// <summary>[Repeat] の Min (0=Star=0回以上、1=Plus=1回以上)。既定は 1 (Plus)。</summary>
+    private static int GetRepeatMin(ISymbol symbol)
+    {
+        foreach (var a in symbol.GetAttributes())
+        {
+            if (a.AttributeClass?.Name != "RepeatAttribute") continue;
+            int min = 1;
+            foreach (var na in a.NamedArguments)
+                if (na.Key == "Min" && na.Value.Value is int m) min = m;
+            return min;
+        }
+        return 1;
+    }
+
     /// <summary>[Rule] の引数から AstNode 派生の子を収集 (partial プロパティ + Listener 用)。</summary>
     private static IReadOnlyList<ChildModel> ExtractChildrenFromRules(IReadOnlyList<RuleModel> rules)
     {
@@ -157,7 +200,11 @@ public static class ModelExtraction
                 bool isNullable = p.TypeFullName.EndsWith("?");
                 var prop = CodeEmitter.Pascalize(p.Name);
                 if (children.Exists(c => c.PropertyName == prop)) continue;
-                children.Add(new ChildModel(prop, p.TypeFullName, isNullable));
+                // [Repeat] の子は IReadOnlyList<T> 型 (リスト展開された結果を格納)。
+                var typeFullName = p.IsRepeat
+                    ? "System.Collections.Generic.IReadOnlyList<" + p.TypeFullName + ">"
+                    : p.TypeFullName;
+                children.Add(new ChildModel(prop, typeFullName, isNullable, p.RepeatMin));
             }
         children.Sort((a, b) => string.CompareOrdinal(a.PropertyName, b.PropertyName));
         return children;
