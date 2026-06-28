@@ -50,16 +50,26 @@ jobs:
         if: steps.check.outputs.published == 'false'
         run: mkdir -p artifacts/packages
 
+      # README.en.md の相対リンクを GitHub 絶対 URL に変換 (ref = v<Version> tag)。
+      # nuget.org 上ではパッケージ内の相対リンクがリンク切れになるため。
+      - name: README を絶対 URL 化 (NuGet 用)
+        if: steps.check.outputs.published == 'false'
+        shell: pwsh
+        run: |
+          ./build/transform-readme.ps1 -Source README.en.md -Output README.nuget.md `
+            -BaseUrl "https://github.com/actbit/AstFirst/blob/v${{ steps.ver.outputs.version }}"
+
       # Runtime を先に pack し、local フィード (./artifacts/packages) に出力する。
       # Generator は Runtime へ PackageReference Version="$(Version)" で依存するため、
       # Generator の pack/restore 時に同フィードから Runtime の nupkg を解決できる。
+      # -p:PackageReadmePath で絶対 URL 化した README を NuGet 用 README として格納。
       - name: Pack Runtime
         if: steps.check.outputs.published == 'false'
-        run: dotnet pack src/AstFirst.Runtime/AstFirst.Runtime.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -o artifacts/packages
+        run: dotnet pack src/AstFirst.Runtime/AstFirst.Runtime.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -p:PackageReadmePath="$PWD/README.nuget.md" -o artifacts/packages
 
       - name: Pack Generator
         if: steps.check.outputs.published == 'false'
-        run: dotnet pack src/AstFirst.Generator/AstFirst.Generator.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -o artifacts/packages
+        run: dotnet pack src/AstFirst.Generator/AstFirst.Generator.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -p:PackageReadmePath="$PWD/README.nuget.md" -o artifacts/packages
 
       # Trusted Publishing (OIDC): nuget.org に事前登録したポリシー
       # (owner=actbit, repo=AstFirst, workflow=publish-nuget.yml) と一致する

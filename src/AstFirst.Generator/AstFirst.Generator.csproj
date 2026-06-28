@@ -15,7 +15,7 @@
     <NoWarn>$(NoWarn);NU5128</NoWarn>
     <PackageId>AstFirst</PackageId>
     <Title>AstFirst</Title>
-    <Description>C# のクラスと属性で文法を書くと、コンパイル時に Lexer / LALR(1) Parser / Listener を生成するパーサージェネレーター。</Description>
+    <Description>C# のクラスと属性で文法を書くと、コンパイル時に Lexer / LALR(1) Parser / partial AST / OnSecondPass トラバーサル を生成するパーサージェネレーター。</Description>
   </PropertyGroup>
 
   <ItemGroup>

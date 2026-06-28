@@ -204,6 +204,7 @@ var result = ProgramParser.Parse(code, new MiniCContext());
 | `[Rule]` | static メソッド | 生成規則（1クラス1つ）。メソッドの**引数**が右辺。 |
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度（大きいほど高優先）。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。`IsRightAssociative`/`IsNonAssociative` で結合性。 |
+| `[Repeat]` / `[Repeat(Min=0)]` | `[Rule]` メソッドの `AstNode` 派生引数 | リスト（繰り返し）。`Min=1`（既定）は1回以上、`Min=0` は0回以上（空リスト可）。`IReadOnlyList<T>` に展開。 |
 | `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
 
 ### `[Rule]` メソッドの引数（型ベース分類）
@@ -228,7 +229,26 @@ var result = ProgramParser.Parse(code, new MiniCContext());
 
 - **継承ツリー = 構文**: `[Grammar] public abstract partial class Expr` が非終端。`sealed partial class NumExpr : Expr` が「`Expr -> [0-9]+`」の生成規則。
 - **`[Rule]` メソッドの引数 = 右辺**: 引数の型と順序が右辺。`[Rule] static void Add(Expr left, [Token(@"\+")] Token op, Expr right)` は `Expr -> Expr + Expr`。
-- **1クラス1 `[Rule]`**: 複数規則は別クラスへ分割（例: 空オブジェクト `JsonObjectEmpty` と非空 `JsonObject`）。メソッド名と引数の Pascal プロパティが衝突しないよう注意（例: 引数 `name` → プロパティ `NameTok`、メソッド名 `NumToken`）。
+- **1クラスに複数 `[Rule]` 可**: 同じクラスに複数の `[Rule]` static メソッドを書くと、それぞれ独立の生成規則になる。どの規則で reduce されたかは `RuleName` プロパティ（メソッド名）で判定し、`OnReduce` 内で `switch` する。
+- **中間抽象クラス**: 抽象クラスを挟んだ継承階層（`Root → Mid → Leaf`）が使える。抽象基底に `[Rule]` で共通プロパティを宣言すると、具象サブクラスが `: base(...)` で初期化し readonly を維持したままプロパティを継承できる。
+- **リスト（`[Repeat]`）**: `[Repeat]` を付けた引数は `IReadOnlyList<T>` に展開される。`Min=1`（既定）は1回以上、`Min=0` は0回以上（空リスト可）。
+
+```csharp
+// 1クラス複数 [Rule]: RuleName で分岐
+public sealed partial class BinaryExpr : Expr
+{
+    [Rule] public static void Add(Expr left, [Token(@"\+")] Token op, Expr right) { }
+    [Rule] public static void Sub(Expr left, [Token(@"-")]  Token op, Expr right) { }
+    partial void OnReduce() { /* this.RuleName で "Add"/"Sub" を判定 */ }
+}
+
+// リスト: [Repeat] で IReadOnlyList<T>
+public sealed partial class ProgramBody : Program
+{
+    [Rule] public static void Body([Repeat(Min = 0)] Stmt statements) { }
+    // → Program → Stmt* (Statements は IReadOnlyList<Stmt>)
+}
+```
 
 ## サンプル
 
