@@ -295,4 +295,57 @@ public class StmtItem : AstFirst.AstNode { public StmtItem(string ruleName, AstF
         // Items フィールドは基底から継承するため、具象では再定義しない。
         Assert.DoesNotContain("public readonly System.Collections.Generic.IReadOnlyList<Test.EItem> Items;", source);
     }
+
+    [Fact]
+    public void EmitPartialEmitsSpanAutoMergeForConcrete()
+    {
+        // 具象ノード: 子 (AstNode + Token) の Span を順次マージする生成コードを含む。
+        var node = new NodeModel("Test.AddExpr", "Test.Expr", false, new List<RuleModel>
+        {
+            new RuleModel("Add", new List<ParamModel>
+            {
+                new ParamModel("Test.Expr", "left", null, false, false, 0),
+                new ParamModel("AstFirst.Token", "op", "\\+", false, false, 0),
+                new ParamModel("Test.Expr", "right", null, false, false, 0),
+            })
+        });
+        var source = ParserEmitter.EmitPartial(CalcModel(), node, "Test");
+        Assert.Contains("var __autoSpan = default(AstFirst.SourceSpan);", source);
+        Assert.Contains("AstFirst.SourceSpan.Merge(__autoSpan, left.Span)", source);
+        Assert.Contains("AstFirst.SourceSpan.Merge(__autoSpan, op.Span)", source);
+        Assert.Contains("AstFirst.SourceSpan.Merge(__autoSpan, right.Span)", source);
+        Assert.Contains("if (__autoSpanHas) Span = __autoSpan;", source);
+    }
+
+    [Fact]
+    public void EmitPartialEmitsSpanMergeForRepeatChild()
+    {
+        // [Repeat] 子: foreach で各要素の Span をマージする生成コードを含む。
+        var node = new NodeModel("Test.ProgramBody", "Test.Program", false, new List<RuleModel>
+        {
+            new RuleModel("Body", new List<ParamModel>
+            {
+                new ParamModel("Test.StmtItem", "statements", null, false, true, 0, false, 1)  // RepeatMin=1 (Plus)
+            })
+        });
+        var source = ParserEmitter.EmitPartial(CalcModel(), node, "Test");
+        Assert.Contains("foreach (var __autoSpanItem in statements)", source);
+        Assert.Contains("__autoSpanItem.Span", source);
+    }
+
+    [Fact]
+    public void EmitPartialSkipsSpanMergeForAbstractBase()
+    {
+        // 抽象基底 ([Rule] 持ち abstract): 直接 new されないため Span 自動計算を生成しない。
+        var abstractBase = new NodeModel("Test.ABinary", "Test.ANode", true, new List<RuleModel>
+        {
+            new RuleModel("Base", new List<ParamModel>
+            {
+                new ParamModel("Test.ANode", "left", null, false, false, 0),
+                new ParamModel("Test.ANode", "right", null, false, false, 0),
+            })
+        });
+        var source = ParserEmitter.EmitPartial(CalcModel(), abstractBase, "Test");
+        Assert.DoesNotContain("__autoSpan", source);
+    }
 }

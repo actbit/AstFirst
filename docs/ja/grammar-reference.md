@@ -152,7 +152,7 @@ public sealed partial class AAdd : ABinary
 
 ## `OnReduce` / Accept/Reject / OnSecondPass
 
-- **`OnReduce(ctx)`**: 規則が reduce されたとき（ボトムアップ）に呼ばれる partial メソッド。子プロパティが既に設定済み。`this.RuleName` で規則を判定、`Span` の設定等を行う。
+- **`OnReduce(ctx)`**: 規則が reduce されたとき（ボトムアップ）に呼ばれる partial メソッド。子プロパティと `Span`（子から自動計算）が既に設定済み。`this.RuleName` で規則を判定、`Span` を上書きする等を行う。
 - **Accept/Reject**: `IsAccepted` をオーバーライドして `false` を返すと、その reduce を拒否（Reject）しフォールバック候補を試す。詳細は [README](../../README.md) の「Accept/Reject とフォールバック」。
 - **`OnSecondPass`**: 2パス目のトラバーサル（トップダウン）。`IOnSecondPassEnter`/`IOnSecondPassExit` を実装したノードに対し、`OnSecondPassEnter`（子の前）→ 子再帰 → `OnSecondPassExit`（子の後）を自動呼出。詳細は [意味解析ガイド](semantic-analysis.md)。
 

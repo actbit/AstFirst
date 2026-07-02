@@ -11,7 +11,7 @@ A parser generator where you write the grammar in **plain C# classes and attribu
 - **Regex-based lexer**: character-class compaction, longest-match + priority-driven, `{m,n}` quantifiers, Unicode supplementary planes. Computes **line/column** of each token.
 - **LALR(1) parsing**: resolves shift-reduce conflicts with precedence/associativity (`[Precedence]`) (e.g. `*` > `+`, right-associative assignment).
 - **Semantic ambiguity resolution (Accept/Reject)**: call `Reject()` in the reduce-time `OnReduce` to fall back to the next candidate (another rule / shift) in priority order. Resolves meaning-dependent ambiguity like cast vs. parenthesized expression during parsing.
-- **AST construction + automatic child retention**: at reduce time a generator-emitted partial constructor sets children/terminals into properties automatically and calls `OnReduce`. No manual child assignment.
+- **AST construction + automatic child retention + automatic Span**: at reduce time a generator-emitted partial constructor sets children/terminals into properties automatically, merges their `Span`s into the node's `Span`, and then calls `OnReduce`. No manual child assignment or Span setup (overridable in `OnReduce`).
 - **Two-pass semantic analysis**: after `Parse`, each node's `OnSecondPassEnter`/`OnSecondPassExit` (top-down) is called automatically. Accurate semantic analysis like scope Push/Pop is straightforward.
 - **Semantic analysis helpers**: scoped symbol table (`ScopedSymbolTable`), symbol resolution (`ResolveOrError`), type checking (`TypeSymbol`/`TypeContext`), binding (`AstNode.SetAnnotation`), diagnostics (`ParseResult.Diagnostics`).
 - **Error recovery**: continues after syntax errors via panic mode; `ParseResult` carries the AST + error list.
@@ -35,7 +35,7 @@ public sealed partial class NumExpr : Expr     // rule: Expr -> [0-9]+
     partial void OnReduce()                    // at reduce, bottom-up
     {
         Value = int.Parse(Num.Text);
-        Span = Num.Span;                       // set the node's source span
+        Span = Num.Span;                       // optional: Span is auto-computed from children; this overrides it
     }
 }
 
@@ -58,6 +58,7 @@ public sealed partial class MulExpr : Expr     // rule: Expr -> Expr * Expr
 
 - The **parameters** of the `[Rule]` static method (one per class, void, empty body) are the RHS. `Token` + `[Token]`/`[Pattern]` is a terminal; an `AstNode`-derived type is a child; a `SemanticContext`-derived type is the ctx (injected by the parser).
 - `partial` is required. The generator emits child/terminal properties (PascalCase of the parameter name, e.g. `Num`/`Left`/`Right`) and a partial constructor, and calls `OnReduce`.
+- Each node's `Span` is auto-computed at reduce by merging the children's `Span`s, so the `Span = ...` lines in `OnReduce` above are optional (only to override).
 
 ### 2. Generator emits Lexer / Parser / partials
 
@@ -175,7 +176,7 @@ var result = ProgramParser.Parse(code, new MiniCContext());
 
 ### Source positions (line/column)
 
-`SourceSpan` carries accurate 1-based line/column. The lexer computes line/column while tokenizing; it propagates through `Token.Span` to AST node `Span`. Diagnostics report accurate positions.
+`SourceSpan` carries accurate 1-based line/column. The lexer computes line/column while tokenizing; the generator merges the children's `Span`s at reduce to set each AST node's `Span`. Diagnostics report accurate positions.
 
 ### Example: MiniC semantic analysis
 

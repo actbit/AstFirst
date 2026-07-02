@@ -13,6 +13,8 @@ public class RepeatStarEndToEndTests
         Assert.False(result.HasErrors);
         var body = Assert.IsType<RSProgramBody>(result.Ast);
         Assert.Empty(body.Items);
+        // 空リストは子を持たないため Span は自動計算されず、default (IsEmpty) のまま。
+        Assert.True(body.Span.IsEmpty);
     }
 
     [Fact]
