@@ -477,6 +477,30 @@ public static class ParserEmitter
                     if (isAbstractBase || !inheritedSet.Contains(prop))
                         sb.AppendLine("        this." + prop + " = " + p.Name + ";");
                 }
+            // Span 自動計算: 子の Span を順次マージして this.Span に設定。
+            // OnReduce の「前」に設定するのでユーザーが OnReduce で上書き可能 (後方互換)。
+            // 抽象基底 (isAbstractBase) ではスキップ — 具象コンストラクタが継承子含む全子を持つため冗長。
+            if (!isAbstractBase)
+            {
+                sb.AppendLine("        var __autoSpan = default(AstFirst.SourceSpan);");
+                sb.AppendLine("        var __autoSpanHas = false;");
+                foreach (var p in rule.Parameters)
+                {
+                    if (p.IsContext || p.Name is null) continue;
+                    if (p.IsRepeat)
+                    {
+                        // [Repeat] 子: IReadOnlyList<T> (T は AstNode/Token 派生、いずれも .Span を持つ)。
+                        sb.AppendLine("        foreach (var __autoSpanItem in " + p.Name
+                            + ") { __autoSpan = __autoSpanHas ? AstFirst.SourceSpan.Merge(__autoSpan, __autoSpanItem.Span) : __autoSpanItem.Span; __autoSpanHas = true; }");
+                    }
+                    else
+                    {
+                        sb.AppendLine("        __autoSpan = __autoSpanHas ? AstFirst.SourceSpan.Merge(__autoSpan, "
+                            + p.Name + ".Span) : " + p.Name + ".Span; __autoSpanHas = true;");
+                    }
+                }
+                sb.AppendLine("        if (__autoSpanHas) Span = __autoSpan;");
+            }
             sb.AppendLine("        OnReduce(" + ctxCall + ");");
             sb.AppendLine("    }");
         }

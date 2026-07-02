@@ -152,7 +152,7 @@ Special parameter types of a `[Rule]` method:
 
 ## `OnReduce` / Accept/Reject / OnSecondPass
 
-- **`OnReduce(ctx)`**: a partial method called when a rule is reduced (bottom-up). Child properties are already set. Use `this.RuleName` to branch on the rule, set `Span`, etc.
+- **`OnReduce(ctx)`**: a partial method called when a rule is reduced (bottom-up). Child properties and `Span` (auto-computed from children) are already set. Use `this.RuleName` to branch on the rule, override `Span`, etc.
 - **Accept/Reject**: override `IsAccepted` to return `false` to reject a reduce and try fallback candidates. See the [README](../../README.en.md) "Accept/Reject and fallback" section.
 - **`OnSecondPass`**: the second-pass traversal (top-down). For nodes implementing `IOnSecondPassEnter`/`IOnSecondPassExit`, the generator calls `OnSecondPassEnter` (before children) → recurse children → `OnSecondPassExit` (after children). See the [semantic analysis guide](semantic-analysis.md).
 

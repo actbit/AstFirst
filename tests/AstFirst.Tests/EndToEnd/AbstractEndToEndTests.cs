@@ -15,6 +15,9 @@ public class AbstractEndToEndTests
         var add = Assert.IsType<AAdd>(result.Ast);
         Assert.IsType<ANum>(add.Left);
         Assert.IsType<ANum>(add.Right);
+        // OnReduce を持たないノードでも、子の Span から自動計算されて "1+2" 全体を覆う。
+        Assert.Equal(0, add.Span.Start.Offset);
+        Assert.Equal(3, add.Span.End.Offset);
     }
 
     [Fact]

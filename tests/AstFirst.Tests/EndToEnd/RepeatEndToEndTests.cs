@@ -13,6 +13,9 @@ public class RepeatEndToEndTests
         Assert.False(result.HasErrors);
         var body = Assert.IsType<RProgramBody>(result.Ast);
         Assert.Equal(3, body.Items.Count);
+        // [Repeat] 子の各要素の Span をマージして "a b c" 全体を覆う。
+        Assert.Equal(0, body.Span.Start.Offset);
+        Assert.Equal(5, body.Span.End.Offset);
     }
 
     [Fact]
