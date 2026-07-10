@@ -19,7 +19,7 @@ AstFirst sits in the same space as parser generators and combinator libraries, b
 | Target language | any DSL / language | any language | any language | C#/VB only |
 | Error recovery | panic mode | yes | limited | n/a |
 
-**Why it exists**: define a grammar in the same C# you already write (no separate `.g4` file, full IDE/refactoring support), generate a fast table-driven parser at compile time (no runtime codegen, AOT-friendly), and get back an AST with built-in semantic-analysis helpers (scoped symbol table, two-pass Walker, type system, `[Enter]`/`[Exit]`/`[OnReduce]` attribute rules). A small language or DSL becomes a single project, not a toolchain.
+**Why it exists**: define a grammar in the same C# you already write (no separate `.g4` file, full IDE/refactoring support), generate a fast table-driven parser at compile time (no runtime codegen, AOT-friendly), and get back an AST with built-in semantic-analysis helpers (scoped symbol table, two-pass Walker, type system, `[Enter]`/`[Exit]`/`[OnReduce]` attribute rules).
 
 ## Features
 
