@@ -42,7 +42,7 @@ public abstract class AstNode
 }
 
 /// <summary>2パス目: 子の前 (トップダウン) に呼ばれる。実装したいノードだけこのインターフェースを実装する。
-/// Generator は1つでも実装があれば WalkSecondPass を生成し、未実装なら走査そのものを省く (空呼び回避)。</summary>
+/// Generator は1つでも実装があれば Walker を生成し、未実装なら走査そのものを省く (空呼び回避)。</summary>
 public interface IOnSecondPassEnter
 {
     void OnSecondPassEnter(SemanticContext ctx);
@@ -99,4 +99,6 @@ public class BasicSemanticContext : SemanticContext
 {
     public override ScopedSymbolTable Symbols { get; } = new ScopedSymbolTable();
     public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag();
+    /// <summary>ノード→型 の対応 (型推論・型チェックの結果)。意味解析ウォークで使用。</summary>
+    public TypeContext Types { get; } = new TypeContext();
 }

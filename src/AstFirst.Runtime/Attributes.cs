@@ -85,3 +85,34 @@ public sealed class RepeatAttribute : Attribute
     /// <summary>最小繰り返し回数。1 = 1回以上 (Plus、既定)、0 = 0回以上 (Star、空リスト可)。</summary>
     public int Min { get; set; } = 1;
 }
+
+/// <summary>
+/// 意味解析ルール: 2パス目 (トップダウン) でノードに入る時に呼ぶ static メソッドに付ける。
+/// [Grammar] ルートクラス内に宣言し、第1引数に対象ノード型、第2引数に <see cref="SemanticContext"/> 派生の ctx を取る。
+/// Generator が Walker の Enter フェーズで自動呼出し、ctx のキャストも自動で挿入する (ボイラープレート不要)。
+/// </summary>
+/// <remarks>
+/// [Grammar]
+/// partial class MyGrammar
+/// {
+///     [Enter]
+///     static void EnterBlock(Block b, MyCtx ctx) => ctx.Symbols.PushScope();
+/// }
+/// </remarks>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class EnterAttribute : Attribute { }
+
+/// <summary>
+/// 意味解析ルール: 2パス目でノードを出る時に呼ぶ static メソッドに付ける。
+/// <see cref="EnterAttribute"/> と対。スコープの Pop や、子ノードの型が揃った後の型チェックに使う。
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class ExitAttribute : Attribute { }
+
+/// <summary>
+/// 意味解析ルール: 1パス目 (reduce 時・ボトムアップ) に呼ぶ static メソッドに付ける。
+/// [Grammar] ルートクラスに宣言し、第1引数に対象ノード、第2引数に ctx。
+/// 各ノードの partial OnReduce の直後に呼ばれる (partial OnReduce と共存)。
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class OnReduceAttribute : Attribute { }

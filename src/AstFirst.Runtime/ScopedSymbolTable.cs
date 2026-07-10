@@ -12,7 +12,7 @@ namespace AstFirst;
 /// 名前衝突を避けるため <c>SymbolEntry</c> としている。
 /// </para>
 /// </summary>
-public sealed class SymbolEntry
+public sealed class SymbolEntry : ISymbol
 {
     public string Name { get; }
     public object? Value { get; set; }
@@ -26,6 +26,12 @@ public sealed class SymbolEntry
         Depth = depth;
         Value = value;
     }
+
+    /// <summary><see cref="Value"/> に格納された <see cref="VariableSymbol"/> を取得 (未設定や型違いなら null)。</summary>
+    public VariableSymbol? AsVariable() => Value as VariableSymbol;
+
+    /// <summary><see cref="Value"/> に格納された <see cref="FunctionSymbol"/> を取得 (未設定や型違いなら null)。</summary>
+    public FunctionSymbol? AsFunction() => Value as FunctionSymbol;
 }
 
 /// <summary>スコープの種類。PushScope で指定し、PopScope で対応付けを検証する。</summary>

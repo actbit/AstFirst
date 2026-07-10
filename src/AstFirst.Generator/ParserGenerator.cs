@@ -49,6 +49,9 @@ public sealed class ParserGenerator : IIncrementalGenerator
 
                 spc.AddSource(typeName + suffix + "Lexer.g.cs", CodeEmitter.EmitLexer(model, dfa, rules, typeName + suffix + "Lexer", ns));
                 spc.AddSource(typeName + suffix + "Parser.g.cs", ParserEmitter.EmitParser(model, grammar, table, rules, ns));
+                // 汎用 Walker: IOnSecondPassEnter/Exit または [Enter]/[Exit] を使う文法でのみ生成 (ゼロコスト)。
+                if (model.HasSecondPass)
+                    spc.AddSource(typeName + suffix + "Walker.g.cs", WalkerEmitter.EmitWalker(model, ns));
                 // 各ノードの partial (子プロパティ + OnReduce/OnSecondPass 宣言 + partial コンストラクタ)。
                 // [Rule] を持つ抽象基底 (中間抽象のプロパティ宣言) は protected コンストラクタ生成のため partial 必要。
                 // [Rule] のない抽象クラスはフィールド/コンストラクタがないので partial 不要。

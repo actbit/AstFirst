@@ -16,13 +16,15 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     public IReadOnlyList<string> SkipPatterns { get; }
     /// <summary>(string) コンストラクタを持たない Token 派生型 (G7 で new DerivedType(token.Text) を生成できない)。診断用。</summary>
     public IReadOnlyList<string> TokenDerivedWarnings { get; }
+    /// <summary>[OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド)。</summary>
+    public IReadOnlyList<AnalyzeRuleModel> AnalyzeRules { get; }
 
     /// <summary>[Grammar] ルートクラスのソース位置 (診断報告用)。Equals/GetHashCode には含めない (IncrementalGenerator のキャッシュ判定を壊さないため)。</summary>
     public Location? RootLocation { get; }
 
     public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs,
         IReadOnlyList<string>? skipPatterns = null, string? mode = null, Location? rootLocation = null,
-        IReadOnlyList<string>? tokenDerivedWarnings = null)
+        IReadOnlyList<string>? tokenDerivedWarnings = null, IReadOnlyList<AnalyzeRuleModel>? analyzeRules = null)
     {
         RootTypeFullName = rootTypeFullName;
         Nodes = nodes;
@@ -31,19 +33,24 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
         Mode = mode;
         RootLocation = rootLocation;
         TokenDerivedWarnings = tokenDerivedWarnings ?? Array.Empty<string>();
+        AnalyzeRules = analyzeRules ?? Array.Empty<AnalyzeRuleModel>();
     }
 
     public bool Equals(GrammarModel? other) =>
         other is not null && RootTypeFullName == other.RootTypeFullName
-        && SeqEqual(Nodes, other.Nodes) && SeqEqual(TokenDefs, other.TokenDefs);
+        && SeqEqual(Nodes, other.Nodes) && SeqEqual(TokenDefs, other.TokenDefs)
+        && SeqEqual(AnalyzeRules, other.AnalyzeRules);
 
-    /// <summary>いずれかのノードが IOnSecondPassEnter/Exit を実装するか。未実装なら WalkSecondPass を生成しない (空走査回避)。</summary>
+    /// <summary>いずれかのノードが IOnSecondPassEnter/Exit を実装するか、[Enter]/[Exit] ルールがあるか。
+    /// いずれもなければ Walker/Walk を生成しない (空走査回避・ゼロコスト)。</summary>
     public bool HasSecondPass
     {
         get
         {
             for (int i = 0; i < Nodes.Count; i++)
                 if (Nodes[i].HasSecondPassEnter || Nodes[i].HasSecondPassExit) return true;
+            for (int i = 0; i < AnalyzeRules.Count; i++)
+                if (AnalyzeRules[i].Phase is AnalyzePhase.Enter or AnalyzePhase.Exit) return true;
             return false;
         }
     }
@@ -53,6 +60,7 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     {
         int h = StringComparer.Ordinal.GetHashCode(RootTypeFullName);
         for (int i = 0; i < Nodes.Count; i++) h = unchecked(h * 31 + Nodes[i].GetHashCode());
+        for (int i = 0; i < AnalyzeRules.Count; i++) h = unchecked(h * 31 + AnalyzeRules[i].GetHashCode());
         return h;
     }
 
@@ -71,12 +79,12 @@ public sealed class NodeModel : IEquatable<NodeModel>
     public string BaseFullName { get; }       // 直接の基底 (非終端 = 親)
     public bool IsAbstract { get; }
     public IReadOnlyList<RuleModel> Rules { get; }      // [Rule] static メソッド (1クラス1つだがリストで保持)
-    public IReadOnlyList<ChildModel> Children { get; }   // [Rule] 引数の子 (partial プロパティ + Listener 用)
+    public IReadOnlyList<ChildModel> Children { get; }   // [Rule] 引数の子 (partial プロパティ + Walker 用)
     /// <summary>基底クラスから継承するプロパティ名 (PascalCase・順序付き)。具象クラスの partial で再定義を避け、: base(...) に渡す。</summary>
     public IReadOnlyList<string> InheritedPropertyNames { get; }
     public int PrecedencePriority { get; }    // [Precedence] の Priority (0=未設定)
     public AstFirst.Core.Parsing.Associativity PrecedenceAssoc { get; }
-    /// <summary>IOnSecondPassEnter を実装するか (WalkSecondPass 生成判定・呼び分け用)。</summary>
+    /// <summary>IOnSecondPassEnter を実装するか (Walker 生成判定・呼び分け用)。</summary>
     public bool HasSecondPassEnter { get; }
     /// <summary>IOnSecondPassExit を実装するか。</summary>
     public bool HasSecondPassExit { get; }
@@ -130,7 +138,7 @@ public sealed class ParamModel : IEquatable<ParamModel>
     public bool IsContext { get; }      // SemanticContext 派生型の引数 (ctx・最後)
     public bool IsChild { get; }        // AstNode 派生 (右辺の子・partial プロパティ生成対象)
     public bool IsToken { get; }        // Token 派生型 (共通 Token 以外)。TokenDef の Key を型名にする。
-    /// <summary>-1=非リスト、0=Star (0回以上)、1=Plus (1回以上)。[Repeat] 付き引数は IReadOnlyList&lt;T&gt; に展開。</summary>
+    /// <summary>-1=非リスト、0=Star (0回以上)，1=Plus (1回以上)。[Repeat] 付き引数は IReadOnlyList&lt;T&gt; に展開。</summary>
     public int RepeatMin { get; }
     public bool IsRepeat => RepeatMin >= 0;  // [Repeat] 付き (IReadOnlyList<T> に展開)
     public int Priority { get; }        // [Token]/[Pattern] の Priority
@@ -178,7 +186,7 @@ public sealed class TokenDefModel : IEquatable<TokenDefModel>
     public override int GetHashCode() => (Key, Pattern).GetHashCode();
 }
 
-/// <summary>AST ノードの子 (AstNode 派生の [Rule] 引数 = partial プロパティ)。Listener 生成で子の再帰ウォークにも使う。</summary>
+/// <summary>AST ノードの子 (AstNode 派生の [Rule] 引数 = partial プロパティ)。Walker 生成で子の再帰ウォークにも使う。</summary>
 public sealed class ChildModel : IEquatable<ChildModel>
 {
     public string PropertyName { get; }     // [Rule] 引数名 (= partial プロパティ名)
@@ -201,4 +209,46 @@ public sealed class ChildModel : IEquatable<ChildModel>
         && TypeFullName == other.TypeFullName && IsNullable == other.IsNullable && RepeatMin == other.RepeatMin;
     public override bool Equals(object? obj) => obj is ChildModel c && Equals(c);
     public override int GetHashCode() => (PropertyName, TypeFullName).GetHashCode();
+}
+
+/// <summary>意味解析ルールのフェーズ。</summary>
+public enum AnalyzePhase
+{
+    /// <summary>1パス目: reduce 時 (ボトムアップ)。[OnReduce] 属性。Walker 不要 (コンストラクタ経路)。</summary>
+    OnReduce,
+    /// <summary>2パス目: ノードに入る時 (トップダウン)。[Enter] 属性。Walker の Enter フェーズ。</summary>
+    Enter,
+    /// <summary>2パス目: ノードを出る時。[Exit] 属性。Walker の Exit フェーズ。</summary>
+    Exit,
+}
+
+/// <summary>[OnReduce]/[Enter]/[Exit] 属性付き static メソッド = 意味解析ルール。
+/// [Grammar] ルートクラス内に宣言。第1引数が対象ノード、第2引数が ctx。</summary>
+public sealed class AnalyzeRuleModel : IEquatable<AnalyzeRuleModel>
+{
+    public AnalyzePhase Phase { get; }
+    /// <summary>対象ノード型 (第1引数の AstNode 派生型の完全名)。</summary>
+    public string TargetNodeFullName { get; }
+    /// <summary>[Grammar] ルートクラスのメソッド名 (静的呼出しの対象)。</summary>
+    public string MethodName { get; }
+    /// <summary>ctx 型 (第2引数の SemanticContext 派生型の完全名)。</summary>
+    public string CtxTypeFullName { get; }
+    /// <summary>[Grammar] ルートクラスの完全名 (静的呼出しのレシーバ)。</summary>
+    public string GrammarClassFullName { get; }
+
+    public AnalyzeRuleModel(AnalyzePhase phase, string targetNodeFullName, string methodName, string ctxTypeFullName, string grammarClassFullName)
+    {
+        Phase = phase;
+        TargetNodeFullName = targetNodeFullName;
+        MethodName = methodName;
+        CtxTypeFullName = ctxTypeFullName;
+        GrammarClassFullName = grammarClassFullName;
+    }
+
+    public bool Equals(AnalyzeRuleModel? other) =>
+        other is not null && Phase == other.Phase && TargetNodeFullName == other.TargetNodeFullName
+        && MethodName == other.MethodName && CtxTypeFullName == other.CtxTypeFullName
+        && GrammarClassFullName == other.GrammarClassFullName;
+    public override bool Equals(object? obj) => obj is AnalyzeRuleModel a && Equals(a);
+    public override int GetHashCode() => (Phase, TargetNodeFullName, MethodName).GetHashCode();
 }

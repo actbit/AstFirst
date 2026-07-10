@@ -75,7 +75,37 @@ public static class ModelExtraction
                 foreach (var na in a.NamedArguments)
                     if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
 
-        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings);
+        // [OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド) を収集。
+        var analyzeRules = ExtractAnalyzeRules(rootType, astNodeBase, contextBase);
+
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings, analyzeRules);
+    }
+
+    /// <summary>[OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド) を収集。
+    /// 第1引数=対象 AstNode 派生型、第2引数=ctx。不正シグネチャは無視。</summary>
+    private static List<AnalyzeRuleModel> ExtractAnalyzeRules(INamedTypeSymbol rootType, INamedTypeSymbol? astNodeBase, INamedTypeSymbol? contextBase)
+    {
+        var rules = new List<AnalyzeRuleModel>();
+        var rootFullName = rootType.ToDisplayString();
+        foreach (var member in rootType.GetMembers())
+        {
+            if (member is not IMethodSymbol method) continue;
+            if (!method.IsStatic) continue;
+            AnalyzePhase phase;
+            if (HasAttribute(method, "EnterAttribute")) phase = AnalyzePhase.Enter;
+            else if (HasAttribute(method, "ExitAttribute")) phase = AnalyzePhase.Exit;
+            else if (HasAttribute(method, "OnReduceAttribute")) phase = AnalyzePhase.OnReduce;
+            else continue;
+            var ps = method.Parameters;
+            // 第1引数 = AstNode 派生の対象ノード。
+            if (ps.Length < 1 || astNodeBase is null || !InheritsFromOrEquals(ps[0].Type, astNodeBase)) continue;
+            string targetNode = ps[0].Type.ToDisplayString();
+            string ctxType = SemanticContextFullName;
+            if (ps.Length >= 2 && contextBase is not null && InheritsFromOrEquals(ps[1].Type, contextBase))
+                ctxType = ps[1].Type.ToDisplayString();
+            rules.Add(new AnalyzeRuleModel(phase, targetNode, method.Name, ctxType, rootFullName));
+        }
+        return rules;
     }
 
     /// <summary>[Rule] 属性付き static メソッドを抽出して NodeModel を構築。</summary>
@@ -189,7 +219,7 @@ public static class ModelExtraction
         return 1;
     }
 
-    /// <summary>[Rule] の引数から AstNode 派生の子を収集 (partial プロパティ + Listener 用)。</summary>
+    /// <summary>[Rule] の引数から AstNode 派生の子を収集 (partial プロパティ + Walker 用)。</summary>
     private static IReadOnlyList<ChildModel> ExtractChildrenFromRules(IReadOnlyList<RuleModel> rules)
     {
         var children = new List<ChildModel>();

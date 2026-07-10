@@ -154,11 +154,12 @@ public sealed partial class AAdd : ABinary
 
 - **`OnReduce(ctx)`**: 規則が reduce されたとき（ボトムアップ）に呼ばれる partial メソッド。子プロパティと `Span`（子から自動計算）が既に設定済み。`this.RuleName` で規則を判定、`Span` を上書きする等を行う。
 - **Accept/Reject**: `IsAccepted` をオーバーライドして `false` を返すと、その reduce を拒否（Reject）しフォールバック候補を試す。詳細は [README](../../README.md) の「Accept/Reject とフォールバック」。
-- **`OnSecondPass`**: 2パス目のトラバーサル（トップダウン）。`IOnSecondPassEnter`/`IOnSecondPassExit` を実装したノードに対し、`OnSecondPassEnter`（子の前）→ 子再帰 → `OnSecondPassExit`（子の後）を自動呼出。詳細は [意味解析ガイド](semantic-analysis.md)。
+- **`OnSecondPass`**: 2パス目のトラバーサル（トップダウン）。`IOnSecondPassEnter`/`IOnSecondPassExit` を実装したノードに対し、`OnSecondPassEnter`（子の前）→ 子再帰 → `OnSecondPassExit`（子の後）を自動呼出。
+- **`[OnReduce]` / `[Enter]` / `[Exit]` 属性**: `[Grammar]` ルートクラスの `static` メソッドに付けると、Generator が Walker / コンストラクタに dispatch する（ctx キャストは自動注入）。`[OnReduce]` は reduce 時、`[Enter]`/`[Exit]` は 2パス目。詳細は [意味解析ガイド](semantic-analysis.md)。
 
 ## 複数方言（Mode）
 
-`[Grammar(Mode = "...")]` で、同じルートから複数の Parser/Listener を生成できる（フォーマット/方言の切り替え）。生成されるクラス名は `<Root>_<Mode>Parser` 等。
+`[Grammar(Mode = "...")]` で、同じルートから複数の Lexer/Parser/Walker を生成できる（フォーマット/方言の切り替え）。生成されるクラス名は `<Root>_<Mode>Lexer` / `<Root>_<Mode>Parser` / `<Root>_<Mode>Walker` 等。
 
 ## 正規表現
 
