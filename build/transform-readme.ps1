@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-  README.en.md の相対リンクを GitHub 絶対 URL に変換し、NuGet 用 README を生成します。
+  README の相対リンクを GitHub 絶対 URL に変換し、NuGet 用 README を生成します。
   nuget.org 上ではパッケージ内の相対リンク (docs/en/*.md 等) がリンク切れになるため、
   CI の pack 前に本スクリプトで絶対 URL 化します。
 .PARAMETER Source
-  変換元 README (通常 README.en.md)。
+  変換元 README (通常 README.md)。
 .PARAMETER Output
   変換後 README の出力先。
 .PARAMETER BaseUrl
