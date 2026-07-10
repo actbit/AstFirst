@@ -36,7 +36,7 @@ public static class ModelExtraction
 
         foreach (var type in GetAllTypes(compilation.Assembly.GlobalNamespace))
         {
-            if (type.TypeKind != TypeKind.Class) continue;
+            if (type.TypeKind != Microsoft.CodeAnalysis.TypeKind.Class) continue;
             if (type.DeclaredAccessibility != Accessibility.Public) continue;
             // rootType と同じ名前空間の型のみ収集 (別文法の混入を防ぎ、到達不能/未定義検知の誤検知を避ける)。
             if (!SymbolEqualityComparer.Default.Equals(type.ContainingNamespace, rootType.ContainingNamespace)) continue;
@@ -180,7 +180,7 @@ public static class ModelExtraction
         foreach (var p in parameters)
         {
             var isContext = contextBase is not null && InheritsFromOrEquals(p.Type, contextBase);
-            var isChild = astNodeBase is not null && p.Type.TypeKind == TypeKind.Class && InheritsFromOrEquals(p.Type, astNodeBase);
+            var isChild = astNodeBase is not null && p.Type.TypeKind == Microsoft.CodeAnalysis.TypeKind.Class && InheritsFromOrEquals(p.Type, astNodeBase);
             var isToken = tokenBase is not null && InheritsFrom(p.Type, tokenBase);
             int repeatMin = HasAttribute(p, "RepeatAttribute") ? GetRepeatMin(p) : -1;
             var (pattern, priority) = GetPattern(p);
@@ -189,7 +189,7 @@ public static class ModelExtraction
     }
 
     /// <summary>[Token]/[Pattern] から (Regex, Priority) を取得。未設定なら (null,0)。</summary>
-    private static (string? regex, int priority) GetPattern(ISymbol symbol)
+    private static (string? regex, int priority) GetPattern(Microsoft.CodeAnalysis.ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
@@ -206,7 +206,7 @@ public static class ModelExtraction
     }
 
     /// <summary>[Repeat] の Min (0=Star=0回以上、1=Plus=1回以上)。既定は 1 (Plus)。</summary>
-    private static int GetRepeatMin(ISymbol symbol)
+    private static int GetRepeatMin(Microsoft.CodeAnalysis.ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
@@ -253,7 +253,7 @@ public static class ModelExtraction
             }
     }
 
-    private static bool HasAttribute(ISymbol symbol, string attrName)
+    private static bool HasAttribute(Microsoft.CodeAnalysis.ISymbol symbol, string attrName)
     {
         foreach (var a in symbol.GetAttributes())
             if (a.AttributeClass?.Name == attrName) return true;
