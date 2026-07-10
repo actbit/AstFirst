@@ -48,7 +48,9 @@ public sealed class ParserGenerator : IIncrementalGenerator
                     spc.ReportDiagnostic(Microsoft.CodeAnalysis.Diagnostic.Create(DiagnosticDescriptors.TokenDerivedNoStringCtor, model.RootLocation, $"Token 派生型 '{tdw}' に (string) コンストラクタがありません (new DerivedType(token.Text) の生成に必要) / Token-derived type '{tdw}' has no (string) constructor"));
 
                 spc.AddSource(typeName + suffix + "Lexer.g.cs", CodeEmitter.EmitLexer(model, dfa, rules, typeName + suffix + "Lexer", ns));
-                spc.AddSource(typeName + suffix + "Parser.g.cs", ParserEmitter.EmitParser(model, grammar, table, rules, ns));
+                spc.AddSource(typeName + suffix + "Parser.g.cs", model.ParseMode == ParseMode.LightGlr
+                    ? GlrParserEmitter.EmitParser(model, grammar, table, rules, ns)
+                    : ParserEmitter.EmitParser(model, grammar, table, rules, ns));
                 // 汎用 Walker: IOnSecondPassEnter/Exit または [Enter]/[Exit] を使う文法でのみ生成 (ゼロコスト)。
                 if (model.HasSecondPass)
                     spc.AddSource(typeName + suffix + "Walker.g.cs", WalkerEmitter.EmitWalker(model, ns));
@@ -59,7 +61,9 @@ public sealed class ParserGenerator : IIncrementalGenerator
                 {
                     if (node.IsAbstract && node.Rules.Count == 0) continue;
                     var simple = CodeEmitter.SplitFullName(node.FullName).type;
-                    spc.AddSource(typeName + suffix + "_" + simple + ".partial.g.cs", ParserEmitter.EmitPartial(model, node, ns));
+                    spc.AddSource(typeName + suffix + "_" + simple + ".partial.g.cs", model.ParseMode == ParseMode.LightGlr
+                        ? GlrParserEmitter.EmitPartial(model, node, ns)
+                        : ParserEmitter.EmitPartial(model, node, ns));
                 }
             }
         });

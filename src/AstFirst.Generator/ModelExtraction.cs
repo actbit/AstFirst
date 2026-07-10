@@ -68,17 +68,22 @@ public static class ModelExtraction
             if (a.AttributeClass?.Name == "SkipAttribute" && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
                 skipPatterns.Add(ss);
 
-        // [Grammar(Mode = "...")] の Mode を取得。
+        // [Grammar(Mode = "...")] の Mode と [Grammar(ParseMode = ...)] の ParseMode を取得。
+        // ParseMode は enum だが Generator は Runtime を直接参照しないため整数値として読む。
         string? mode = null;
+        var parseMode = ParseMode.Lalr;
         foreach (var a in rootType.GetAttributes())
             if (a.AttributeClass?.Name == "GrammarAttribute")
                 foreach (var na in a.NamedArguments)
+                {
                     if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
+                    if (na.Key == "ParseMode" && na.Value.Value is int pm) parseMode = (ParseMode)pm;
+                }
 
         // [OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド) を収集。
         var analyzeRules = ExtractAnalyzeRules(rootType, astNodeBase, contextBase);
 
-        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings, analyzeRules);
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings, analyzeRules, parseMode);
     }
 
     /// <summary>[OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド) を収集。

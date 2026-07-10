@@ -16,12 +16,24 @@ public sealed class PatternAttribute(string regex) : Attribute
     public int Priority { get; set; }
 }
 
+/// <summary>パーサの実行モード。</summary>
+public enum ParseMode
+{
+    /// <summary>LALR(1) 確定パーサ (既定)。コンフリクトは優先度/結合性で解決し、解決不能分は警告 (ASTF001)。</summary>
+    Lalr,
+    /// <summary>軽量 GLR: コンフリクトセルで並行 fork し、収束でマージ。本質的曖昧性 (cast/paren, generic の型/式 等) を扱う。</summary>
+    LightGlr,
+}
+
 /// <summary>文法の開始記号 (ルート非終端) のクラスに付ける。Generator の抽出開始点。</summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class GrammarAttribute : Attribute
 {
-    /// <summary>複数フォーマット/方言時のモード名 (フェーズ7)。</summary>
+    /// <summary>複数フォーマット/方言時のモード名。</summary>
     public string? Mode { get; set; }
+    /// <summary>パーサの実行モード。既定は <see cref="ParseMode.Lalr"/> (確定 LALR(1))。
+    /// <see cref="ParseMode.LightGlr"/> は軽量 GLR (コンフリクトを並行 fork で解決)。</summary>
+    public ParseMode ParseMode { get; set; } = ParseMode.Lalr;
 }
 
 /// <summary>スキップパターン (空白・コメント等)。クラスまたはアセンブリに付ける。</summary>

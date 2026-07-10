@@ -5,12 +5,23 @@ using Microsoft.CodeAnalysis;
 
 namespace AstFirst.Generator;
 
+/// <summary>パーザの実行モード (Generator 用。Runtime の <c>AstFirst.ParseMode</c> と値が一致。
+/// Generator は Runtime を直接参照しないためミラーリングする)。</summary>
+public enum ParseMode
+{
+    /// <summary>LALR(1) 確定パーサ (既定)。</summary>
+    Lalr,
+    /// <summary>軽量 GLR: コンフリクトセルで並行 fork し、収束でマージ。</summary>
+    LightGlr,
+}
+
 /// <summary>DSL から抽出した文法モデル。等価比較可能 (IncrementalGenerator のキャッシュ判定用)。
 /// シンボル/構文ノードは一切持たず、文字列/整数/bool のみ。</summary>
 public sealed class GrammarModel : IEquatable<GrammarModel>
 {
     public string RootTypeFullName { get; }
     public string? Mode { get; }                     // [Grammar(Mode=...)] の Mode
+    public ParseMode ParseMode { get; }              // [Grammar(ParseMode=...)] の ParseMode (既定 Lalr)
     public IReadOnlyList<NodeModel> Nodes { get; }
     public IReadOnlyList<TokenDefModel> TokenDefs { get; }
     public IReadOnlyList<string> SkipPatterns { get; }
@@ -24,7 +35,8 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
 
     public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs,
         IReadOnlyList<string>? skipPatterns = null, string? mode = null, Location? rootLocation = null,
-        IReadOnlyList<string>? tokenDerivedWarnings = null, IReadOnlyList<AnalyzeRuleModel>? analyzeRules = null)
+        IReadOnlyList<string>? tokenDerivedWarnings = null, IReadOnlyList<AnalyzeRuleModel>? analyzeRules = null,
+        ParseMode parseMode = ParseMode.Lalr)
     {
         RootTypeFullName = rootTypeFullName;
         Nodes = nodes;
@@ -34,12 +46,13 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
         RootLocation = rootLocation;
         TokenDerivedWarnings = tokenDerivedWarnings ?? Array.Empty<string>();
         AnalyzeRules = analyzeRules ?? Array.Empty<AnalyzeRuleModel>();
+        ParseMode = parseMode;
     }
 
     public bool Equals(GrammarModel? other) =>
         other is not null && RootTypeFullName == other.RootTypeFullName
         && SeqEqual(Nodes, other.Nodes) && SeqEqual(TokenDefs, other.TokenDefs)
-        && SeqEqual(AnalyzeRules, other.AnalyzeRules);
+        && SeqEqual(AnalyzeRules, other.AnalyzeRules) && ParseMode == other.ParseMode;
 
     /// <summary>いずれかのノードが IOnSecondPassEnter/Exit を実装するか、[Enter]/[Exit] ルールがあるか。
     /// いずれもなければ Walker/Walk を生成しない (空走査回避・ゼロコスト)。</summary>
@@ -61,6 +74,7 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
         int h = StringComparer.Ordinal.GetHashCode(RootTypeFullName);
         for (int i = 0; i < Nodes.Count; i++) h = unchecked(h * 31 + Nodes[i].GetHashCode());
         for (int i = 0; i < AnalyzeRules.Count; i++) h = unchecked(h * 31 + AnalyzeRules[i].GetHashCode());
+        h = unchecked(h * 31 + (int)ParseMode);
         return h;
     }
 
