@@ -1,16 +1,16 @@
 <Project>
   <PropertyGroup>
-    <Version>0.2.2</Version>
+    <Version>0.3.0</Version>
     <Authors>actbit</Authors>
     <PackageProjectUrl>https://github.com/actbit/AstFirst</PackageProjectUrl>
     <RepositoryUrl>https://github.com/actbit/AstFirst</RepositoryUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Copyright>Copyright (c) actbit</Copyright>
     <IsPackable>false</IsPackable>
-    <!-- NuGet README: ローカルは README.en.md (相対リンクのまま)。
+    <!-- NuGet README: ローカルは README.md (相対リンクのまま)。
          CI で -p:PackageReadmePath=<変換済み絶対URL版> を上書きする。 -->
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReadmePath>$(MSBuildThisFileDirectory)README.en.md</PackageReadmePath>
+    <PackageReadmePath>$(MSBuildThisFileDirectory)README.md</PackageReadmePath>
   </PropertyGroup>
 
   <!-- パッケージ化するプロジェクト (IsPackable=true) のみ、README を README.md として格納。 -->

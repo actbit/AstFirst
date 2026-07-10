@@ -70,6 +70,14 @@ public static class ParserEmitter
         if (ns.Length > 0) { sb.AppendLine("namespace " + ns + ";"); sb.AppendLine(); }
         sb.AppendLine("public static class " + parserName);
         sb.AppendLine("{");
+        // 2パス目 (Walker) を使う文法でのみ、既定 Walker インスタンスを保持 (ゼロコスト)。
+        if (model.HasSecondPass)
+        {
+            var walkerSuffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+            var (_, rootType) = CodeEmitter.SplitFullName(model.RootTypeFullName);
+            var walkerName = rootType + walkerSuffix + "Walker";
+            sb.AppendLine("    private static readonly " + walkerName + " __defaultWalker = new " + walkerName + "._Default();");
+        }
 
         EmitMatrixByte(sb, "ActionKind", table, stateCount, symbolCount, s => c => ActionKindByte(table.Action(s, c)));
         EmitMatrixIntRaw(sb, "ActionValue", stateCount, symbolCount, s => c => table.Action(s, c).Value);
@@ -217,10 +225,10 @@ public static class ParserEmitter
         sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
-        // 2パス目: IOnSecondPassEnter/Exit を実装するノードが1つでもあれば WalkSecondPass を生成・呼出。
+        // 2パス目: IOnSecondPassEnter/Exit を実装するノードが1つでもあれば Walker を生成・呼出。
         // 未実装文法では走査ごと省略 (空呼びによる Parse 時間の無駄を回避)。
         if (model.HasSecondPass)
-            sb.AppendLine("        if (result is AstFirst.AstNode root) WalkSecondPass(root, ctx);");
+            sb.AppendLine("        if (result is AstFirst.AstNode root) __defaultWalker.Walk(root, ctx);");
         sb.AppendLine("        return new AstFirst.ParseResult(result, errors, ctx.Diagnostics.Items);");
         sb.AppendLine("    }");
     }
@@ -331,59 +339,6 @@ public static class ParserEmitter
         sb.AppendLine("            default: return null;");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
-
-        // WalkSecondPass / GetChildren は IOnSecondPassEnter/Exit を実装するノードが1つでもある場合のみ生成。
-        if (model.HasSecondPass)
-        {
-        // WalkSecondPass: AST をトップダウンで IOnSecondPassEnter/Exit 呼出。
-        // 反復的 (明示的スタック) 実装: 深い/広い AST でも再帰によるスタックオーバーフローを起こさない。
-        // Enter→子(逆順push)→Exit の順序を保つため、(node, isExit) を積む。
-        sb.AppendLine("    private static void WalkSecondPass(AstFirst.AstNode root, AstFirst.SemanticContext ctx)");
-        sb.AppendLine("    {");
-        sb.AppendLine("        if (root is null) return;");
-        sb.AppendLine("        var stack = new System.Collections.Generic.Stack<(AstFirst.AstNode node, bool isExit)>();");
-        sb.AppendLine("        stack.Push((root, false));");
-        sb.AppendLine("        while (stack.Count > 0)");
-        sb.AppendLine("        {");
-        sb.AppendLine("            var (node, isExit) = stack.Pop();");
-        sb.AppendLine("            if (isExit)");
-        sb.AppendLine("            {");
-        sb.AppendLine("                if (node is AstFirst.IOnSecondPassExit ex) ex.OnSecondPassExit(ctx);");
-        sb.AppendLine("                continue;");
-        sb.AppendLine("            }");
-        sb.AppendLine("            if (node is AstFirst.IOnSecondPassEnter en) en.OnSecondPassEnter(ctx);");
-        sb.AppendLine("            stack.Push((node, true)); // Exit 用");
-        sb.AppendLine("            // 子を逆順で積む (pop 順 = 元の順序を維持)");
-        sb.AppendLine("            var children = GetChildren(node);");
-        sb.AppendLine("            for (int i = children.Count - 1; i >= 0; i--) stack.Push((children[i], false));");
-        sb.AppendLine("        }");
-        sb.AppendLine("    }");
-        sb.AppendLine();
-        // GetChildren: ノードの子を List で返す (switch で型ごとにプロパティから収集)。
-        sb.AppendLine("    private static System.Collections.Generic.List<AstFirst.AstNode> GetChildren(AstFirst.AstNode node)");
-        sb.AppendLine("    {");
-        sb.AppendLine("        var children = new System.Collections.Generic.List<AstFirst.AstNode>();");
-        sb.AppendLine("        switch (node)");
-        sb.AppendLine("        {");
-        foreach (var n in model.Nodes)
-        {
-            if (n.IsAbstract) continue;
-            sb.AppendLine("            case " + n.FullName + " __n:");
-            foreach (var c in n.Children)
-            {
-                if (c.IsRepeat)
-                    sb.AppendLine("                foreach (var __c in __n." + c.PropertyName + ") children.Add(__c);");
-                else if (c.IsNullable)
-                    sb.AppendLine("                if (__n." + c.PropertyName + " is not null) children.Add(__n." + c.PropertyName + ");");
-                else
-                    sb.AppendLine("                children.Add(__n." + c.PropertyName + ");");
-            }
-            sb.AppendLine("                break;");
-        }
-        sb.AppendLine("        }");
-        sb.AppendLine("        return children;");
-        sb.AppendLine("    }");
-        }
 
         sb.AppendLine("    private static AstFirst.Token ToToken(AstFirst.Core.Lexing.LexToken t)");
         sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
@@ -502,6 +457,14 @@ public static class ParserEmitter
                 sb.AppendLine("        if (__autoSpanHas) Span = __autoSpan;");
             }
             sb.AppendLine("        OnReduce(" + ctxCall + ");");
+            // [OnReduce] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド)。partial OnReduce の直後に呼ぶ (共存)。
+            foreach (var ar in model.AnalyzeRules)
+            {
+                if (ar.Phase != AnalyzePhase.OnReduce) continue;
+                if (ar.TargetNodeFullName != node.FullName) continue;
+                if (ctxCall.Length == 0) continue; // ctx なしノードには注入不可
+                sb.AppendLine("        " + ar.GrammarClassFullName + "." + ar.MethodName + "(this, (" + ar.CtxTypeFullName + ")" + ctxCall + ");");
+            }
             sb.AppendLine("    }");
         }
         sb.AppendLine("}");

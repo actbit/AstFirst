@@ -154,11 +154,12 @@ Special parameter types of a `[Rule]` method:
 
 - **`OnReduce(ctx)`**: a partial method called when a rule is reduced (bottom-up). Child properties and `Span` (auto-computed from children) are already set. Use `this.RuleName` to branch on the rule, override `Span`, etc.
 - **Accept/Reject**: override `IsAccepted` to return `false` to reject a reduce and try fallback candidates. See the [README](../../README.en.md) "Accept/Reject and fallback" section.
-- **`OnSecondPass`**: the second-pass traversal (top-down). For nodes implementing `IOnSecondPassEnter`/`IOnSecondPassExit`, the generator calls `OnSecondPassEnter` (before children) → recurse children → `OnSecondPassExit` (after children). See the [semantic analysis guide](semantic-analysis.md).
+- **`OnSecondPass`**: the second-pass traversal (top-down). For nodes implementing `IOnSecondPassEnter`/`IOnSecondPassExit`, the generator calls `OnSecondPassEnter` (before children) → recurse children → `OnSecondPassExit` (after children).
+- **`[OnReduce]` / `[Enter]` / `[Exit]` attributes**: attach to a `static` method on the `[Grammar]` root class and the generator dispatches it from the Walker / constructor (the ctx cast is injected automatically). `[OnReduce]` runs at reduce; `[Enter]`/`[Exit]` run in the second pass. See the [semantic analysis guide](semantic-analysis.md).
 
 ## Dialects (Mode)
 
-`[Grammar(Mode = "...")]` emits multiple Parsers/Listeners from the same root (format/dialect switching). Generated class names are `<Root>_<Mode>Parser`, etc.
+`[Grammar(Mode = "...")]` emits multiple Lexers/Parsers/Walkers from the same root (format/dialect switching). Generated class names are `<Root>_<Mode>Lexer` / `<Root>_<Mode>Parser` / `<Root>_<Mode>Walker`, etc.
 
 ## Regular expressions
 

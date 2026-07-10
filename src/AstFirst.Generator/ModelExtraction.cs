@@ -36,7 +36,7 @@ public static class ModelExtraction
 
         foreach (var type in GetAllTypes(compilation.Assembly.GlobalNamespace))
         {
-            if (type.TypeKind != TypeKind.Class) continue;
+            if (type.TypeKind != Microsoft.CodeAnalysis.TypeKind.Class) continue;
             if (type.DeclaredAccessibility != Accessibility.Public) continue;
             // rootType と同じ名前空間の型のみ収集 (別文法の混入を防ぎ、到達不能/未定義検知の誤検知を避ける)。
             if (!SymbolEqualityComparer.Default.Equals(type.ContainingNamespace, rootType.ContainingNamespace)) continue;
@@ -75,7 +75,37 @@ public static class ModelExtraction
                 foreach (var na in a.NamedArguments)
                     if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
 
-        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings);
+        // [OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド) を収集。
+        var analyzeRules = ExtractAnalyzeRules(rootType, astNodeBase, contextBase);
+
+        return new GrammarModel(rootType.ToDisplayString(), nodes, Dedup(tokenDefs), skipPatterns, mode, rootLocation, tokenDerivedWarnings, analyzeRules);
+    }
+
+    /// <summary>[OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド) を収集。
+    /// 第1引数=対象 AstNode 派生型、第2引数=ctx。不正シグネチャは無視。</summary>
+    private static List<AnalyzeRuleModel> ExtractAnalyzeRules(INamedTypeSymbol rootType, INamedTypeSymbol? astNodeBase, INamedTypeSymbol? contextBase)
+    {
+        var rules = new List<AnalyzeRuleModel>();
+        var rootFullName = rootType.ToDisplayString();
+        foreach (var member in rootType.GetMembers())
+        {
+            if (member is not IMethodSymbol method) continue;
+            if (!method.IsStatic) continue;
+            AnalyzePhase phase;
+            if (HasAttribute(method, "EnterAttribute")) phase = AnalyzePhase.Enter;
+            else if (HasAttribute(method, "ExitAttribute")) phase = AnalyzePhase.Exit;
+            else if (HasAttribute(method, "OnReduceAttribute")) phase = AnalyzePhase.OnReduce;
+            else continue;
+            var ps = method.Parameters;
+            // 第1引数 = AstNode 派生の対象ノード。
+            if (ps.Length < 1 || astNodeBase is null || !InheritsFromOrEquals(ps[0].Type, astNodeBase)) continue;
+            string targetNode = ps[0].Type.ToDisplayString();
+            string ctxType = SemanticContextFullName;
+            if (ps.Length >= 2 && contextBase is not null && InheritsFromOrEquals(ps[1].Type, contextBase))
+                ctxType = ps[1].Type.ToDisplayString();
+            rules.Add(new AnalyzeRuleModel(phase, targetNode, method.Name, ctxType, rootFullName));
+        }
+        return rules;
     }
 
     /// <summary>[Rule] 属性付き static メソッドを抽出して NodeModel を構築。</summary>
@@ -150,7 +180,7 @@ public static class ModelExtraction
         foreach (var p in parameters)
         {
             var isContext = contextBase is not null && InheritsFromOrEquals(p.Type, contextBase);
-            var isChild = astNodeBase is not null && p.Type.TypeKind == TypeKind.Class && InheritsFromOrEquals(p.Type, astNodeBase);
+            var isChild = astNodeBase is not null && p.Type.TypeKind == Microsoft.CodeAnalysis.TypeKind.Class && InheritsFromOrEquals(p.Type, astNodeBase);
             var isToken = tokenBase is not null && InheritsFrom(p.Type, tokenBase);
             int repeatMin = HasAttribute(p, "RepeatAttribute") ? GetRepeatMin(p) : -1;
             var (pattern, priority) = GetPattern(p);
@@ -159,7 +189,7 @@ public static class ModelExtraction
     }
 
     /// <summary>[Token]/[Pattern] から (Regex, Priority) を取得。未設定なら (null,0)。</summary>
-    private static (string? regex, int priority) GetPattern(ISymbol symbol)
+    private static (string? regex, int priority) GetPattern(Microsoft.CodeAnalysis.ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
@@ -176,7 +206,7 @@ public static class ModelExtraction
     }
 
     /// <summary>[Repeat] の Min (0=Star=0回以上、1=Plus=1回以上)。既定は 1 (Plus)。</summary>
-    private static int GetRepeatMin(ISymbol symbol)
+    private static int GetRepeatMin(Microsoft.CodeAnalysis.ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
@@ -189,7 +219,7 @@ public static class ModelExtraction
         return 1;
     }
 
-    /// <summary>[Rule] の引数から AstNode 派生の子を収集 (partial プロパティ + Listener 用)。</summary>
+    /// <summary>[Rule] の引数から AstNode 派生の子を収集 (partial プロパティ + Walker 用)。</summary>
     private static IReadOnlyList<ChildModel> ExtractChildrenFromRules(IReadOnlyList<RuleModel> rules)
     {
         var children = new List<ChildModel>();
@@ -223,7 +253,7 @@ public static class ModelExtraction
             }
     }
 
-    private static bool HasAttribute(ISymbol symbol, string attrName)
+    private static bool HasAttribute(Microsoft.CodeAnalysis.ISymbol symbol, string attrName)
     {
         foreach (var a in symbol.GetAttributes())
             if (a.AttributeClass?.Name == attrName) return true;

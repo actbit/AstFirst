@@ -16,6 +16,7 @@
     <PackageId>AstFirst</PackageId>
     <Title>AstFirst</Title>
     <Description>Parser generator: write grammar in plain C# classes and attributes; a Source Generator emits a Lexer, an LALR(1) Parser, partial AST nodes, and an OnSecondPass traversal at compile time.</Description>
+    <PackageTags>parser-generator;source-generator;ast;lalr;compiler;csharp</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

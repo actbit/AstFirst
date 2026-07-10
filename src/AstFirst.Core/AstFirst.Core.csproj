@@ -8,6 +8,7 @@
     <IsPackable>true</IsPackable>
     <PackageId>AstFirst.Core</PackageId>
     <Description>AstFirst core: pure lexer (DFA) and LALR(1) parsing logic. No Roslyn dependency.</Description>
+    <PackageTags>parser-generator;lalr;lexer;dfa;automata</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
