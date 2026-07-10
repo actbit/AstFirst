@@ -9,6 +9,7 @@
     <PackageId>AstFirst.Runtime</PackageId>
     <Title>AstFirst.Runtime</Title>
     <Description>AstFirst runtime: grammar attributes ([Grammar]/[Pattern]/[Precedence]/[Skip]), AstNode, Token, ParseResult, and semantic-analysis helpers.</Description>
+    <PackageTags>parser-generator;ast;semantic-analysis;type-system;symbols</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

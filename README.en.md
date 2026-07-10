@@ -1,8 +1,25 @@
 # AstFirst
 
-[日本語](README.md) / English
+[![NuGet](https://img.shields.io/nuget/v/AstFirst.svg)](https://www.nuget.org/packages/AstFirst)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/actbit/AstFirst/blob/master/LICENSE)
 
-A parser generator where you write the grammar in **plain C# classes and attributes**, and a Source Generator emits a Lexer and an LALR(1) Parser at compile time. The generated Parser returns an AST you can layer semantic analysis on (scoped symbol table, two-pass walk, type checking, and `Accept`/`Reject` to resolve semantic ambiguity).
+[日本語](README.ja.md) / English
+
+A parser generator where you write the grammar in **plain C# classes and attributes**, and a Source Generator emits a Lexer and an LALR(1) Parser at compile time. The generated Parser returns an AST you can layer semantic analysis on (scoped symbol table, two-pass Walker, type checking, and `Accept`/`Reject` to resolve semantic ambiguity).
+
+## How it compares
+
+AstFirst sits in the same space as parser generators and combinator libraries, but trades differently:
+
+| | AstFirst | ANTLR | Superpower / Pidgin | Roslyn `SyntaxGenerator` |
+|---|---|---|---|---|
+| Grammar defined in | plain C# classes + attributes | external `.g4` DSL | C# parser combinators | n/a — C#/VB syntax only |
+| Generated at | compile time (Source Generator) | build-time codegen | runtime (interpreted) | n/a |
+| Algorithm | LALR(1) table-driven | LL(\*) / ALL(\*) | recursive-descent combinators | n/a |
+| Target language | any DSL / language | any language | any language | C#/VB only |
+| Error recovery | panic mode | yes | limited | n/a |
+
+**Why it exists**: define a grammar in the same C# you already write (no separate `.g4` file, full IDE/refactoring support), generate a fast table-driven parser at compile time (no runtime codegen, AOT-friendly), and get back an AST with built-in semantic-analysis helpers (scoped symbol table, two-pass Walker, type system, `[Enter]`/`[Exit]`/`[OnReduce]` attribute rules). A small language or DSL becomes a single project, not a toolchain.
 
 ## Features
 
@@ -81,8 +98,10 @@ var result2 = ExprParser.Parse("1+");
 
 AstFirst provides standard helpers and a two-pass framework for semantic analysis on top of parsing. See [docs/en/semantic-analysis.md](docs/en/semantic-analysis.md) for details.
 
-- **First pass `OnReduce` (bottom-up)**: called at reduce time. `Accept()`/`Reject()` decides whether to accept this interpretation (default Accept). `Reject` falls back to the next candidate.
-- **Second pass `OnSecondPassEnter`/`Exit` (top-down)**: nodes implementing `IOnSecondPassEnter`/`IOnSecondPassExit` are called automatically from the AST root after `Parse` (Enter -> recurse children -> Exit). Accurate semantic analysis like scope Push/Pop fits here. Grammars with no implementations skip the traversal entirely (no overhead).
+- **Attribute-based rules `[OnReduce]` / `[Enter]` / `[Exit]` (recommended)**: write semantic rules as `static` methods on the `[Grammar]` root class. The generator dispatches them from the constructor / Walker and injects the `ctx` cast for you — no per-node boilerplate.
+- **First pass `OnReduce` (bottom-up)**: a partial method called at reduce time. `Accept()`/`Reject()` decides whether to accept this interpretation (default Accept). `Reject` falls back to the next candidate.
+- **Second pass `[Enter]`/`[Exit]` / `OnSecondPassEnter`/`Exit` (top-down)**: a generated generic Walker (`{Root}Walker`) drives `Enter -> children -> Exit` after `Parse`. Accurate semantic analysis like scope Push/Pop fits here. Grammars with no semantic hook skip the traversal entirely (no overhead, zero-cost).
+- **Type system**: `TypeSymbol` is inheritable with built-in `FunctionTypeSymbol`/`ArrayTypeSymbol` (variance + structural equality), plus implicit-conversion classification and `OverloadResolver`. `BasicSemanticContext` carries a `TypeContext` by default.
 - **Scoped symbol table** (`ScopedSymbolTable`) — lexical scope management
 - **Symbol resolution** (`ResolveOrError`) — detect undeclared references
 - **Type checking** (`TypeSymbol` / `TypeContext`) — represent and check types

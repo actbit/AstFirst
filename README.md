@@ -1,54 +1,71 @@
 # AstFirst
 
-日本語 / [English](README.en.md)
+[![NuGet](https://img.shields.io/nuget/v/AstFirst.svg)](https://www.nuget.org/packages/AstFirst)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/actbit/AstFirst/blob/master/LICENSE)
 
-C# の**クラスと属性**で文法を書くと、Source Generator がコンパイル時に Lexer と LALR(1) Parser を生成するパーサジェネレータ。生成された Parser は意味解析（スコープ付きシンボル表・2パス目ウォーク・型チェック・`Accept`/`Reject` による意味的曖昧性解決）を乗せられる AST を返す。
+[日本語](README.ja.md) / English
 
-## 特徴
+A parser generator where you write the grammar in **plain C# classes and attributes**, and a Source Generator emits a Lexer and an LALR(1) Parser at compile time. The generated Parser returns an AST you can layer semantic analysis on (scoped symbol table, two-pass Walker, type checking, and `Accept`/`Reject` to resolve semantic ambiguity).
 
-- **C# コードで文法定義**: クラスの継承ツリーで構文、`[Rule]` static メソッドの引数で右辺・字句ルール。特別な構文や DSL ファイルは不要。
-- **Source Generator (`IIncrementalGenerator`)**: コンパイル時に Lexer / Parser / partial プロパティ の C# コードを生成。実行時コード生成なし。
-- **正規表現ベースのレクサ**: 文字クラス圧縮、最長一致 + 優先度駆動、`{m,n}` 量指定子、Unicode 補助面に対応。トークンの**行・列**も計算。
-- **LALR(1) 構文解析**: 優先度/結合性 (`[Precedence]`) で shift-reduce 衝突を解決（`*` > `+`、代入の右結合等）。
-- **意味的曖昧性の解決 (Accept/Reject)**: reduce 時の `OnReduce` で `Reject()` すると、優先度順の別候補（別規則/shift）へフォールバック。cast vs 括弧式のような意味依存の曖昧性を構文解析で解決できる。
-- **AST 構築 + 子の自動保持 + Span 自動計算**: reduce 時に Generator 生成の partial コンストラクタが子・終端をプロパティへ自動セットし、子の `Span` をマージしてノードの `Span` を設定してから `OnReduce` を呼ぶ。子の手動代入も Span 設定も不要（`OnReduce` で上書き可）。
-- **2パス目の意味解析**: `Parse` 後に各ノードの `OnSecondPassEnter`/`OnSecondPassExit`（トップダウン）を自動呼出。スコープの Push/Pop 等の正確な意味解析が書ける。
-- **意味解析ヘルパー**: スコープ付きシンボル表 (`ScopedSymbolTable`)、シンボル解決 (`ResolveOrError`)、型チェック (`TypeSymbol`/`TypeContext`)、束縛解析 (`AstNode.SetAnnotation`)、診断 (`ParseResult.Diagnostics`)。
-- **エラー回復**: panic mode で構文エラー後も解析を継続し、`ParseResult` で AST + エラーリストを返す。
+## How it compares
 
-## クイックスタート
+AstFirst sits in the same space as parser generators and combinator libraries, but trades differently:
 
-### 1. 文法を書く
+| | AstFirst | ANTLR | Superpower / Pidgin | Roslyn `SyntaxGenerator` |
+|---|---|---|---|---|
+| Grammar defined in | plain C# classes + attributes | external `.g4` DSL | C# parser combinators | n/a — C#/VB syntax only |
+| Generated at | compile time (Source Generator) | build-time codegen | runtime (interpreted) | n/a |
+| Algorithm | LALR(1) table-driven | LL(\*) / ALL(\*) | recursive-descent combinators | n/a |
+| Target language | any DSL / language | any language | any language | C#/VB only |
+| Error recovery | panic mode | yes | limited | n/a |
+
+**Why it exists**: define a grammar in the same C# you already write (no separate `.g4` file, full IDE/refactoring support), generate a fast table-driven parser at compile time (no runtime codegen, AOT-friendly), and get back an AST with built-in semantic-analysis helpers (scoped symbol table, two-pass Walker, type system, `[Enter]`/`[Exit]`/`[OnReduce]` attribute rules). A small language or DSL becomes a single project, not a toolchain.
+
+## Features
+
+- **Grammar in C# code**: the inheritance tree expresses syntax; the parameters of a `[Rule]` static method express the RHS and lexical rules. No special DSL files.
+- **Source Generator (`IIncrementalGenerator`)**: emits Lexer / Parser / partial properties C# code at compile time. No runtime code generation.
+- **Regex-based lexer**: character-class compaction, longest-match + priority-driven, `{m,n}` quantifiers, Unicode supplementary planes. Computes **line/column** of each token.
+- **LALR(1) parsing**: resolves shift-reduce conflicts with precedence/associativity (`[Precedence]`) (e.g. `*` > `+`, right-associative assignment).
+- **Semantic ambiguity resolution (Accept/Reject)**: call `Reject()` in the reduce-time `OnReduce` to fall back to the next candidate (another rule / shift) in priority order. Resolves meaning-dependent ambiguity like cast vs. parenthesized expression during parsing.
+- **AST construction + automatic child retention + automatic Span**: at reduce time a generator-emitted partial constructor sets children/terminals into properties automatically, merges their `Span`s into the node's `Span`, and then calls `OnReduce`. No manual child assignment or Span setup (overridable in `OnReduce`).
+- **Two-pass semantic analysis**: after `Parse`, each node's `OnSecondPassEnter`/`OnSecondPassExit` (top-down) is called automatically. Accurate semantic analysis like scope Push/Pop is straightforward.
+- **Semantic analysis helpers**: scoped symbol table (`ScopedSymbolTable`), symbol resolution (`ResolveOrError`), type checking (`TypeSymbol`/`TypeContext`), binding (`AstNode.SetAnnotation`), diagnostics (`ParseResult.Diagnostics`).
+- **Error recovery**: continues after syntax errors via panic mode; `ParseResult` carries the AST + error list.
+
+## Quick start
+
+### 1. Write the grammar
 
 ```csharp
 using AstFirst;
 
-[Grammar]                              // 開始記号
-[Skip(@"\s+")]                         // 空白をスキップ
+[Grammar]                              // start symbol
+[Skip(@"\s+")]                         // skip whitespace
 public abstract partial class Expr : AstNode { }
 
-public sealed partial class NumExpr : Expr     // 規則: Expr -> [0-9]+
+public sealed partial class NumExpr : Expr     // rule: Expr -> [0-9]+
 {
     public int Value { get; private set; }
     [Rule]
-    public static void NumToken([Token(@"[0-9]+")] Token num) { }   // 右辺 = 引数
-    partial void OnReduce()                    // reduce 時・ボトムアップ
+    public static void NumToken([Token(@"[0-9]+")] Token num) { }   // RHS = parameters
+    partial void OnReduce()                    // at reduce, bottom-up
     {
         Value = int.Parse(Num.Text);
-        Span = Num.Span;                       // 任意: Span は子から自動計算済み、ここで上書きも可
+        Span = Num.Span;                       // optional: Span is auto-computed from children; this overrides it
     }
 }
 
-[Precedence(1)]                        // 優先度1・左結合(既定)
-public sealed partial class AddExpr : Expr     // 規則: Expr -> Expr + Expr
+[Precedence(1)]                        // priority 1, left-assoc (default)
+public sealed partial class AddExpr : Expr     // rule: Expr -> Expr + Expr
 {
     [Rule]
     public static void Add(Expr left, [Token(@"\+")] Token op, Expr right) { }
     partial void OnReduce() => Span = SourceSpan.Merge(Left.Span, Right.Span);
 }
 
-[Precedence(2)]                        // 優先度2(高い)・左結合
-public sealed partial class MulExpr : Expr     // 規則: Expr -> Expr * Expr
+[Precedence(2)]                        // priority 2 (higher), left-assoc
+public sealed partial class MulExpr : Expr     // rule: Expr -> Expr * Expr
 {
     [Rule]
     public static void Mul(Expr left, [Token(@"\*")] Token op, Expr right) { }
@@ -56,42 +73,44 @@ public sealed partial class MulExpr : Expr     // 規則: Expr -> Expr * Expr
 }
 ```
 
-- `[Rule]` static メソッド（1クラス1つ・void・空本体）の**引数**が右辺。`Token` + `[Token]`/`[Pattern]` は終端、`AstNode` 派生は子、`SemanticContext` 派生は ctx（パーサが注入）。
-- `partial` 宣言必須。Generator が子・終端のプロパティ（引数名の PascalCase、例: `Num`/`Left`/`Right`）と partial コンストラクタを生成し、`OnReduce` を呼ぶ。
-- 各ノードの `Span` は reduce 時に子の `Span` から自動計算されるため、上記 `OnReduce` での `Span = ...` は省略可能（明示的に上書きしたい場合のみ）。
+- The **parameters** of the `[Rule]` static method (one per class, void, empty body) are the RHS. `Token` + `[Token]`/`[Pattern]` is a terminal; an `AstNode`-derived type is a child; a `SemanticContext`-derived type is the ctx (injected by the parser).
+- `partial` is required. The generator emits child/terminal properties (PascalCase of the parameter name, e.g. `Num`/`Left`/`Right`) and a partial constructor, and calls `OnReduce`.
+- Each node's `Span` is auto-computed at reduce by merging the children's `Span`s, so the `Span = ...` lines in `OnReduce` above are optional (only to override).
 
-### 2. Generator が Lexer / Parser / partial を生成
+### 2. Generator emits Lexer / Parser / partials
 
-コンパイル時に `ExprLexer` / `ExprParser` と各ノードの partial プロパティ・コンストラクタが自動生成される。
+`ExprLexer` / `ExprParser` and each node's partial properties/constructor are generated automatically at compile time.
 
-### 3. 呼ぶだけ
+### 3. Just call it
 
 ```csharp
 var result = ExprParser.Parse("1+2*3");
-// result.Ast      → AddExpr(NumExpr(1), +, MulExpr(NumExpr(2), *, NumExpr(3)))
-//                  (* が + より優先度が高いので先に結合)
-// result.Errors   → [] (構文エラーなし)
-// result.HasErrors → false
+// result.Ast      -> AddExpr(NumExpr(1), +, MulExpr(NumExpr(2), *, NumExpr(3)))
+//                  (* binds tighter than +)
+// result.Errors   -> [] (no syntax errors)
+// result.HasErrors -> false
 
 var result2 = ExprParser.Parse("1+");
-// result2.HasErrors → true (panic mode で回復)
+// result2.HasErrors -> true (recovered via panic mode)
 ```
 
-## 意味解析
+## Semantic analysis
 
-AstFirst は構文解析（AST 構築）に加え、意味解析のための標準ヘルパーと 2パスの枠組みを提供する。詳細は [docs/ja/semantic-analysis.md](docs/ja/semantic-analysis.md)。
+AstFirst provides standard helpers and a two-pass framework for semantic analysis on top of parsing. See [docs/en/semantic-analysis.md](docs/en/semantic-analysis.md) for details.
 
-- **1パス目 `OnReduce` (ボトムアップ)**: reduce 時に呼ばれる。`Accept()`/`Reject()` でこの構文を受け入れるか判定（既定 Accept）。`Reject` すると別候補へフォールバック。
-- **2パス目 `OnSecondPassEnter`/`Exit` (トップダウン)**: `IOnSecondPassEnter`/`IOnSecondPassExit` インターフェースを実装したノードで、`Parse` 後に AST ルートから順に自動呼出（Enter → 子再帰 → Exit）。スコープ Push/Pop 等の正確な意味解析が書ける。未実装文法では走査を省略しオーバーヘッドなし。
-- **スコープ付きシンボル表** (`ScopedSymbolTable`) — レキシカルスコープの管理
-- **シンボル解決** (`ResolveOrError`) — 未宣言参照の検出
-- **型チェック** (`TypeSymbol` / `TypeContext`) — 型の表現と検査
-- **束縛解析** (`AstNode.SetAnnotation`) — ノードにシンボル/型を紐付け
-- **診断** (`ParseResult.Diagnostics`) — 意味解析の診断を取り出す
+- **Attribute-based rules `[OnReduce]` / `[Enter]` / `[Exit]` (recommended)**: write semantic rules as `static` methods on the `[Grammar]` root class. The generator dispatches them from the constructor / Walker and injects the `ctx` cast for you — no per-node boilerplate.
+- **First pass `OnReduce` (bottom-up)**: a partial method called at reduce time. `Accept()`/`Reject()` decides whether to accept this interpretation (default Accept). `Reject` falls back to the next candidate.
+- **Second pass `[Enter]`/`[Exit]` / `OnSecondPassEnter`/`Exit` (top-down)**: a generated generic Walker (`{Root}Walker`) drives `Enter -> children -> Exit` after `Parse`. Accurate semantic analysis like scope Push/Pop fits here. Grammars with no semantic hook skip the traversal entirely (no overhead, zero-cost).
+- **Type system**: `TypeSymbol` is inheritable with built-in `FunctionTypeSymbol`/`ArrayTypeSymbol` (variance + structural equality), plus implicit-conversion classification and `OverloadResolver`. `BasicSemanticContext` carries a `TypeContext` by default.
+- **Scoped symbol table** (`ScopedSymbolTable`) — lexical scope management
+- **Symbol resolution** (`ResolveOrError`) — detect undeclared references
+- **Type checking** (`TypeSymbol` / `TypeContext`) — represent and check types
+- **Binding** (`AstNode.SetAnnotation`) — attach resolved symbols/types to nodes
+- **Diagnostics** (`ParseResult.Diagnostics`) — retrieve semantic diagnostics
 
-### Accept/Reject とフォールバック
+### Accept/Reject and fallback
 
-reduce 時の `OnReduce` で `Reject()` を呼ぶと、その解釈を破棄して**優先度順の別候補**（別規則/shift）へフォールバックする。これにより、cast `(Type)e` vs 括弧式 `(e)` のような**意味依存の曖昧性**を構文解析で解決できる。
+Calling `Reject()` in the reduce-time `OnReduce` discards that interpretation and falls back to the **next candidate in priority order** (another rule / shift). This resolves **meaning-dependent ambiguity** like cast `(Type)e` vs. parenthesized expression `(e)` during parsing.
 
 ```csharp
 public sealed partial class CastExpr : Expr
@@ -99,18 +118,18 @@ public sealed partial class CastExpr : Expr
     [Rule] public static void Cast(Type t, [Token(@"\)")] Token rp, Expr e, SemanticContext ctx) { }
     partial void OnReduce(SemanticContext ctx)
     {
-        // Type が既知の型でなければ Reject → 括弧式の規則へフォールバック
+        // If Type is not a known type, Reject -> fall back to the parenthesized-expression rule
         if (!IsKnownType(T.Name)) Reject();
     }
 }
 ```
 
-### 2パス目（OnSecondPass）
+### Second pass (OnSecondPass)
 
-`IOnSecondPassEnter` / `IOnSecondPassExit` インターフェースを実装したノードで、`Parse` 後にトップダウン（子の前/後）で自動呼出される。ブロックスコープの Push/Pop に適する。**1つも実装しない文法では AST 走査ごと省略**され、Parse のオーバーヘッドが発生しない。
+Implement `IOnSecondPassEnter` / `IOnSecondPassExit` on a node; they are called automatically top-down (before/after children) after `Parse`. Ideal for block-scope Push/Pop. **Grammars with no implementations skip the traversal entirely**, so there is no Parse overhead.
 
 ```csharp
-// MiniC: BlockStmt でスコープを開閉
+// MiniC: open/close a scope on BlockStmt
 public sealed partial class BlockStmt : Stmt, IOnSecondPassEnter, IOnSecondPassExit
 {
     [Rule] public static void Block([Token(@"\{")] Token lb, Program body, [Token(@"\}")] Token rb, MiniCContext ctx) { }
@@ -119,50 +138,50 @@ public sealed partial class BlockStmt : Stmt, IOnSecondPassEnter, IOnSecondPassE
 }
 ```
 
-### スコープ付きシンボル表
+### Scoped symbol table
 
-`ScopedSymbolTable` はレキシカルスコープのスタック。宣言位置 (`SourceSpan`) を記録し、内側スコープ優先で名前を解決する。
+`ScopedSymbolTable` is a stack of lexical scopes. It records declaration spans and resolves names innermost-first.
 
-- `PushScope(key, kind)` / `PopScope(key)` — スコープの開閉（キー付き）。引数なし版も後方互換で残存。
-- `Lookup(name)` — 現在のスコープから外側へ（未宣言は `null`）
-- `TryDeclare(name, span, value, out existing)` — 宣言。同一スコープ重複は拒否、外側同名（シャドウイング）は許可
-- `ResolveOrError(name, span, bag)` — 解決し、未宣言なら `bag` に Error を追加して `null`
+- `PushScope(key, kind)` / `PopScope(key)` — open/close a scope (keyed). Argument-less variants remain for back-compat.
+- `Lookup(name)` — from current scope outward (null if undeclared)
+- `TryDeclare(name, span, value, out existing)` — declare; rejects same-scope duplicates, allows shadowing of outer
+- `ResolveOrError(name, span, bag)` — resolve, or add an Error to `bag` and return null
 
-### 型チェック
+### Type checking
 
-`TypeSymbol`（型の表現、継承・`IsAssignableFrom`）と `TypeContext`（ノード → 型）。言語非依存の枠組みで、具象型はユーザーが定義する。
+`TypeSymbol` (type representation, inheritance / `IsAssignableFrom`) and `TypeContext` (node -> type). A language-agnostic skeleton; you define concrete types.
 
 ```csharp
 var Int = new TypeSymbol("int");
 var Bool = new TypeSymbol("bool");
-// OnSecondPassExit で式の型を伝播
+// Propagate expression types on OnSecondPassExit
 ctx.Types.SetType(node, Int);
-// 条件の型チェック
+// Check a condition's type
 if (ctx.Types.TypeOf(cond) is { } t && !Bool.IsAssignableFrom(t))
-    ctx.Diagnostics.Error("if の条件は bool が必要です", cond.Span);
+    ctx.Diagnostics.Error("if condition must be bool", cond.Span);
 ```
 
-### 束縛解析
+### Binding
 
-`AstNode.SetAnnotation/GetAnnotation<T>` で、解決したシンボルや型をノードに紐付ける。
+`AstNode.SetAnnotation/GetAnnotation<T>` attach a resolved symbol or type to a node.
 
 ```csharp
 node.SetAnnotation("symbol", resolvedSymbol);
 var sym = node.GetAnnotation<SymbolEntry>("symbol");
 ```
 
-### 診断の取得
+### Retrieving diagnostics
 
-意味解析の診断（`OnReduce`/`OnSecondPass` で `ctx.Diagnostics` に追加したもの）は `ParseResult.Diagnostics` から取り出せる。
+Semantic diagnostics (added to `ctx.Diagnostics` in `OnReduce`/`OnSecondPass`) are available via `ParseResult.Diagnostics`.
 
 ```csharp
 var result = ProgramParser.Parse(code, new MiniCContext());
-// result.Errors      → 構文エラー (ParseError)
-// result.Diagnostics → 意味解析の診断 (Diagnostic)
-// result.HasErrors   → 構文エラーまたは意味解析の Error が1つでもあれば true
+// result.Errors      -> syntax errors (ParseError)
+// result.Diagnostics -> semantic diagnostics (Diagnostic)
+// result.HasErrors   -> true if any syntax error or semantic Error
 ```
 
-### 独自コンテキストの注入
+### Injecting a custom context
 
 ```csharp
 public sealed class MiniCContext : BasicSemanticContext
@@ -172,176 +191,127 @@ public sealed class MiniCContext : BasicSemanticContext
 var result = ProgramParser.Parse(code, new MiniCContext());
 ```
 
-`Parse(string)` は `Parse(string, SemanticContext?)` に転送し、省略時は `BasicSemanticContext` を使う。`BasicSemanticContext` から派生して独自の状態（型コンテキスト等）を追加できる。
+`Parse(string)` forwards to `Parse(string, SemanticContext?)` and uses `BasicSemanticContext` when omitted. Derive from `BasicSemanticContext` to add your own state (e.g. a type context).
 
-### 位置情報（行・列）
+### Source positions (line/column)
 
-`SourceSpan` は行・列（1 ベース）を正確に持つ。Lexer がトークン化と同時に行・列を計算し、`Token.Span` から reduce 時に子の `Span` を自動マージして AST ノードの `Span` に設定する。診断メッセージにも正確な位置が出る。
+`SourceSpan` carries accurate 1-based line/column. The lexer computes line/column while tokenizing; the generator merges the children's `Span`s at reduce to set each AST node's `Span`. Diagnostics report accurate positions.
 
-### 例: MiniC の意味解析
+### Example: MiniC semantic analysis
 
-`samples/MiniC/SemanticAnalyzer.cs`（静的ヘルパ）と各ノードの `OnSecondPass` で、スコープ管理・シンボル解決・型チェック（int/bool）を行う。`dotnet run --project samples/MiniC` で実演。
+`samples/MiniC/SemanticAnalyzer.cs` (a static helper) plus each node's `OnSecondPass` perform scope management, symbol resolution, and type checking (int/bool). Run with `dotnet run --project samples/MiniC`.
 
 ```
---- 未宣言参照 ---
-  意味解析の診断:
-    Error: 'x' は宣言されていません @ (1,7)-(1,8)
+--- Undeclared reference ---
+  Semantic diagnostics:
+    Error: 'x' is not declared @ (1,7)-(1,8)
 
---- 型エラー: if の条件が int ---
-  意味解析の診断:
-    Error: if の条件は bool が必要です (実際: int) @ (1,5)-(1,6)
+--- Type error: if condition is int ---
+  Semantic diagnostics:
+    Error: if condition must be bool (got: int) @ (1,5)-(1,6)
 
---- シャドウイング (許容) ---
-  意味解析: 診断なし (OK)
+--- Shadowing (allowed) ---
+  Semantic analysis: no diagnostics (OK)
 ```
 
-## 属性リファレンス
+## Attribute reference
 
-詳細は [docs/ja/grammar-reference.md](docs/ja/grammar-reference.md)。
+See [docs/en/grammar-reference.md](docs/en/grammar-reference.md) for details.
 
-| 属性 | 対象 | 役割 |
+| Attribute | Target | Role |
 |---|---|---|
-| `[Grammar]` | クラス | 文法の開始記号（ルート非終端）。Generator の抽出開始点。`Mode` で複数方言を切り替え。 |
-| `[Rule]` | static メソッド | 生成規則（1クラス1つ）。メソッドの**引数**が右辺。 |
-| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度（大きいほど高優先）。 |
-| `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。`IsRightAssociative`/`IsNonAssociative` で結合性。 |
-| `[Repeat]` / `[Repeat(Min=0)]` | `[Rule]` メソッドの `AstNode` 派生引数 | リスト（繰り返し）。`Min=1`（既定）は1回以上、`Min=0` は0回以上（空リスト可）。`IReadOnlyList<T>` に展開。 |
-| `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
+| `[Grammar]` | class | Start symbol (root nonterminal). Generator's extraction entry point. `Mode` switches dialects. |
+| `[Rule]` | static method | A production (one per class). The method's **parameters** are the RHS. |
+| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority (higher wins). |
+| `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. `IsRightAssociative`/`IsNonAssociative`. |
+| `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more (empty list allowed). Expands to `IReadOnlyList<T>`. |
+| `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
 
-### `[Rule]` メソッドの引数（型ベース分類）
+### `[Rule]` method parameters (type-based classification)
 
-- **`Token` 型** (`[Token]`/`[Pattern]` 付き): 終端記号。字面 (`Text`) とソース範囲 (`Span`) を持つ。
-- **`AstNode` 派生型**: 右辺の子。Generator が partial プロパティ（引数名の PascalCase）を生成。
-- **`SemanticContext` 派生型**: 右辺の子でなく、パーサから意味解析コンテキストが注入される（属性ではなく**型**で判定される）。
+- **`Token` type** (with `[Token]`/`[Pattern]`): terminal. Carries `Text` and `Span`.
+- **`AstNode`-derived type**: a RHS child. The generator emits a partial property (PascalCase of the parameter name).
+- **`SemanticContext`-derived type**: not a RHS child; the parser injects the semantic context (determined by **type**, not attribute).
 
-### `[Token]` / `[Precedence]` の named プロパティ
+### `[Token]` / `[Precedence]` named properties
 
 ```csharp
-[Token(@"[A-Za-z_]\w*", Priority = 0)]    // 識別子（低優先）
-[Token(@"if", Priority = 1)]               // キーワード if（高優先）
+[Token(@"[A-Za-z_]\w*", Priority = 0)]    // identifier (low priority)
+[Token(@"if", Priority = 1)]               // keyword if (beats identifier)
 
-[Precedence(1)]                              // 優先度1・左結合（例: + -）
-[Precedence(2)]                              // 優先度2（+ より強い、例: * /）
-[Precedence(3, IsRightAssociative = true)]    // 優先度3・右結合（* より強い、例: べき乗 **）
-[Precedence(1, IsNonAssociative = true)]      // 優先度1・非結合（例: 比較 < >、a<b<c はエラー）
+[Precedence(1)]                              // priority 1, left-assoc (e.g. + -)
+[Precedence(2)]                              // priority 2 (binds tighter than +; e.g. * /)
+[Precedence(3, IsRightAssociative = true)]    // priority 3, right-assoc (tighter than *; e.g. power **)
+[Precedence(1, IsNonAssociative = true)]      // priority 1, non-assoc (e.g. comparison < >; a<b<c is an error)
 ```
 
-### 文法の書き方
+### Writing grammar
 
-- **継承ツリー = 構文**: `[Grammar] public abstract partial class Expr` が非終端。`sealed partial class NumExpr : Expr` が「`Expr -> [0-9]+`」の生成規則。
-- **`[Rule]` メソッドの引数 = 右辺**: 引数の型と順序が右辺。`[Rule] static void Add(Expr left, [Token(@"\+")] Token op, Expr right)` は `Expr -> Expr + Expr`。
-- **1クラスに複数 `[Rule]` 可**: 同じクラスに複数の `[Rule]` static メソッドを書くと、それぞれ独立の生成規則になる。どの規則で reduce されたかは `RuleName` プロパティ（メソッド名）で判定し、`OnReduce` 内で `switch` する。
-- **中間抽象クラス**: 抽象クラスを挟んだ継承階層（`Root → Mid → Leaf`）が使える。抽象基底に `[Rule]` で共通プロパティを宣言すると、具象サブクラスが `: base(...)` で初期化し readonly を維持したままプロパティを継承できる。
-- **リスト（`[Repeat]`）**: `[Repeat]` を付けた引数は `IReadOnlyList<T>` に展開される。`Min=1`（既定）は1回以上、`Min=0` は0回以上（空リスト可）。
+- **Inheritance tree = syntax**: `[Grammar] public abstract partial class Expr` is a nonterminal. `sealed partial class NumExpr : Expr` is the rule `Expr -> [0-9]+`.
+- **`[Rule]` method parameters = RHS**: types and order express the RHS. `[Rule] static void Add(Expr left, [Token(@"\+")] Token op, Expr right)` is `Expr -> Expr + Expr`.
+- **Multiple `[Rule]`s per class**: a class may have several `[Rule]` static methods, each an independent production. Which rule reduced is exposed via the `RuleName` property (method name); branch on it in `OnReduce` with a `switch`.
+- **Intermediate abstract classes**: inheritance hierarchies with abstract classes in between (`Root → Mid → Leaf`) are supported. Declare shared properties on the abstract base with a `[Rule]`; concrete subclasses initialize them via `: base(...)`, inheriting the properties while keeping them `readonly`.
+- **Lists (`[Repeat]`)**: a parameter marked `[Repeat]` expands to `IReadOnlyList<T>`. `Min=1` (default) = one or more, `Min=0` = zero or more (empty list allowed).
 
 ```csharp
-// 1クラス複数 [Rule]: RuleName で分岐
+// Multiple [Rule]s in one class: branch on RuleName
 public sealed partial class BinaryExpr : Expr
 {
     [Rule] public static void Add(Expr left, [Token(@"\+")] Token op, Expr right) { }
     [Rule] public static void Sub(Expr left, [Token(@"-")]  Token op, Expr right) { }
-    partial void OnReduce() { /* this.RuleName で "Add"/"Sub" を判定 */ }
+    partial void OnReduce() { /* use this.RuleName to distinguish "Add"/"Sub" */ }
 }
 
-// リスト: [Repeat] で IReadOnlyList<T>
+// List: [Repeat] expands to IReadOnlyList<T>
 public sealed partial class ProgramBody : Program
 {
     [Rule] public static void Body([Repeat(Min = 0)] Stmt statements) { }
-    // → Program → Stmt* (Statements は IReadOnlyList<Stmt>)
+    // → Program → Stmt* (Statements is IReadOnlyList<Stmt>)
 }
 ```
 
-## サンプル
+## Samples
 
-- **電卓** (`src/AstFirst/Calc/`) — 四則演算（優先度付き）。
-- **MiniLang** (`src/AstFirst/MiniLang/`) — `let`/`print`/四則演算。
-- **JSON パーサ** (`samples/JsonParser/`) — JSON 基本型。
-- **MiniC** (`samples/MiniC/`) — 変数・代入・`if`/`while`・ブロック・bool。**意味解析（2パス目 + 型チェック）デモ**。
-- **MiniBASIC** (`samples/MiniBasic/`) — 行番号付き BASIC。
-- **C# パーサ** (`samples/CSharpParser/`) — C# 完全文法（ECMA-334 Annex A 相当）。構文解析 + AST 構築のみ（意味解析なし）。`samples/Perf/Perf.Grammars/CSharpFactory.cs` で文法を定義。
+- **Calculator** (`src/AstFirst/Calc/`) — arithmetic with precedence.
+- **MiniLang** (`src/AstFirst/MiniLang/`) — `let`/`print`/arithmetic.
+- **JSON parser** (`samples/JsonParser/`) — JSON primitive types.
+- **MiniC** (`samples/MiniC/`) — variables, assignment, `if`/`while`, blocks, bool. **Semantic analysis (two-pass + type checking) demo**.
+- **MiniBASIC** (`samples/MiniBasic/`) — line-numbered BASIC.
+- **C# parser** (`samples/CSharpParser/`) — full C# grammar (ECMA-334 Annex A). Parsing + AST construction only (no semantic analysis). Grammar defined in `samples/Perf/Perf.Grammars/CSharpFactory.cs`.
 
-各サンプルの README を参照。
+See each sample's README.
 
-## C# 完全文法ベンチマーク (samples/Perf)
+## Architecture
 
-AstFirst で C# の完全文法（365 規則）を LALR(1) で実装し、パーサ生成時間 (Build) と実行時間 (Parse) を計測する。意味解析は行わない（構文解析 + AST 構築のみ）。
-
-- `samples/Perf/Perf.Grammars/CSharpFactory.cs` — 文法定義（型/式/パターン/文/宣言/メンバ/属性/プリプロセス）。
-- `samples/Perf/Perf.Gen` — `GrammarSpec → GrammarModel → LALR テーブル` を構築し、コンフリクト/状態数を検証。`GeneratedGrammar.cs` を各文法プロジェクトへ書き出す。
-- 集計結果: [samples/Perf/PerfSummary.md](samples/Perf/PerfSummary.md)
-
-### smoke test（Perf.CSharp）
-
-AST 構築成功（宣言/継承/generic クラス/enum/struct/interface/プロパティ/全文/全式/switch/try/using 等）。
-
-### 計測結果（Ryzen 9 3900, .NET 10, Release）
-
-| 指標 | 値 |
-|---|---|
-| Parse_CSharp（50 クラス入力 ≈ 7KB） | 0.68 ms（≈ 10 MB/s）※ |
-| Parse_CSharp アロケーション | 627 KB |
-| Build_CSharp（ModelToTable.Build 純粋時間） | 190 ms |
-| クリーンビルド時間 | 11 s |
-| LALR 状態数 / シンボル数 | 798 / 608 |
-| 生成コードサイズ | 6.0 MB（8011 行） |
-
-> ※ Parse 時間は [Rule] モデル移行後（Reject/TryFallback + Span スタック）の代表値。Build_CSharp 190 ms は Worklist アルゴリズム最適化後。詳細は [samples/Perf/PerfSummary.md](samples/Perf/PerfSummary.md) 参照。Parse のアロケーションは AST 構築（reduce ごとに `new`）が主。
-
-### コンフリクト解決技術
-
-C# の曖昧性を分類し、設計で解消（99 → 5）:
-
-| 曖昧性源 | 分類 | 解決 |
-|---|---|---|
-| 二項/三項/postfix/unary の shift-reduce | 見かけ上 | `[Precedence]` + 全終端伝播（規則の全終端に優先度を設定） |
-| リスト（文/引数/初期化子）の shift-reduce | 見かけ上 | bison 互換の shift 優先（LalrTable: 優先度未設定 SR は shift） |
-| LINQ キーワード / `get`/`set` 等の文脈キーワード | 文脈キーワード | `priority:1` + 文法位置で弁別 |
-| cast `(Type)e` vs 括弧式 `(e)` | 真に意味依存 | `Accept`/`Reject` で意味的に解決可能（既定は shift 優先、必要なら Reject で切替） |
-| identifier/generic が「式か型か」 | 真に意味依存 | 残り 5 コンフリクト（RR、許容） |
-
-残り 5 コンフリクト（state 361）は `Foo` が式（`IdentifierExpr`）か型（`NamedType`）かの衝突。LALR(1) では解決不可（C# 仕様も意味解析で解決）。reduce-reduce を許容し式を優先。
-
-### 設計上の制限（LALR(1) の限界）
-
-指針「generic は Member の型のみ（ローカルは `var`）」「cast/paren は意味依存で許容」に沿う:
-
-- **generic メソッド呼び出し** `Foo<T>(x)`: 不可（式位置の `<` は比較のみとし、generic の `<` と衝突させない）。
-- **default 演算子** `default(T)` / target-typed `default`: 不可（switch 文の `default:` ラベルとの衝突を避けるため）。
-- **ユーザー定義型の** `Foo[]` / `Foo?` / `Foo*` / cast `(Foo)e`: 式優先のため制限。
-
-対照的に、定義済み型 `int[]` / `int?`、generic 型フィールド `List<int> x`、cast `(int)e` は動作する。
-
-## アーキテクチャ
-
-詳細は [docs/ja/architecture.md](docs/ja/architecture.md)。
+See [docs/en/architecture.md](docs/en/architecture.md) for details.
 
 ```
 AstFirst.slnx
 ├── src/
-│   ├── AstFirst.Core/        netstandard2.0  純粋ロジック (レクサ DFA / LALR)。Roslyn 非依存。
-│   ├── AstFirst.Runtime/     netstandard2.0  属性・基底クラス・意味解析 (ScopedSymbolTable / TypeSystem / SemanticContext / AstNode / Token)。Core に依存。
-│   ├── AstFirst.Generator/   netstandard2.0  IIncrementalGenerator。Core のソースを取り込み単一アセンブリ化。
-│   └── AstFirst/             net10.0         ユーザーコード (電卓・MiniLang サンプル)
+│   ├── AstFirst.Core/        netstandard2.0  Pure logic (lexer DFA / LALR). No Roslyn dependency.
+│   ├── AstFirst.Runtime/     netstandard2.0  Attributes, base classes, semantic analysis (ScopedSymbolTable / TypeSystem / SemanticContext / AstNode / Token). Depends on Core.
+│   ├── AstFirst.Generator/   netstandard2.0  IIncrementalGenerator. Includes Core sources into a single assembly.
+│   └── AstFirst/             net10.0         User code (calculator / MiniLang samples)
 ├── samples/                   net10.0         JsonParser / MiniC / MiniBasic / CSharpParser / Perf
 └── tests/                     net10.0         AstFirst.Tests (Core/Runtime + EndToEnd) / AstFirst.Generator.Tests
 ```
 
-- Generator は Roslyn で C# コードを読み、等価比較可能な POCO モデルに変換してから（キャッシュの生命線）、Core の純粋ロジックで DFA/LALR テーブルを構築し、Lexer/Parser/partial の C# コードを生成する。
-- 生成コードは Runtime に依存。Lexer/Parser は DFA/LALR テーブルを `static readonly` 配列に埋め込み shift/reduce を駆動。reduce 時に partial コンストラクタが子をセットして `OnReduce` を呼び、Reject ならフォールバック候補へ。`Parse` 後、`IOnSecondPassEnter`/`IOnSecondPassExit` 実装ノードがあれば `WalkSecondPass`（反復的スタック実装）でトップダウン呼出（未実装なら走査自体を省略）。
-- Generator は Core のソースを Compile Include して単一アセンブリ化（Analyzer 実行時の依存ロード問題を回避）。
+- The generator reads C# via Roslyn, converts it to an equality-comparable POCO model (the lifeline of caching), builds DFA/LALR tables via Core's pure logic, and emits Lexer/Parser/partial C# code.
+- Generated code depends on Runtime. Lexer/Parser embed DFA/LALR tables in `static readonly` arrays and drive shift/reduce. At reduce, a partial constructor sets the children and calls `OnReduce`; on Reject it falls back to the next candidate. After `Parse`, if any node implements `IOnSecondPassEnter`/`IOnSecondPassExit`, `WalkSecondPass` (iterative stack-based) calls them top-down; otherwise the traversal is skipped entirely.
+- The generator Compile-Includes Core sources into a single assembly (avoids dependency loading issues for analyzers).
 
-## ドキュメント
+## Documentation
 
-- [アーキテクチャ](docs/ja/architecture.md)
-- [意味解析ガイド](docs/ja/semantic-analysis.md)
-- [文法リファレンス](docs/ja/grammar-reference.md)
+- [Architecture](docs/en/architecture.md)
+- [Semantic analysis guide](docs/en/semantic-analysis.md)
+- [Grammar reference](docs/en/grammar-reference.md)
 
-英語版は `docs/en/` および [README.en.md](README.en.md)。
+Japanese versions are under `docs/ja/` and [README.md](README.md).
 
-## テスト
+## Tests
 
-293 テスト（AstFirst.Tests 247 + Generator.Tests 46）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復、意味解析（スコープ・2パス目・型チェック・ctx → `ParseResult.Diagnostics` の統合）、`Accept`/`Reject` フォールバック、位置情報（行・列）を検証。
+293 tests (AstFirst.Tests 247 + Generator.Tests 46). Covers lexer/DFA/LALR stages, end-to-end, error recovery, semantic analysis (scopes, two-pass, type checking, ctx -> `ParseResult.Diagnostics` integration), `Accept`/`Reject` fallback, and positions (line/column).
 
-## ライセンス
+## License
 
 MIT (LICENSE.txt)
