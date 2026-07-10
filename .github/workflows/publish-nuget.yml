@@ -50,7 +50,7 @@ jobs:
         if: steps.check.outputs.published == 'false'
         run: mkdir -p artifacts/packages
 
-      # README.en.md の相対リンクを GitHub 絶対 URL に変換 (ref = v<Version> tag)。
+      # README.md の相対リンクを GitHub 絶対 URL に変換 (ref = v<Version> tag)。
       # nuget.org 上ではパッケージ内の相対リンクがリンク切れになるため。
       - name: README を絶対 URL 化 (NuGet 用)
         if: steps.check.outputs.published == 'false'

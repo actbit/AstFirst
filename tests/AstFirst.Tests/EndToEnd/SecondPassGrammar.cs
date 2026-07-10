@@ -4,7 +4,7 @@ using AstFirst;
 namespace AstFirst.Tests.EndToEnd.SecondPassTest;
 
 // ListenerEndToEndTests 用の文法。Generator がテストプロジェクト内で SNodeParser を生成。
-// 新モデルの 2パス目: Parse 後に WalkSecondPass が各ノードの OnSecondPassEnter(子の前) → 子再帰 → OnSecondPassExit(子の後)
+// 新モデルの 2パス目: Parse 後に Walker が各ノードの OnSecondPassEnter(子の前) → 子再帰 → OnSecondPassExit(子の後)
 // をトップダウンで自動呼出する。SymStmt 文法 (AstFirst.Tests.EndToEnd) と混入しないよう別名前空間へ分離。
 
 /// <summary>OnSecondPass の E2E 検証用文法。</summary>

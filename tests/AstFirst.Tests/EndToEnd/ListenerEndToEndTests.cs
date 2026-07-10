@@ -3,8 +3,8 @@ using AstFirst.Tests.EndToEnd.SecondPassTest;
 namespace AstFirst.Tests.EndToEnd;
 
 /// <summary>
-/// 新モデルの 2パス目トラバーサル (OnSecondPass) の E2E 検証。
-/// 旧モデルの Listener.Walk (Enter→子→Exit) に代わり、Parse 後に WalkSecondPass が
+/// 新モデルの 2パス目トラバーサル (OnSecondPass / Walker) の E2E 検証。
+/// 旧モデルの Listener.Walk (Enter→子→Exit) に代わり、Parse 後に Walker が
 /// 各ノードの OnSecondPassEnter(子の前) → 子再帰 → OnSecondPassExit(子の後) をトップダウンで自動呼出する。
 /// </summary>
 public class ListenerEndToEndTests

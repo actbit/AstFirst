@@ -2,7 +2,7 @@
 
 English / [日本語](../ja/grammar-reference.md)
 
-AstFirst grammars are written with C# classes and attributes. The generator emits the Lexer / Parser / per-node partials at compile time. This document describes the current `[Rule]` static model (`OnReduce` / `OnSecondPass` / `Accept`/`Reject` / partial child storage). See the [README](../../README.en.md) for the overview.
+AstFirst grammars are written with C# classes and attributes. The generator emits the Lexer / Parser / per-node partials at compile time. This document describes the current `[Rule]` static model (`OnReduce` / Walker / `[Enter]`/`[Exit]`/`[OnReduce]` attributes / `OnSecondPass` / `Accept`/`Reject` / partial child storage). See the [README](../../README.md) for the overview.
 
 ## Attribute reference
 
@@ -14,6 +14,7 @@ AstFirst grammars are written with C# classes and attributes. The generator emit
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. |
 | `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more. Expands to `IReadOnlyList<T>`. |
 | `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
+| `[OnReduce]` / `[Enter]` / `[Exit]` | static method (on the `[Grammar]` root class) | Semantic rule. The generator dispatches it from the constructor (`[OnReduce]`) / Walker (`[Enter]`/`[Exit]`); the ctx cast is injected. |
 
 ## `[Grammar]`
 
@@ -153,7 +154,7 @@ Special parameter types of a `[Rule]` method:
 ## `OnReduce` / Accept/Reject / OnSecondPass
 
 - **`OnReduce(ctx)`**: a partial method called when a rule is reduced (bottom-up). Child properties and `Span` (auto-computed from children) are already set. Use `this.RuleName` to branch on the rule, override `Span`, etc.
-- **Accept/Reject**: override `IsAccepted` to return `false` to reject a reduce and try fallback candidates. See the [README](../../README.en.md) "Accept/Reject and fallback" section.
+- **Accept/Reject**: override `IsAccepted` to return `false` to reject a reduce and try fallback candidates. See the [README](../../README.md) "Accept/Reject and fallback" section.
 - **`OnSecondPass`**: the second-pass traversal (top-down). For nodes implementing `IOnSecondPassEnter`/`IOnSecondPassExit`, the generator calls `OnSecondPassEnter` (before children) → recurse children → `OnSecondPassExit` (after children).
 - **`[OnReduce]` / `[Enter]` / `[Exit]` attributes**: attach to a `static` method on the `[Grammar]` root class and the generator dispatches it from the Walker / constructor (the ctx cast is injected automatically). `[OnReduce]` runs at reduce; `[Enter]`/`[Exit]` run in the second pass. See the [semantic analysis guide](semantic-analysis.md).
 
@@ -169,4 +170,4 @@ Special parameter types of a `[Rule]` method:
 
 - [Architecture](architecture.md)
 - [Semantic analysis guide](semantic-analysis.md)
-- [README](../../README.en.md)
+- [README](../../README.md)

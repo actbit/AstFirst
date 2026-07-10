@@ -2,7 +2,7 @@
 
 [English](../en/grammar-reference.md) / 日本語
 
-AstFirst では C# のクラスと属性で文法を書く。Generator がコンパイル時に Lexer / Parser / 各ノードの partial を生成する。本ドキュメントは現行の `[Rule]` static モデルを説明する（`OnReduce` / `OnSecondPass` / `Accept`/`Reject` / partial 子保持）。全体の概要は [README](../../README.md) を参照。
+AstFirst では C# のクラスと属性で文法を書く。Generator がコンパイル時に Lexer / Parser / 各ノードの partial を生成する。本ドキュメントは現行の `[Rule]` static モデルを説明する（`OnReduce` / Walker / `[Enter]`/`[Exit]`/`[OnReduce]` 属性 / `OnSecondPass` / `Accept`/`Reject` / partial 子保持）。全体の概要は [README](../../README.md) を参照。
 
 ## 属性一覧
 
@@ -14,6 +14,7 @@ AstFirst では C# のクラスと属性で文法を書く。Generator がコン
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。 |
 | `[Repeat]` / `[Repeat(Min=0)]` | `[Rule]` メソッドの `AstNode` 派生引数 | リスト（繰り返し）。`Min=1`（既定）= 1回以上、`Min=0` = 0回以上。`IReadOnlyList<T>` に展開。 |
 | `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
+| `[OnReduce]` / `[Enter]` / `[Exit]` | static メソッド（`[Grammar]` ルートクラス） | 意味ルール。Generator がコンストラクタ（`[OnReduce]`）/ Walker（`[Enter]`/`[Exit]`）から dispatch（ctx キャスト自動注入）。 |
 
 ## `[Grammar]`
 
