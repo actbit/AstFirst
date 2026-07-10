@@ -56,7 +56,7 @@ jobs:
         if: steps.check.outputs.published == 'false'
         shell: pwsh
         run: |
-          ./build/transform-readme.ps1 -Source README.en.md -Output README.nuget.md `
+          ./build/transform-readme.ps1 -Source README.md -Output README.nuget.md `
             -BaseUrl "https://github.com/actbit/AstFirst/blob/v${{ steps.ver.outputs.version }}"
 
       # 依存順に pack し、local フィード (./artifacts/packages) に出力する。
