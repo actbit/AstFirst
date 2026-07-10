@@ -13,13 +13,19 @@ AstFirst sits in the same space as parser generators and combinator libraries, b
 
 | | AstFirst | ANTLR | Superpower / Pidgin | Roslyn `SyntaxGenerator` |
 |---|---|---|---|---|
-| Grammar defined in | plain C# classes + attributes | external `.g4` DSL | C# parser combinators | n/a — C#/VB syntax only |
-| Generated at | compile time (Source Generator) | build-time codegen | runtime (interpreted) | n/a |
+| Grammar in | plain C# classes + attributes | external `.g4` DSL | C# parser combinators | n/a — C#/VB syntax only |
+| Code generated | **compile time** (Source Generator) | build-time codegen tool | **never** — interpreted at runtime | n/a |
+| Runtime parse cost | **zero** — static tables, no dispatch | generated code | interpreted (allocation/dispatch per parse) | n/a |
+| AOT / Native AOT | ✓ no runtime codegen | △ | ✓ | n/a |
 | Algorithm | LALR(1) table-driven | LL(\*) / ALL(\*) | recursive-descent combinators | n/a |
-| Target language | any DSL / language | any language | any language | C#/VB only |
-| Error recovery | panic mode | yes | limited | n/a |
+| Error recovery | panic mode (built-in) | yes | hand-rolled | n/a |
+| Grammar power | LALR(1) — resolve conflicts with `[Precedence]` | LL(\*) | **Turing-complete** (branch on any C#) | n/a |
 
-**Why it exists**: define a grammar in the same C# you already write (no separate `.g4` file, full IDE/refactoring support), generate a fast table-driven parser at compile time (no runtime codegen, AOT-friendly), and get back an AST with built-in semantic-analysis helpers (scoped symbol table, two-pass Walker, type system, `[Enter]`/`[Exit]`/`[OnReduce]` attribute rules).
+**Strengths vs combinators (Superpower/Pidgin)**: the parser is emitted *at compile time* as static tables — no interpretation, no delegate dispatch, no per-parse construction. Startup and per-parse cost are effectively zero, it AOTs / Native-AOTs cleanly, and panic-mode error recovery is built in. The grammar is declarative C#, so the IDE can navigate and refactor it.
+
+**Trade-offs**: LALR(1) needs `[Precedence]`/associativity to resolve shift-reduce conflicts — combinator libraries are freer (you can branch on arbitrary C# mid-parse). A C#-only toolchain.
+
+**Why a Source Generator?** the Lexer/Parser/Walker are ordinary C# the compiler sees and the IDE can open (the `.g.cs` lives under your project, Go to Definition works). You never *build* the parser at runtime, and grammar mistakes (unresolved conflicts, unreachable rules) surface as **compile-time warnings**, not at the first `Parse`.
 
 ## Features
 
@@ -30,7 +36,7 @@ AstFirst sits in the same space as parser generators and combinator libraries, b
 - **Semantic ambiguity resolution (Accept/Reject)**: call `Reject()` in the reduce-time `OnReduce` to fall back to the next candidate (another rule / shift) in priority order. Resolves meaning-dependent ambiguity like cast vs. parenthesized expression during parsing.
 - **AST construction + automatic child retention + automatic Span**: at reduce time a generator-emitted partial constructor sets children/terminals into properties automatically, merges their `Span`s into the node's `Span`, and then calls `OnReduce`. No manual child assignment or Span setup (overridable in `OnReduce`).
 - **Two-pass semantic analysis**: after `Parse`, each node's `OnSecondPassEnter`/`OnSecondPassExit` (top-down) is called automatically. Accurate semantic analysis like scope Push/Pop is straightforward.
-- **Semantic analysis helpers**: scoped symbol table (`ScopedSymbolTable`), symbol resolution (`ResolveOrError`), type checking (`TypeSymbol`/`TypeContext`), binding (`AstNode.SetAnnotation`), diagnostics (`ParseResult.Diagnostics`).
+- **Semantic analysis helpers**: `[Enter]`/`[Exit]`/`[OnReduce]` attribute rules, a generic Walker (`{Root}Walker`), scoped symbol table (`ScopedSymbolTable`), symbol resolution (`ResolveOrError`), type system (`TypeSymbol` / `FunctionTypeSymbol` / `ArrayTypeSymbol` / `OverloadResolver`), binding (`AstNode.SetAnnotation`), diagnostics (`ParseResult.Diagnostics`).
 - **Error recovery**: continues after syntax errors via panic mode; `ParseResult` carries the AST + error list.
 
 ## Quick start
@@ -297,7 +303,7 @@ AstFirst.slnx
 ```
 
 - The generator reads C# via Roslyn, converts it to an equality-comparable POCO model (the lifeline of caching), builds DFA/LALR tables via Core's pure logic, and emits Lexer/Parser/partial C# code.
-- Generated code depends on Runtime. Lexer/Parser embed DFA/LALR tables in `static readonly` arrays and drive shift/reduce. At reduce, a partial constructor sets the children and calls `OnReduce`; on Reject it falls back to the next candidate. After `Parse`, if any node implements `IOnSecondPassEnter`/`IOnSecondPassExit`, `WalkSecondPass` (iterative stack-based) calls them top-down; otherwise the traversal is skipped entirely.
+- Generated code depends on Runtime. Lexer/Parser embed DFA/LALR tables in `static readonly` arrays and drive shift/reduce. At reduce, a partial constructor sets the children and calls `OnReduce`; on Reject it falls back to the next candidate. After `Parse`, a generated Walker (`{Root}Walker`) drives `Enter → children → Exit` top-down — invoking `IOnSecondPassEnter`/`Exit`, `[Enter]`/`[Exit]` attribute rules, and overridable `EnterXxx`/`ExitXxx`. Grammars with no semantic hook skip the traversal entirely (zero-cost).
 - The generator Compile-Includes Core sources into a single assembly (avoids dependency loading issues for analyzers).
 
 ## Documentation

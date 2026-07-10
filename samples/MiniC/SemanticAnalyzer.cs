@@ -3,8 +3,8 @@ using AstFirst;
 namespace MiniC;
 
 /// <summary>
-/// MiniC の意味解析ヘルパー。各ノードの OnSecondPassEnter/Exit から呼ばれる (旧 ProgramListener モデルに代わる)。
-/// Generator が Parse 後にトップダウンで OnSecondPassEnter→子再帰→OnSecondPassExit を回すため、
+/// MiniC の意味解析ヘルパー。ルート Program クラスの [Enter]/[Exit] 属性メソッドから呼ばれる。
+/// Generator が Parse 後に Walker でトップダウン (Enter→子→Exit) を回すため、
 /// 式の型伝播 (Exit) → 条件/代入の型チェック (Exit) が正しく順序付く。
 /// </summary>
 public static class SemanticAnalyzer
