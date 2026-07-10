@@ -84,6 +84,45 @@ public class LightGlrDriverTests
         Assert.NotEmpty(result.Errors);
     }
 
+    // 文法: S → A → 'a' (A→a のあと pass-through S→A を cascade). sym 0=$, 1=a, 2=A, 3=S.
+    // 実文法 GlrExpr → GlrNum → [0-9]+ と同じ構造 (抽象経由の単位規則)。
+    private static GlrTables MakePassThroughTables()
+    {
+        const int sc = 4;
+        const int states = 4;
+        var actionKind = new byte[states * sc];
+        var actionValue = new int[states * sc];
+        var gotoTable = new int[states * sc];
+        Array.Fill(gotoTable, -1);
+
+        actionKind[0 * sc + 1] = 1; actionValue[0 * sc + 1] = 1;   // state0: shift 'a' -> state1
+        gotoTable[0 * sc + 2] = 2;                                  // state0: goto A -> state2
+        gotoTable[0 * sc + 3] = 3;                                  // state0: goto S -> state3
+        actionKind[1 * sc + 0] = 2; actionValue[1 * sc + 0] = 0;   // state1: reduce A->a (prod0) on $
+        actionKind[2 * sc + 0] = 2; actionValue[2 * sc + 0] = 1;   // state2: reduce S->A (prod1, pass-through) on $
+        actionKind[3 * sc + 0] = 3;                                 // state3: accept on $
+
+        return new GlrTables(actionKind, actionValue, gotoTable,
+            prodLhs: new[] { 2, 3 }, prodLen: new[] { 1, 1 },
+            defaultReduce: new[] { -1, -1, -1, -1 }, tokenIdToSym: new[] { 1 },
+            altKeys: Array.Empty<int>(), altActs: Array.Empty<int[]>(),
+            stateCount: states, symbolCount: sc, eofSym: 0, startState: 0);
+    }
+
+    [Fact]
+    public void CascadesThroughPassThroughToAccept()
+    {
+        var t = MakePassThroughTables();
+        var tokens = new List<LexToken> { new LexToken(0, "a", 0, 1) };
+        static object? Reduce(int prodId, object?[] children, SemanticContext ctx)
+            => prodId == 1 ? children[0] : "p" + prodId;   // prod1 (S->A) は pass-through
+        var result = LightGlrDriver.Run(t, tokens, new BasicSemanticContext(), Reduce, ToToken);
+
+        Assert.Single(result.Candidates);
+        Assert.Equal("p0", result.Candidates[0]);   // pass-through で A の値 (p0) が伝播
+        Assert.Empty(result.Errors);
+    }
+
     [Fact]
     public void UnexpectedToken_ReportsError()
     {

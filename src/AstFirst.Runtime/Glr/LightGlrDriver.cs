@@ -71,7 +71,13 @@ public static class LightGlrDriver
                         hasAccept = true;
                     }
                 }
-                if (hasAccept) accepted.Add(s.PeekValue());
+                if (hasAccept)
+                {
+                    // AstFirst のテーブルは $ を shift する (S'→S $)。accept 時のスタックトップが $ (null) なら
+                    // 開始記号の値はその下。LALR の Accept (top-- で $ を捨てて result = その下) と同義。
+                    var top = s.PeekValue();
+                    accepted.Add(top is null ? s.Values[s.Top - 2] : top);
+                }
                 if (!hasShift)
                 {
                     // shift 先がない → このスタックはここで死亡 (accept 済みなら結果は回収済み)
