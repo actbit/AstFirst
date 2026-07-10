@@ -36,8 +36,12 @@ public sealed class ParserGenerator : IIncrementalGenerator
                 var dfa = ModelToDfa.Build(model, out var rules);
 
                 // 優先度/結合性で解決できなかったコンフリクトを警告で報告 (構文的曖昧さの可視化)。
-                foreach (var conflict in table.Conflicts)
-                    spc.ReportDiagnostic(Microsoft.CodeAnalysis.Diagnostic.Create(DiagnosticDescriptors.GrammarConflict, model.RootLocation, conflict.Description));
+                // LightGlr モードではコンフリクトは並行 fork で解決されるため警告しない (確定 LALR のみ)。
+                if (model.ParseMode != ParseMode.LightGlr)
+                {
+                    foreach (var conflict in table.Conflicts)
+                        spc.ReportDiagnostic(Microsoft.CodeAnalysis.Diagnostic.Create(DiagnosticDescriptors.GrammarConflict, model.RootLocation, conflict.Description));
+                }
 
                 // 到達不能/未定義非終端を警告で報告 (規則の過不足の可視化)。
                 foreach (var nt in grammar.UnreachableNonTerminals)
