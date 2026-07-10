@@ -97,3 +97,16 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag ${{ steps.ver.outputs.tag }}
           git push origin ${{ steps.ver.outputs.tag }}
+
+      # GitHub Release を自動作成 (リリースノートはコミット/PR から自動生成)。
+      # タグ作成の後なので、既存タグの Release がなければ作る。
+      - name: GitHub Release を作成
+        if: steps.check.outputs.published == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.ver.outputs.tag }}" >/dev/null 2>&1; then
+            echo "Release ${{ steps.ver.outputs.tag }} already exists — skipping"
+          else
+            gh release create "${{ steps.ver.outputs.tag }}" --title "${{ steps.ver.outputs.version }}" --generate-notes
+          fi

@@ -36,7 +36,7 @@ AstFirst sits in the same space as parser generators and combinator libraries, b
 - **Semantic ambiguity resolution (Accept/Reject)**: call `Reject()` in the reduce-time `OnReduce` to fall back to the next candidate (another rule / shift) in priority order. Resolves meaning-dependent ambiguity like cast vs. parenthesized expression during parsing.
 - **AST construction + automatic child retention + automatic Span**: at reduce time a generator-emitted partial constructor sets children/terminals into properties automatically, merges their `Span`s into the node's `Span`, and then calls `OnReduce`. No manual child assignment or Span setup (overridable in `OnReduce`).
 - **Two-pass semantic analysis**: after `Parse`, each node's `OnSecondPassEnter`/`OnSecondPassExit` (top-down) is called automatically. Accurate semantic analysis like scope Push/Pop is straightforward.
-- **Semantic analysis helpers**: scoped symbol table (`ScopedSymbolTable`), symbol resolution (`ResolveOrError`), type checking (`TypeSymbol`/`TypeContext`), binding (`AstNode.SetAnnotation`), diagnostics (`ParseResult.Diagnostics`).
+- **Semantic analysis helpers**: `[Enter]`/`[Exit]`/`[OnReduce]` attribute rules, a generic Walker (`{Root}Walker`), scoped symbol table (`ScopedSymbolTable`), symbol resolution (`ResolveOrError`), type system (`TypeSymbol` / `FunctionTypeSymbol` / `ArrayTypeSymbol` / `OverloadResolver`), binding (`AstNode.SetAnnotation`), diagnostics (`ParseResult.Diagnostics`).
 - **Error recovery**: continues after syntax errors via panic mode; `ParseResult` carries the AST + error list.
 
 ## Quick start
