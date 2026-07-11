@@ -28,6 +28,22 @@ public abstract partial class Expr : AstNode { }
 
 `Mode` 名前付きプロパティで複数方言を切り替えられる（後述）。
 
+### ParseMode（パーサの実行モード）
+
+`ParseMode` 名前付きプロパティでパーサの実行モードを切り替えられる。既定は `Lalr`（確定 LALR(1)）。
+
+| 値 | 動作 |
+|---|---|
+| `ParseMode.Lalr`（既定） | 確定 LALR(1)。コンフリクトは優先度/結合性で解決し、解決不能分は警告 (ASTF001)。 |
+| `ParseMode.LightGlr` | 軽量 GLR。コンフリクトセルで並行 fork し、収束でマージ。cast/paren・generic の型/式など**本質的曖昧性**を扱える。コンフリクトは fork で解決されるため ASTF001 を出さない。結果は単一 AST（`ParseResult.Ast`）。複数解釈が残った場合は `ParseResult.AmbiguousCandidates` で観察可能。 |
+
+```csharp
+[Grammar(ParseMode = ParseMode.LightGlr)]
+```
+
+- **1 クラス 1 モード**: `Lalr` と `LightGlr` を同じ `[Grammar]` ルートに同時指定はできない（1 モード選択）。`Mode`（方言）とは併用可。
+- **OnReduce の制約**: LightGlr では未確定の分岐でも reduce 時に `OnReduce` が呼ばれる。そのため `OnReduce`（partial）は**ノード自身のプロパティ設定（`Name`/`Value`/`Span` 等）のみ**とし、外部の mutable 状態（`ScopedSymbolTable` / `DiagnosticBag` 等）の変更を行ってはならない。意味解析は 2 パス目の `[Enter]`/`[Exit]`（Walker）で行うこと（破棄された分岐の副作用が残るのを防ぐ）。
+
 ## `[Rule]`
 
 生成規則を定義する static メソッドに付ける。1クラスに複数置ける。本体は空（意味アクションは `OnReduce` に書く）。

@@ -28,6 +28,22 @@ public abstract partial class Expr : AstNode { }
 
 The `Mode` named property switches dialects (see below).
 
+### ParseMode (parser execution mode)
+
+The `ParseMode` named property selects the parser execution mode. Default is `Lalr` (deterministic LALR(1)).
+
+| Value | Behavior |
+|---|---|
+| `ParseMode.Lalr` (default) | Deterministic LALR(1). Conflicts resolved by precedence/associativity; unresolved ones are warnings (ASTF001). |
+| `ParseMode.LightGlr` | Lightweight GLR. Forks in parallel at conflict cells, merges on convergence. Handles **inherent ambiguity** such as cast/paren or generic type/expression. Conflicts are resolved by forking, so no ASTF001. Result is a single AST (`ParseResult.Ast`); if multiple interpretations survive, observe via `ParseResult.AmbiguousCandidates`. |
+
+```csharp
+[Grammar(ParseMode = ParseMode.LightGlr)]
+```
+
+- **One mode per class**: `Lalr` and `LightGlr` cannot be specified simultaneously on the same `[Grammar]` root (choose one). Combinable with `Mode` (dialect).
+- **OnReduce constraint**: In LightGlr, `OnReduce` is invoked at reduce time even for undetermined branches. Therefore `OnReduce` (partial) must only set the node's own properties (`Name`/`Value`/`Span`, etc.) and must **not** mutate external state (`ScopedSymbolTable` / `DiagnosticBag`, etc.). Do semantic analysis in the second pass via `[Enter]`/`[Exit]` (Walker) to avoid leftover side effects from discarded branches.
+
 ## `[Rule]`
 
 Attach to a static method that defines a production. Multiple per class allowed. The body is empty (semantic actions go in `OnReduce`).
