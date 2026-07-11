@@ -17,6 +17,8 @@ public sealed class GrammarSpec
     /// <summary>csSource の [Skip(@"...")] に埋め込む正規表現 (verbatim 内なのでそのまま)。</summary>
     public string SkipRegex { get; }
     public List<NodeSpec> Nodes { get; } = new();
+    /// <summary>ParseMode 名 ("LightGlr" 等)。null/空なら既定 (Lalr)。ToCsSource で [Grammar(ParseMode = ParseMode.X)] に出力。</summary>
+    public string? ParseMode { get; set; }
 
     public GrammarSpec(string ns, string rootClass, string skipRegex)
     {
@@ -50,9 +52,9 @@ public sealed class GrammarSpec
         sb.AppendLine();
 
         // ルート (開始記号)
-        sb.AppendLine("[Grammar]");
+        sb.AppendLine(string.IsNullOrEmpty(ParseMode) ? "[Grammar]" : "[Grammar(ParseMode = ParseMode." + ParseMode + ")]");
         sb.AppendLine("[Skip(@\"" + SkipRegex + "\")]");
-        sb.AppendLine("public abstract class " + RootClass + " : AstNode { }");
+        sb.AppendLine("public abstract partial class " + RootClass + " : AstNode { }");
         sb.AppendLine();
 
         foreach (var n in Nodes)
@@ -60,7 +62,7 @@ public sealed class GrammarSpec
             if (n.ClassName == RootClass) continue; // ルートは上で出力済み
             if (n.IsAbstract)
             {
-                sb.AppendLine("public abstract class " + n.ClassName + " : " + n.BaseClass + " { }");
+                sb.AppendLine("public abstract partial class " + n.ClassName + " : " + n.BaseClass + " { }");
                 sb.AppendLine();
                 continue;
             }
@@ -72,7 +74,7 @@ public sealed class GrammarSpec
                 p += ")]";
                 sb.AppendLine(p);
             }
-            sb.AppendLine("public sealed class " + n.ClassName + " : " + n.BaseClass);
+            sb.AppendLine("public sealed partial class " + n.ClassName + " : " + n.BaseClass);
             sb.AppendLine("{");
             foreach (var ctor in n.Ctors)
             {
@@ -88,7 +90,8 @@ public sealed class GrammarSpec
                     }
                     ps.Add(attr + p.CsType + " " + p.Name);
                 }
-                sb.AppendLine("    public " + n.ClassName + "(" + string.Join(", ", ps) + ") { }");
+                sb.AppendLine("    [Rule]");
+                sb.AppendLine("    public static void Reduce(" + string.Join(", ", ps) + ") { }");
             }
             sb.AppendLine("}");
             sb.AppendLine();
