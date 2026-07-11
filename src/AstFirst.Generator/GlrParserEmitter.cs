@@ -144,7 +144,7 @@ public static class GlrParserEmitter
         sb.AppendLine("        object? result = __r.Candidates.Count > 0 ? __r.Candidates[0] : null;");
         if (model.HasSecondPass)
             sb.AppendLine("        if (result is AstFirst.AstNode __root) __defaultWalker.Walk(__root, ctx);");
-        sb.AppendLine("        return new AstFirst.ParseResult(result, __r.Errors, ctx.Diagnostics.Items);");
+        sb.AppendLine("        return new AstFirst.ParseResult(result, __r.Errors, ctx.Diagnostics.Items, __r.Candidates.Count > 1 ? __r.Candidates : null);");
         sb.AppendLine("    }");
     }
 
