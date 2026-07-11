@@ -3,7 +3,7 @@ using AstFirst;
 
 namespace CSharpParser;
 
-[Grammar]
+[Grammar(ParseMode = ParseMode.LightGlr)]
 [Skip(@"(\s|//[^\n]*)+")]
 public abstract partial class CSharpCompilationUnit : AstNode { }
 
