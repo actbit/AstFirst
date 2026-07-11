@@ -80,13 +80,32 @@ public static class LightGlrDriver
                 }
                 if (!hasShift)
                 {
-                    // shift 先がない → このスタックはここで死亡 (accept 済みなら結果は回収済み)
-                    if (!hasAccept && s.Pos - lastErrorPos >= 3)
+                    // shift 先がない。accept 済みなら結果は回収済み。そうでなければパニック回復を試みる
+                    // (LALR の panic mode と同義: スタックを shift 可能状態まで pop、見つからなければトークンを進める)。
+                    if (!hasAccept)
                     {
-                        errors.Add(MakeError(t, tokens, s));
-                        lastErrorPos = s.Pos;
+                        if (s.Pos - lastErrorPos >= 3)
+                        {
+                            errors.Add(MakeError(t, tokens, s));
+                            lastErrorPos = s.Pos;
+                        }
+                        bool recovered = false;
+                        while (s.Top > 1 && s.Pos < tokens.Count)
+                        {
+                            s.Top--;
+                            int topState = s.States[s.Top - 1];
+                            int curSym = LookaheadSym(t, tokens, s.Pos);
+                            if (curSym >= 0 && t.ActionKind[topState * t.SymbolCount + curSym] != 0) { recovered = true; break; }
+                        }
+                        if (recovered) { shifted.Add(s); }   // 回復: 次ループで再評価
+                        else
+                        {
+                            if (s.Top <= 1) { s.Top = 0; s.States[s.Top++] = t.StartState; }
+                            if (s.Pos < tokens.Count) { s.Pos++; shifted.Add(s); }   // トークンを進めて再試行
+                            else s.Alive = false;
+                        }
                     }
-                    s.Alive = false;
+                    else s.Alive = false;   // accept 済み: これ以上追わない
                 }
             }
             active = Dedup(shifted);
