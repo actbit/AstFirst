@@ -6,11 +6,8 @@ namespace AstFirst.Glr;
 /// <summary>軽量 GLR (Tomita-lite) の解析結果。勝者順の候補 AST と構文エラー。</summary>
 public sealed class GlrResult
 {
-    /// <summary>accept に達した候補 AST (優先度/到達順)。非曖昧入力では通常 1 個。</summary>
     public IReadOnlyList<object?> Candidates { get; }
-    /// <summary>構文エラー (位置付き)。</summary>
     public IReadOnlyList<ParseError> Errors { get; }
-
     public GlrResult(IReadOnlyList<object?> candidates, IReadOnlyList<ParseError> errors)
     {
         Candidates = candidates;
@@ -20,15 +17,11 @@ public sealed class GlrResult
 
 /// <summary>
 /// 軽量 GLR (Generalized LR) ドライバ (Tomita-lite)。
-/// LALR(1) テーブル (<see cref="GlrTables"/>) の上で、コンフリクトセルでは全候補を並行 fork し、
-/// 入力が進むと (state, pos) が同じスタックを dedup-merge して一本化する。
-/// 完全 SPPF は作らず、各候補は独立配列スタック (浅い fork が前提)。本質的曖昧性を扱う。
+/// 単一スタック時は fast path (List/Queue/HashSet バイパス) で LALR に近い性能。
+/// コンフリクトセルでのみ fork し、収束でマージ。完全 SPPF は作らない。
 /// </summary>
 public static class LightGlrDriver
 {
-    /// <summary>入力トークンを GLR パースし、候補 AST とエラーを返す。
-    /// <paramref name="reduce"/> は (prodId, children, ctx) から部分木を構築するデリゲート (生成コードが ReduceNode をラップして渡す)。
-    /// <paramref name="toToken"/> は LexToken を AstFirst.Token に変換するデリゲート。</summary>
     public static GlrResult Run(GlrTables t, IReadOnlyList<LexToken> tokens,
         SemanticContext ctx,
         System.Func<int, object?[], SemanticContext, object?> reduce,
@@ -41,20 +34,31 @@ public static class LightGlrDriver
 
         while (active.Count > 0)
         {
-            // --- reduce phase: 各スタックで reduce を cascade + fork し、reduce が収束したら shift 待ちへ ---
-            active = ReduceAll(t, tokens, ctx, reduce, active);
+            // === Fast path: 単一スタック (List/Queue/HashSet バイパス) ===
+            if (active.Count == 1 && active[0].Alive)
+            {
+                var s = active[0];
+                bool needSlowPath = ProcessSingleStack(t, tokens, ctx, reduce, toToken,
+                    s, accepted, errors, ref lastErrorPos);
+                if (!needSlowPath)
+                {
+                    if (!s.Alive) { active.Clear(); break; }
+                    continue;
+                }
+                // slow path へフォールスルー
+            }
 
+            // === Slow path: 複数スタック (GLR fork) ===
+            active = ReduceAll(t, tokens, ctx, reduce, active);
             if (active.Count == 0) break;
 
-            // --- shift phase: 各スタックで shift (または accept)。コンフリクト候補で fork ---
             var shifted = new List<LightGlrStack>();
             foreach (var s in active)
             {
                 if (!s.Alive) continue;
                 int la = ErrorRepair.LookaheadSym(t, tokens, s.Pos);
-                if (la < 0) { s.Alive = false; continue; } // 未知トークン
+                if (la < 0) { s.Alive = false; continue; }
                 var acts = t.Actions(s.State, la);
-                // shift/accept の数を数える。単一 shift なら in-place (Clone 不要)。
                 int shiftCount = 0; int firstShiftState = -1;
                 bool hasAccept = false;
                 foreach (var act in acts)
@@ -62,10 +66,8 @@ public static class LightGlrDriver
                     if (act.Kind == 1) { shiftCount++; if (shiftCount == 1) firstShiftState = act.Value; }
                     else if (act.Kind == 3) hasAccept = true;
                 }
-
                 if (shiftCount == 1 && !hasAccept)
                 {
-                    // 単一 shift: in-place (Clone 不要)。最も多いパス。
                     object? val = la == t.EofSym ? null : (object)toToken(tokens[s.Pos]);
                     s.Push(firstShiftState, val);
                     s.Pos = s.Pos + 1;
@@ -73,10 +75,9 @@ public static class LightGlrDriver
                 }
                 else
                 {
-                    // 複数 shift または accept あり: Clone する
                     foreach (var act in acts)
                     {
-                        if (act.Kind == 1) // Shift
+                        if (act.Kind == 1)
                         {
                             var ns = s.Clone();
                             object? val = la == t.EofSym ? null : (object)toToken(tokens[s.Pos]);
@@ -86,36 +87,27 @@ public static class LightGlrDriver
                         }
                     }
                 }
-                bool hasShift = shiftCount > 0;
                 if (hasAccept)
                 {
-                    // AstFirst のテーブルは $ を shift する (S'→S $)。accept 時のスタックトップが $ (null) なら
-                    // 開始記号の値はその下。LALR の Accept (top-- で $ を捨てて result = その下) と同義。
                     var top = s.PeekValue();
                     var candidate = top is null ? s.Values[s.Top - 2] : top;
-                    // Accept/Reject: Rejected な候補は破棄 (fork の他方が生き残る、または dead)
                     if (candidate is AstNode an && an.AcceptState == AcceptState.Rejected)
                         s.Alive = false;
                     else
                         accepted.Add(candidate);
                 }
-                if (!hasShift)
+                if (shiftCount == 0 && !hasAccept)
                 {
-                    // shift 先がない。accept 済みなら結果は回収済み。そうでなければ Corchuelo et al. の修復
-                    // (ER1 挿入 / ER2 削除 / ER3 Forward move で N シンボル先まで確認) を最小コストで試みる。
-                    if (!hasAccept)
+                    if (s.Pos - lastErrorPos >= 3)
                     {
-                        if (s.Pos - lastErrorPos >= 3)
-                        {
-                            errors.Add(MakeError(t, tokens, s));
-                            lastErrorPos = s.Pos;
-                        }
-                        var repaired = ErrorRepair.TryRepair(t, tokens, s, reduce, toToken, ctx);
-                        if (repaired != null) shifted.Add(repaired);
-                        else s.Alive = false;
+                        errors.Add(MakeError(t, tokens, s));
+                        lastErrorPos = s.Pos;
                     }
-                    else s.Alive = false;   // accept 済み: これ以上追わない
+                    var repaired = ErrorRepair.TryRepair(t, tokens, s, reduce, toToken, ctx);
+                    if (repaired != null) shifted.Add(repaired);
+                    else s.Alive = false;
                 }
+                else if (hasAccept && shiftCount == 0) s.Alive = false;
             }
             active = Dedup(shifted);
         }
@@ -123,8 +115,84 @@ public static class LightGlrDriver
         return new GlrResult(accepted, errors);
     }
 
-    /// <summary>全スタックで reduce を再帰的に適用 (cascade)。コンフリクトセルで複数 reduce 候補があれば fork。
-    /// reduce がなくなったスタックは shift 待ちリストへ (同一 (state,pos) は dedup)。</summary>
+    /// <summary>単一スタックの fast path。reduce cascade + shift/accept/error をインライン処理。
+    /// fork が必要 (reduce-reduce コンフリクト等) になったら true を返して slow path へ。</summary>
+    private static bool ProcessSingleStack(GlrTables t, IReadOnlyList<LexToken> tokens,
+        SemanticContext ctx, System.Func<int, object?[], SemanticContext, object?> reduce,
+        System.Func<LexToken, Token> toToken,
+        LightGlrStack s, List<object?> accepted, List<ParseError> errors, ref int lastErrorPos)
+    {
+        // Reduce cascade (Queue/HashSet/List バイパス、in-place)
+        int guard = 0;
+        while (true)
+        {
+            if (guard++ > 10000) { s.Alive = false; return false; }
+            int la = ErrorRepair.LookaheadSym(t, tokens, s.Pos);
+            if (la < 0) { s.Alive = false; return false; }
+            var acts = t.Actions(s.State, la);
+            int reduceVal = -1, reduceCount = 0;
+            foreach (var a in acts)
+            {
+                if (a.Kind == 2) { reduceCount++; if (reduceCount == 1) reduceVal = a.Value; }
+            }
+            if (reduceCount == 0) break;
+            if (reduceCount > 1) return true; // fork 必要 → slow path
+            try { ErrorRepair.ApplyReduce(t, reduce, ctx, s, reduceVal); }
+            catch { s.Alive = false; return false; }
+        }
+
+        // NotifyAccepted (ルート確定)
+        if (s.Top > 0 && s.PeekValue() is AstNode survivor) survivor.NotifyAccepted(ctx);
+
+        // Shift / accept / error
+        int la2 = ErrorRepair.LookaheadSym(t, tokens, s.Pos);
+        if (la2 < 0) { s.Alive = false; return false; }
+        var acts2 = t.Actions(s.State, la2);
+        int shiftState = -1, shiftCount = 0;
+        bool hasAccept = false;
+        foreach (var a in acts2)
+        {
+            if (a.Kind == 1) { shiftCount++; if (shiftCount == 1) shiftState = a.Value; }
+            else if (a.Kind == 3) hasAccept = true;
+        }
+        if (hasAccept)
+        {
+            var top = s.PeekValue();
+            var candidate = top is null ? s.Values[s.Top - 2] : top;
+            if (!(candidate is AstNode an && an.AcceptState == AcceptState.Rejected))
+                accepted.Add(candidate);
+        }
+        if (shiftCount > 1) return true; // fork 必要 → slow path
+        if (shiftCount == 1)
+        {
+            object? val = la2 == t.EofSym ? null : (object)toToken(tokens[s.Pos]);
+            s.Push(shiftState, val);
+            s.Pos++;
+            if (hasAccept) { s.Alive = false; return false; }
+            return false; // fast path 継続
+        }
+        if (!hasAccept)
+        {
+            // Error: Corchuelo repair
+            if (s.Pos - lastErrorPos >= 3)
+            {
+                errors.Add(MakeError(t, tokens, s));
+                lastErrorPos = s.Pos;
+            }
+            var repaired = ErrorRepair.TryRepair(t, tokens, s, reduce, toToken, ctx);
+            if (repaired != null)
+            {
+                // repaired スタックで続き (s を入れ替え)
+                s.States = repaired.States; s.Values = repaired.Values;
+                s.Top = repaired.Top; s.Pos = repaired.Pos;
+                return false;
+            }
+            s.Alive = false;
+        }
+        else s.Alive = false;
+        return false;
+    }
+
     private static List<LightGlrStack> ReduceAll(GlrTables t, IReadOnlyList<LexToken> tokens,
         SemanticContext ctx, System.Func<int, object?[], SemanticContext, object?> reduce, List<LightGlrStack> active)
     {
@@ -146,13 +214,10 @@ public static class LightGlrDriver
 
             if (reduceActs.Count == 0)
             {
-                // reduce 収束 → shift 待ち. Rejected な候補は破棄 (Accept/Reject 統合)。
                 if (s.PeekValue() is AstNode an && an.AcceptState == AcceptState.Rejected)
                 {
-                    s.Alive = false;
-                    continue;
+                    s.Alive = false; continue;
                 }
-                // 同一 state,pos は先着を残す。ルートが1つに確定 → MarkAccepted。
                 if (seen.Add((s.State, s.Pos)))
                 {
                     if (s.PeekValue() is AstNode survivor) survivor.NotifyAccepted(ctx);
@@ -162,7 +227,6 @@ public static class LightGlrDriver
                 continue;
             }
 
-            // reduce 候補を適用。単一なら in-place (Clone 不要)、複数なら snapshot から fork。
             if (reduceActs.Count == 1)
             {
                 try { ErrorRepair.ApplyReduce(t, reduce, ctx, s, reduceActs[0]); }
@@ -184,8 +248,6 @@ public static class LightGlrDriver
         return done;
     }
 
-
-    /// <summary>同一 (state, pos) のスタックを統合 (先着を残す)。これで fork の指数爆発を防ぐ。</summary>
     private static List<LightGlrStack> Dedup(List<LightGlrStack> stacks)
     {
         var seen = new HashSet<(int, int)>();
