@@ -215,19 +215,8 @@ public static class ParserEmitter
         sb.AppendLine("                var __es = new AstFirst.Glr.LightGlrDriver.LightGlrStack(states, values, top, i);");
         sb.AppendLine("                var __er = AstFirst.Glr.ErrorRepair.TryRepair(__et, tokens, __es, (int p, object?[] c, AstFirst.SemanticContext x) => ReduceNode(p, c.AsSpan(), c.Length, x), ToToken, ctx);");
         sb.AppendLine("                if (__er != null) { states = __er.States; values = __er.Values; top = __er.Top; i = __er.Pos; statesSpan = states; valuesSpan = values; continue; }");
-        sb.AppendLine("                bool recovered = false;");
-        sb.AppendLine("                while (top > 1 && i < tokens.Count)");
-        sb.AppendLine("                {");
-        sb.AppendLine("                    top--;");
-        sb.AppendLine("                    int topState = statesSpan[top - 1];");
-        sb.AppendLine("                    int curSym = TokenIdToSym[tokens[i].TokenId];");
-        sb.AppendLine("                    if (curSym >= 0 && ActionKind[topState * SymbolCount + curSym] != 0) { recovered = true; break; }");
-        sb.AppendLine("                }");
-        sb.AppendLine("                if (!recovered)");
-        sb.AppendLine("                {");
-        sb.AppendLine("                    if (top <= 1) { top = 0; statesSpan[top++] = 0; }");
-        sb.AppendLine("                    if (i < tokens.Count) i++; else break;");
-        sb.AppendLine("                }");
+        sb.AppendLine("                // Corchuelo 修復失敗 → トークンを1つ進めて続行 (パニックモード不使用)");
+        sb.AppendLine("                if (i < tokens.Count) i++; else break;");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
         // 2パス目: IOnSecondPassEnter/Exit を実装するノードが1つでもあれば Walker を生成・呼出。
