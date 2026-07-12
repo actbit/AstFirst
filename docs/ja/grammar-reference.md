@@ -44,7 +44,7 @@ public abstract partial class Expr : AstNode { }
 - **1 クラス 1 モード**: `Lalr` と `LightGlr` を同じ `[Grammar]` ルートに同時指定はできない（1 モード選択）。`Mode`（方言）とは併用可。
 - **OnReduce の制約**: LightGlr では未確定の分岐でも reduce 時に `OnReduce` が呼ばれる。そのため `OnReduce`（partial）は**ノード自身のプロパティ設定（`Name`/`Value`/`Span` 等）のみ**とし、外部の mutable 状態（`ScopedSymbolTable` / `DiagnosticBag` 等）の変更を行ってはならない。意味解析は 2 パス目の `[Enter]`/`[Exit]`（Walker）で行うこと（破棄された分岐の副作用が残るのを防ぐ）。
 - **エラー修復 (Corchuelo et al. ER1/ER2/ER3) の既知の制限**:
-  - **挿入トークンは値 null**: ER1 で補完されたトークンはユーザーが書いていないため値が `null`。これを子に持つノードの `OnReduce` で `Token.Text` 等を呼ぶと `NullReferenceException` になる。修復検証 (ER3 SimulateForward) で実 reduce を try/catch して例外を出す候補は弾くが、fork 差により本番で漏れる可能性がゼロではない。`OnReduce` は null 安全に書くことが望ましい。
+  - **挿入トークンは空文字 + 推測 Span**: ER1 で補完されたトークンはユーザーが書いていないため `BasicToken("", ...)` (空文字) になる。Span は前後のトークンから推測して補間される (前トークンの End 〜 次トークンの Start)。`Token.Text` は空文字 `""` なので `int.Parse("")` 等は `FormatException` を投げるが、ER3 SimulateForward で実 reduce を try/catch して例外を出す候補は弾く。
   - **N=3・コスト固定**: ER3 の Forward move 確認シンボル数 `N=3`、挿入コスト=1/削除コスト=2 は固定値。Corchuelo 論文では言語に応じたチューニングを推奨しているが、本実装では未対応。
   - **1 回修復 (再帰なし)**: Corchuelo 本来は ER1/ER2/ER3 を再帰的に適用するが、本実装は1回の ER1/ER2 + ER3 のみ。連続エラーは次の dead で順次修復される。
   - **SimulateForward は最初の経路のみ確認**: コンフリクトセルでも fork せず最初の shift/reduce のみ追うため、本番の fork 経路との完全一致は保証しない。
