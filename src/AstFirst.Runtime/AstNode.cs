@@ -37,6 +37,13 @@ public abstract class AstNode
     /// <summary>この構文を受領しない。優先度順の別候補 (別規則/shift) へフォールバックする。</summary>
     protected void Reject() => AcceptState = AcceptState.Rejected;
 
+    /// <summary>GLR で経路が確定 (fork が収束、または他が dead) した時に呼ぶ。Undecided → Accepted に確定。</summary>
+    internal void MarkAccepted()
+    {
+        if (AcceptState == AcceptState.Undecided)
+            AcceptState = AcceptState.Accepted;
+    }
+
     /// <summary>受領されたか (Accepted、または既定の Undecided)。パーサ生成コードが参照。</summary>
     public bool IsAccepted => AcceptState != AcceptState.Rejected;
 }
