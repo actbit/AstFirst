@@ -136,8 +136,7 @@ public static class LightGlrDriver
                     s.Alive = false;
                     continue;
                 }
-                // 同一 state,pos は先着を残す (Tomita の最適化)。
-                // 残る候補 = 経路が確定 (他が dedup/dead で消えた) → MarkAccepted。
+                // 同一 state,pos は先着を残す。ルートが1つに確定 → MarkAccepted。
                 if (seen.Add((s.State, s.Pos)))
                 {
                     if (s.PeekValue() is AstNode survivor) survivor.MarkAccepted();
