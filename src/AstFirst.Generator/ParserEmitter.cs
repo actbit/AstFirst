@@ -139,7 +139,7 @@ public static class ParserEmitter
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input) => Parse(input, null);");
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)");
         sb.AppendLine("    {");
-        sb.AppendLine("        var ctx = context ?? new AstFirst.BasicSemanticContext();");
+        sb.AppendLine("        var ctx = (context as AstFirst.BasicSemanticContext) ?? new AstFirst.BasicSemanticContext();");
         sb.AppendLine("        var tokens = " + lexerName + ".Tokenize(input);");
         sb.AppendLine("        var states = new int[64];");
         sb.AppendLine("        var values = new object?[64];");
@@ -173,6 +173,7 @@ public static class ParserEmitter
         sb.AppendLine("            else if (dk == 2) // Reduce (仮想 reduce)");
         sb.AppendLine("            {");
         sb.AppendLine("                var node = ReduceNode(dv, valuesSpan, top, ctx);");
+        sb.AppendLine("                if (node is AstFirst.AstNode __na) __na.NotifyAccepted(ctx);");
         sb.AppendLine("                if (node is AstFirst.AstNode __an && !__an.IsAccepted)");
         sb.AppendLine("                {");
         sb.AppendLine("                    // Reject: フォールバック候補を試す");
@@ -210,19 +211,12 @@ public static class ParserEmitter
         sb.AppendLine("                    errors.Add(new AstFirst.ParseError(\"予期しないトークン\" + (exp.Length > 0 ? \" (期待: \" + exp + \")\" : \"\"), pos));");
         sb.AppendLine("                    lastErrorPos = i;");
         sb.AppendLine("                }");
-        sb.AppendLine("                bool recovered = false;");
-        sb.AppendLine("                while (top > 1 && i < tokens.Count)");
-        sb.AppendLine("                {");
-        sb.AppendLine("                    top--;");
-        sb.AppendLine("                    int topState = statesSpan[top - 1];");
-        sb.AppendLine("                    int curSym = TokenIdToSym[tokens[i].TokenId];");
-        sb.AppendLine("                    if (curSym >= 0 && ActionKind[topState * SymbolCount + curSym] != 0) { recovered = true; break; }");
-        sb.AppendLine("                }");
-        sb.AppendLine("                if (!recovered)");
-        sb.AppendLine("                {");
-        sb.AppendLine("                    if (top <= 1) { top = 0; statesSpan[top++] = 0; }");
-        sb.AppendLine("                    if (i < tokens.Count) i++; else break;");
-        sb.AppendLine("                }");
+        sb.AppendLine("                var __et = new AstFirst.Glr.GlrTables(ActionKind, ActionValue, Goto, ProdLhs, ProdLen, DefaultReduce, TokenIdToSym, AltKeys, AltActs, StateCount, SymbolCount, EofSym, 0, SymNames);");
+        sb.AppendLine("                var __es = new AstFirst.Glr.LightGlrDriver.LightGlrStack(states, values, top, i);");
+        sb.AppendLine("                var __er = AstFirst.Glr.ErrorRepair.TryRepair(__et, tokens, __es, (int p, object?[] c, AstFirst.SemanticContext x) => ReduceNode(p, c.AsSpan(), c.Length, x), ToToken, ctx);");
+        sb.AppendLine("                if (__er != null) { states = __er.States; values = __er.Values; top = __er.Top; i = __er.Pos; statesSpan = states; valuesSpan = values; continue; }");
+        sb.AppendLine("                // Corchuelo 修復失敗 → トークンを1つ進めて続行 (パニックモード不使用)");
+        sb.AppendLine("                if (i < tokens.Count) i++; else break;");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
         // 2パス目: IOnSecondPassEnter/Exit を実装するノードが1つでもあれば Walker を生成・呼出。
@@ -309,8 +303,11 @@ public static class ParserEmitter
                     sb.Append("            case ").Append(prod.Id).Append(": { ");
                     if (listAction.IsRecursive)
                     {
-                        // List_T → List_T item: 既存リスト (右辺0) に item (右辺1) を Add。
-                        sb.Append("var __list = (").Append(listType).Append(")values[top - ").Append(len).Append(" + 0]!; ");
+                        // List_T → List_T item: COW (copy-on-write)。既存リストをコピーして末尾に Add。
+                        // ErrorRepair の probe (浅いコピー) でリストが共有されるため、破壊的 Add は不可。
+                        sb.Append("var __src = (").Append(listType).Append(")values[top - ").Append(len).Append(" + 0]!; ");
+                        sb.Append("var __list = new ").Append(listType).Append("(__src.Count + 1); ");
+                        sb.Append("foreach (var __x in __src) __list.Add(__x); ");
                         sb.Append("__list.Add((").Append(elemType).Append(")values[top - ").Append(len).Append(" + 1]!); ");
                     }
                     else if (listAction.IsEmpty)
@@ -384,7 +381,15 @@ public static class ParserEmitter
         // RuleName: 抽象基底、または継承プロパティがない (基底が RuleName を持たない) 場合のみ生成。
         if (node.Rules.Count > 0 && (isAbstractBase || !hasInherited))
             sb.AppendLine("    public readonly string RuleName;");
-        sb.AppendLine("    partial void OnReduce" + ctxParam + ";");
+        // OnReduce は読み取り専用 SemanticContext (ctx の書き換えを防ぐ)。
+        // OnAccepted はルート確定後なのでユーザーの ctx 型 (書き込み可) を渡す。
+        sb.AppendLine("    partial void OnReduce(" + (ctxType is not null ? "AstFirst.SemanticContext ctx" : "") + ");");
+        sb.AppendLine("    partial void OnAccepted" + ctxParam + ";");
+        // NotifyAccepted: 常に override を生成。
+        if (ctxType is not null)
+            sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted((" + ctxType + ")ctx!);");
+        else
+            sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted();");
 
         // コンストラクタ: 抽象基底は protected (派生から : base で呼ばれる)、具象は internal。
         // 同じ引数型シグネチャの[Rule]が複数ある場合は1つに統合 (ruleName で実行時に区別)。
@@ -463,7 +468,7 @@ public static class ParserEmitter
                 if (ar.Phase != AnalyzePhase.OnReduce) continue;
                 if (ar.TargetNodeFullName != node.FullName) continue;
                 if (ctxCall.Length == 0) continue; // ctx なしノードには注入不可
-                sb.AppendLine("        " + ar.GrammarClassFullName + "." + ar.MethodName + "(this, (" + ar.CtxTypeFullName + ")" + ctxCall + ");");
+                sb.AppendLine("        " + ar.GrammarClassFullName + "." + ar.MethodName + "(this, (AstFirst.SemanticContext)" + ctxCall + ");");
             }
             sb.AppendLine("    }");
         }

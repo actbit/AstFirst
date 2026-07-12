@@ -30,6 +30,7 @@ public static class CSharpFactory
     public static GrammarSpec Create()
     {
         var spec = new GrammarSpec(Namespace, Root, skipRegex: @"(\s|//[^\n]*)+");
+        spec.ParseMode = "LightGlr";   // C# の型/式 (cast/paren, generic) の本質的曖昧性を GLR で解決
         spec.AddAbstract(Root, "AstNode");
         AddLexical(spec);
         AddTypes(spec);

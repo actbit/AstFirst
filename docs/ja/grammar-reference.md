@@ -28,6 +28,54 @@ public abstract partial class Expr : AstNode { }
 
 `Mode` 名前付きプロパティで複数方言を切り替えられる（後述）。
 
+### ParseMode（パーサの実行モード）
+
+`ParseMode` 名前付きプロパティでパーサの実行モードを切り替えられる。既定は `Lalr`（確定 LALR(1)）。
+
+| 値 | 動作 |
+|---|---|
+| `ParseMode.Lalr`（既定） | 確定 LALR(1)。コンフリクトは優先度/結合性で解決し、解決不能分は警告 (ASTF001)。 |
+| `ParseMode.LightGlr` | 軽量 GLR。コンフリクトセルで並行 fork し、収束でマージ。cast/paren・generic の型/式など**本質的曖昧性**を扱える。コンフリクトは fork で解決されるため ASTF001 を出さない。結果は単一 AST（`ParseResult.Ast`）。複数解釈が残った場合は `ParseResult.AmbiguousCandidates` で観察可能。 |
+
+```csharp
+[Grammar(ParseMode = ParseMode.LightGlr)]
+```
+
+- **1 クラス 1 モード**: `Lalr` と `LightGlr` を同じ `[Grammar]` ルートに同時指定はできない（1 モード選択）。`Mode`（方言）とは併用可。
+- **OnReduce の制約**: LightGlr では未確定の分岐でも reduce 時に `OnReduce` が呼ばれる。そのため `OnReduce`（partial）は**ノード自身のプロパティ設定（`Name`/`Value`/`Span` 等）のみ**とし、外部の mutable 状態（`ScopedSymbolTable` / `DiagnosticBag` 等）の変更を行ってはならない。意味解析は 2 パス目の `[Enter]`/`[Exit]`（Walker）で行うこと（破棄された分岐の副作用が残るのを防ぐ）。
+- **エラー修復 (Corchuelo et al. ER1/ER2/ER3) の既知の制限**:
+  - **挿入トークンは値 null**: ER1 で補完されたトークンはユーザーが書いていないため値が `null`。これを子に持つノードの `OnReduce` で `Token.Text` 等を呼ぶと `NullReferenceException` になる。修復検証 (ER3 SimulateForward) で実 reduce を try/catch して例外を出す候補は弾くが、fork 差により本番で漏れる可能性がゼロではない。`OnReduce` は null 安全に書くことが望ましい。
+  - **N=3・コスト固定**: ER3 の Forward move 確認シンボル数 `N=3`、挿入コスト=1/削除コスト=2 は固定値。Corchuelo 論文では言語に応じたチューニングを推奨しているが、本実装では未対応。
+  - **1 回修復 (再帰なし)**: Corchuelo 本来は ER1/ER2/ER3 を再帰的に適用するが、本実装は1回の ER1/ER2 + ER3 のみ。連続エラーは次の dead で順次修復される。
+  - **SimulateForward は最初の経路のみ確認**: コンフリクトセルでも fork せず最初の shift/reduce のみ追うため、本番の fork 経路との完全一致は保証しない。
+- **エラー回復の挙動**: LightGlr の Corchuelo 修復は、LALR モードの panic mode 回復とは異なり、トークンを補完/削除してパースを続行する。同じ入力でもモードによりエラー位置・メッセージが変わる場合がある。
+
+### ⚠ バージョン互換性のない変更 (0.4.0)
+
+以下の変更は**後方互換性がありません**。既存コードの修正が必要です。
+
+- **OnReduce の ctx が読み取り専用**: `OnReduce(MyCtx ctx)` → `OnReduce(SemanticContext ctx)`。ctx の型が常に `SemanticContext` (基底) になります。`OnAccepted` は引き続きユーザーの ctx 型 (書き込み可) を受け取ります。
+- **SemanticContext.Symbols が読み取り専用**: `IReadOnlySymbolTable` を返す (`Lookup` のみ)。`TryDeclare` / `PushScope` / `PopScope` は不可。
+- **SemanticContext.Diagnostics が削除**: `Diagnostics` は `BasicSemanticContext` に移動。OnReduce で `ctx.Diagnostics.Error(...)` はコンパイルエラーになります。
+- **書き込みは [Enter]/[Exit] で**: `ctx.WritableSymbols.TryDeclare(...)` / `ctx.Diagnostics.Error(...)` は `[Enter]`/`[Exit]` 属性メソッド (2パス目 Walker) 内で行う。
+
+**移行例**:
+```csharp
+// ❌ 前 (0.3.0): OnReduce で宣言・診断
+partial void OnReduce(MyCtx ctx)
+{
+    if (!ctx.Symbols.TryDeclare(...)) ctx.Diagnostics.Error(...);
+}
+
+// ✅ 後 (0.4.0): OnReduce はノードローカルのみ、宣言は [Enter] で
+partial void OnReduce(SemanticContext ctx) { Name = ...; Span = ...; }
+// [Grammar] ルートクラスで:
+[Enter] static void Declare(MyNode n, BasicSemanticContext ctx)
+{
+    if (!ctx.WritableSymbols.TryDeclare(...)) ctx.Diagnostics.Error(...);
+}
+```
+
 ## `[Rule]`
 
 生成規則を定義する static メソッドに付ける。1クラスに複数置ける。本体は空（意味アクションは `OnReduce` に書く）。

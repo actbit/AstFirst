@@ -5,7 +5,7 @@
 
 [日本語](README.ja.md) / English
 
-A parser generator where you write the grammar in **plain C# classes and attributes**, and a Source Generator emits a Lexer and an LALR(1) Parser at compile time. The generated Parser returns an AST you can layer semantic analysis on (scoped symbol table, two-pass Walker, type checking, and `Accept`/`Reject` to resolve semantic ambiguity).
+A parser generator where you write the grammar in **plain C# classes and attributes**, and a Source Generator emits a Lexer and an LALR(1) / Lightweight GLR (LightGlr) Parser at compile time. The generated Parser returns an AST you can layer semantic analysis on (scoped symbol table, two-pass Walker, type checking, and `Accept`/`Reject` to resolve semantic ambiguity).
 
 ## How it compares
 
@@ -17,13 +17,13 @@ AstFirst sits in the same space as parser generators and combinator libraries, b
 | Code generated | **compile time** (Source Generator) | build-time codegen tool | **never** — interpreted at runtime | n/a |
 | Runtime parse cost | **zero** — static tables, no dispatch | generated code | interpreted (allocation/dispatch per parse) | n/a |
 | AOT / Native AOT | ✓ no runtime codegen | △ | ✓ | n/a |
-| Algorithm | LALR(1) table-driven | LL(\*) / ALL(\*) | recursive-descent combinators | n/a |
-| Error recovery | panic mode (built-in) | yes | hand-rolled | n/a |
-| Grammar power | LALR(1) — resolve conflicts with `[Precedence]` | LL(\*) | **Turing-complete** (branch on any C#) | n/a |
+| Algorithm | LALR(1) + Lightweight GLR (LightGlr) | LL(\*) / ALL(\*) | recursive-descent combinators | n/a |
+| Error recovery | Corchuelo et al. ER1/ER2/ER3 (built-in) | yes | hand-rolled | n/a |
+| Grammar power | LALR(1) + GLR — resolve conflicts with `[Precedence]` / fork | LL(\*) | **Turing-complete** (branch on any C#) | n/a |
 
-**Strengths vs combinators (Superpower/Pidgin)**: the parser is emitted *at compile time* as static tables — no interpretation, no delegate dispatch, no per-parse construction. Startup and per-parse cost are effectively zero, it AOTs / Native-AOTs cleanly, and panic-mode error recovery is built in. The grammar is declarative C#, so the IDE can navigate and refactor it.
+**Strengths vs combinators (Superpower/Pidgin)**: the parser is emitted *at compile time* as static tables — no interpretation, no delegate dispatch, no per-parse construction. Startup and per-parse cost are effectively zero, it AOTs / Native-AOTs cleanly, and Corchuelo et al. error recovery (ER1 insert / ER2 delete / ER3 Forward move) is built in. The grammar is declarative C#, so the IDE can navigate and refactor it.
 
-**Trade-offs**: LALR(1) needs `[Precedence]`/associativity to resolve shift-reduce conflicts — combinator libraries are freer (you can branch on arbitrary C# mid-parse). A C#-only toolchain.
+**Trade-offs**: LALR(1) needs `[Precedence]`/associativity to resolve shift-reduce conflicts. However, LightGlr mode (`[Grammar(ParseMode = ParseMode.LightGlr)]`) handles inherent ambiguity (cast/paren, generics) via parallel fork. A C#-only toolchain.
 
 **Why a Source Generator?** the Lexer/Parser/Walker are ordinary C# the compiler sees and the IDE can open (the `.g.cs` lives under your project, Go to Definition works). You never *build* the parser at runtime, and grammar mistakes (unresolved conflicts, unreachable rules) surface as **compile-time warnings**, not at the first `Parse`.
 
@@ -32,12 +32,12 @@ AstFirst sits in the same space as parser generators and combinator libraries, b
 - **Grammar in C# code**: the inheritance tree expresses syntax; the parameters of a `[Rule]` static method express the RHS and lexical rules. No special DSL files.
 - **Source Generator (`IIncrementalGenerator`)**: emits Lexer / Parser / partial properties C# code at compile time. No runtime code generation.
 - **Regex-based lexer**: character-class compaction, longest-match + priority-driven, `{m,n}` quantifiers, Unicode supplementary planes. Computes **line/column** of each token.
-- **LALR(1) parsing**: resolves shift-reduce conflicts with precedence/associativity (`[Precedence]`) (e.g. `*` > `+`, right-associative assignment).
-- **Semantic ambiguity resolution (Accept/Reject)**: call `Reject()` in the reduce-time `OnReduce` to fall back to the next candidate (another rule / shift) in priority order. Resolves meaning-dependent ambiguity like cast vs. parenthesized expression during parsing.
+- **LALR(1) + Lightweight GLR parsing**: default is LALR(1). Switch to Lightweight GLR with `[Grammar(ParseMode = ParseMode.LightGlr)]` to handle inherent ambiguity (cast/paren, generics) via parallel fork. Resolves shift-reduce conflicts with precedence/associativity (`[Precedence]`) (e.g. `*` > `+`, right-associative assignment).
+- **High-quality error recovery (Corchuelo et al.)**: ER1 insert / ER2 delete / ER3 Forward move to continue parsing after syntax errors without discarding tokens. Used in both LALR and GLR modes.
 - **AST construction + automatic child retention + automatic Span**: at reduce time a generator-emitted partial constructor sets children/terminals into properties automatically, merges their `Span`s into the node's `Span`, and then calls `OnReduce`. No manual child assignment or Span setup (overridable in `OnReduce`).
 - **Two-pass semantic analysis**: after `Parse`, each node's `OnSecondPassEnter`/`OnSecondPassExit` (top-down) is called automatically. Accurate semantic analysis like scope Push/Pop is straightforward.
 - **Semantic analysis helpers**: `[Enter]`/`[Exit]`/`[OnReduce]` attribute rules, a generic Walker (`{Root}Walker`), scoped symbol table (`ScopedSymbolTable`), symbol resolution (`ResolveOrError`), type system (`TypeSymbol` / `FunctionTypeSymbol` / `ArrayTypeSymbol` / `OverloadResolver`), binding (`AstNode.SetAnnotation`), diagnostics (`ParseResult.Diagnostics`).
-- **Error recovery**: continues after syntax errors via panic mode; `ParseResult` carries the AST + error list.
+- **Error recovery**: continues after syntax errors via Corchuelo et al. ER1/ER2/ER3; `ParseResult` carries the AST + error list.
 
 ## Quick start
 
@@ -316,7 +316,7 @@ Japanese versions are under `docs/ja/` and [README.md](README.md).
 
 ## Tests
 
-293 tests (AstFirst.Tests 247 + Generator.Tests 46). Covers lexer/DFA/LALR stages, end-to-end, error recovery, semantic analysis (scopes, two-pass, type checking, ctx -> `ParseResult.Diagnostics` integration), `Accept`/`Reject` fallback, and positions (line/column).
+352 tests (AstFirst.Tests 299 + Generator.Tests 53). Covers lexer/DFA/LALR stages, end-to-end, error recovery (Corchuelo), GLR fork/dedup, semantic analysis (scopes, two-pass, type checking, ctx -> `ParseResult.Diagnostics` integration), `Accept`/`Reject` fallback, `OnAccepted` callback, and positions (line/column).
 
 ## License
 

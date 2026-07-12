@@ -46,4 +46,8 @@
     <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="AstFirst.Generator.Tests" />
+  </ItemGroup>
+
 </Project>

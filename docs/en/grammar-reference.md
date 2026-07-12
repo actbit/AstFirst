@@ -28,6 +28,54 @@ public abstract partial class Expr : AstNode { }
 
 The `Mode` named property switches dialects (see below).
 
+### ParseMode (parser execution mode)
+
+The `ParseMode` named property selects the parser execution mode. Default is `Lalr` (deterministic LALR(1)).
+
+| Value | Behavior |
+|---|---|
+| `ParseMode.Lalr` (default) | Deterministic LALR(1). Conflicts resolved by precedence/associativity; unresolved ones are warnings (ASTF001). |
+| `ParseMode.LightGlr` | Lightweight GLR. Forks in parallel at conflict cells, merges on convergence. Handles **inherent ambiguity** such as cast/paren or generic type/expression. Conflicts are resolved by forking, so no ASTF001. Result is a single AST (`ParseResult.Ast`); if multiple interpretations survive, observe via `ParseResult.AmbiguousCandidates`. |
+
+```csharp
+[Grammar(ParseMode = ParseMode.LightGlr)]
+```
+
+- **One mode per class**: `Lalr` and `LightGlr` cannot be specified simultaneously on the same `[Grammar]` root (choose one). Combinable with `Mode` (dialect).
+- **OnReduce constraint**: In LightGlr, `OnReduce` is invoked at reduce time even for undetermined branches. Therefore `OnReduce` (partial) must only set the node's own properties (`Name`/`Value`/`Span`, etc.) and must **not** mutate external state (`ScopedSymbolTable` / `DiagnosticBag`, etc.). Do semantic analysis in the second pass via `[Enter]`/`[Exit]` (Walker) to avoid leftover side effects from discarded branches.
+- **Error repair (Corchuelo et al. ER1/ER2/ER3) known limitations**:
+  - **Inserted tokens have null value**: Tokens inserted by ER1 have no value (the user did not write them). `OnReduce` that accesses `Token.Text` on such a token will throw `NullReferenceException`. SimulateForward (ER3) validates with real reduce + try/catch to reject candidates that throw, but fork divergence means zero risk is not guaranteed. Write `OnReduce` null-safe.
+  - **N=3 and costs are fixed**: Forward move symbols `N=3`, insert cost=1/delete cost=2 are hardcoded. The Corchuelo paper recommends per-language tuning; not yet supported.
+  - **Single-pass repair (no recursion)**: The original Corchuelo applies ER1/ER2/ER3 recursively; this implementation applies one round only. Consecutive errors are repaired one at a time on subsequent dead states.
+  - **SimulateForward checks the first path only**: Does not fork at conflict cells during simulation, so full agreement with production fork paths is not guaranteed.
+- **Error recovery behavior**: LightGlr's Corchuelo repair differs from the panic-mode recovery used in Lalr mode — it inserts/deletes tokens to continue parsing. The same input may produce different error positions/messages depending on the mode.
+
+### ⚠ Breaking Changes (0.4.0)
+
+The following changes are **not backward compatible**. Existing code must be updated.
+
+- **OnReduce ctx is read-only**: `OnReduce(MyCtx ctx)` → `OnReduce(SemanticContext ctx)`. The ctx type is always `SemanticContext` (base class). `OnAccepted` still receives the user's ctx type (writable).
+- **SemanticContext.Symbols is read-only**: Returns `IReadOnlySymbolTable` (`Lookup` only). `TryDeclare` / `PushScope` / `PopScope` are not available.
+- **SemanticContext.Diagnostics removed**: `Diagnostics` moved to `BasicSemanticContext`. `ctx.Diagnostics.Error(...)` in OnReduce is a compile error.
+- **Writes go in [Enter]/[Exit]**: Use `ctx.WritableSymbols.TryDeclare(...)` / `ctx.Diagnostics.Error(...)` inside `[Enter]`/`[Exit]` attribute methods (2nd-pass Walker).
+
+**Migration example**:
+```csharp
+// ❌ Before (0.3.0): declarations/diagnostics in OnReduce
+partial void OnReduce(MyCtx ctx)
+{
+    if (!ctx.Symbols.TryDeclare(...)) ctx.Diagnostics.Error(...);
+}
+
+// ✅ After (0.4.0): OnReduce for node-local only, declarations in [Enter]
+partial void OnReduce(SemanticContext ctx) { Name = ...; Span = ...; }
+// In [Grammar] root class:
+[Enter] static void Declare(MyNode n, BasicSemanticContext ctx)
+{
+    if (!ctx.WritableSymbols.TryDeclare(...)) ctx.Diagnostics.Error(...);
+}
+```
+
 ## `[Rule]`
 
 Attach to a static method that defines a production. Multiple per class allowed. The body is empty (semantic actions go in `OnReduce`).

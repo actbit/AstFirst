@@ -9,12 +9,12 @@
 <!-- BEGIN gen-perf -->
 | パターン | LALR状態数 | シンボル数 | 生成コード(byte) | 生成コード(行) | ビルド時間(ms) |
 |---|---:|---:|---:|---:|---:|
-| DeepPrec | 44 | 45 | 58214 | 624 | 3007 |
-| WideRules | 205 | 207 | 601219 | 2321 | 3447 |
-| ManyTokens | 205 | 206 | 599511 | 2322 | 3660 |
-| DeepNest | 7 | 8 | 11454 | 230 | 3101 |
-| MegaLang | 121 | 119 | 252995 | 1406 | 3315 |
-| CSharp | 798 | 608 | 6023011 | 8011 | 10969 |
+| DeepPrec | 44 | 45 | 81280 | 1339 | 5888 |
+| WideRules | 205 | 207 | 613200 | 3545 | 5455 |
+| ManyTokens | 205 | 206 | 615657 | 3546 | 5169 |
+| DeepNest | 7 | 8 | 12352 | 260 | 3346 |
+| MegaLang | 121 | 119 | 276789 | 2486 | 3443 |
+| CSharp | 798 | 608 | 6183596 | 15363 | 11694 |
 <!-- END gen-perf -->
 
 ## 実行パフォーマンス（BenchmarkDotNet、大規模テスト）
@@ -27,18 +27,20 @@ C# 完全文法（365 規則 / 798 状態）を最大規模のストレステス
 
 | 文法 | 規則数 | Build | Parse | Parse Allocated |
 |---|---:|---:|---:|---:|
-| DeepPrec | 22 | 2.75 ms | 1.94 ms | 4.7 MB |
-| WideRules | 103 | 2.71 ms | 2.14 ms | 4.7 MB |
-| ManyTokens | 103 | 73.0 ms | 1.14 ms | 2.5 MB |
-| DeepNest | 3 | 0.011 ms | 0.104 ms | 338 KB |
-| MegaLang | 58 | 4.02 ms | 0.193 ms | 401 KB |
-| **CSharp** | **365** | **190 ms** | **0.68 ms** | **627 KB** |
+| DeepPrec | 22 | 2.75 ms | 2.3 ms | 4.5 MB |
+| WideRules | 103 | 2.71 ms | — | — |
+| ManyTokens | 103 | 73.0 ms | — | — |
+| DeepNest | 3 | 0.011 ms | 0.17 ms | 376 KB |
+| MegaLang | 58 | 4.02 ms | 0.40 ms | 454 KB |
+| **CSharp (LightGlr)** | **365** | **190 ms** | **11.4 ms** | **1,931 KB** |
+
+> 上記は `dotnet run -c Release -- direct` (Stopwatch + GC 直接計測、warmup 5 回後 1 回) の値。WideRules / ManyTokens は未再計測 (—)。BenchmarkDotNet による精密計測は Windows Defender 適用除外設定後に再実行すること。
 
 ### 所見
 
-- **Parse_CSharp 0.68 ms**（50 クラス ≈ 7KB 入力、≈ 10 MB/s）。[Rule] モデル移行後（Reject/TryFallback + Span スタック）。スタックを Span でラップし境界チェックを最適化。
-- **Build_CSharp 190 ms** は `LalrLookahead` の不動点反復を Worklist アルゴリズムで最適化（798状態×365規則）。WideRules（103 規則）2.7 ms → CSharp（365 規則）190 ms と非線形に増大。ただし Generator 実行時のみの1回コストで、実行時ではない。
-- **Parse のアロケーション 627 KB**（入力の ≈90 倍）は AST 構築（reduce ごとにノードを `new`）。仕組み上（AST は結果として返るためオブジェクト寿命 = AST 寿命）抑制が困難。詳細は README「C# 完全文法ベンチマーク」章。
+- **Parse_CSharp 11.4 ms**（50 クラス ≈ 7KB 入力、LightGlr モード）。state 308 で識別子ごとに fork するため LALR 単一スタック (旧 0.68 ms) より低速。fast path (単一スタック時 List/Queue/HashSet バイパス) で 84.8 ms → 11.4 ms に最適化済み。
+- **LALR モードの文法** (DeepPrec / MegaLang / DeepNest) は単一スタック fast path で動作。旧値の 2〜3 倍 (COW リスト + NotifyAccepted のオーバーヘッド)。
+- **Build_CSharp 190 ms** はテーブル構築時間 (LALR 共通)。LightGlr でも同じ LALR テーブルを使用するため不変。
 
 ### 計測環境
 
