@@ -54,7 +54,7 @@ The `ParseMode` named property selects the parser execution mode. Default is `La
 
 The following changes are **not backward compatible**. Existing code must be updated.
 
-- **OnReduce ctx is read-only**: `OnReduce(MyCtx ctx)` → `OnReduce(SemanticContext ctx)`. The ctx type is always `SemanticContext` (base class).
+- **OnReduce ctx is read-only**: `OnReduce(MyCtx ctx)` → `OnReduce(SemanticContext ctx)`. The ctx type is always `SemanticContext` (base class). `OnAccepted` still receives the user's ctx type (writable).
 - **SemanticContext.Symbols is read-only**: Returns `IReadOnlySymbolTable` (`Lookup` only). `TryDeclare` / `PushScope` / `PopScope` are not available.
 - **SemanticContext.Diagnostics removed**: `Diagnostics` moved to `BasicSemanticContext`. `ctx.Diagnostics.Error(...)` in OnReduce is a compile error.
 - **Writes go in [Enter]/[Exit]**: Use `ctx.WritableSymbols.TryDeclare(...)` / `ctx.Diagnostics.Error(...)` inside `[Enter]`/`[Exit]` attribute methods (2nd-pass Walker).

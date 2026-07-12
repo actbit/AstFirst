@@ -54,7 +54,7 @@ public abstract partial class Expr : AstNode { }
 
 以下の変更は**後方互換性がありません**。既存コードの修正が必要です。
 
-- **OnReduce の ctx が読み取り専用**: `OnReduce(MyCtx ctx)` → `OnReduce(SemanticContext ctx)`。ctx の型が常に `SemanticContext` (基底) になります。
+- **OnReduce の ctx が読み取り専用**: `OnReduce(MyCtx ctx)` → `OnReduce(SemanticContext ctx)`。ctx の型が常に `SemanticContext` (基底) になります。`OnAccepted` は引き続きユーザーの ctx 型 (書き込み可) を受け取ります。
 - **SemanticContext.Symbols が読み取り専用**: `IReadOnlySymbolTable` を返す (`Lookup` のみ)。`TryDeclare` / `PushScope` / `PopScope` は不可。
 - **SemanticContext.Diagnostics が削除**: `Diagnostics` は `BasicSemanticContext` に移動。OnReduce で `ctx.Diagnostics.Error(...)` はコンパイルエラーになります。
 - **書き込みは [Enter]/[Exit] で**: `ctx.WritableSymbols.TryDeclare(...)` / `ctx.Diagnostics.Error(...)` は `[Enter]`/`[Exit]` 属性メソッド (2パス目 Walker) 内で行う。
