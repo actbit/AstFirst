@@ -15,7 +15,7 @@ public sealed partial class GlrNum : GlrExpr
     [Rule]
     public static void N([Token(@"[0-9]+")] Token num) { }
     partial void OnReduce() { Value = int.Parse(Num.Text); }
-    partial void OnAccepted() { OnAcceptedCalled = true; }
+    partial void OnAccepted() { OnAcceptedCalled = true; }  // ctx なしノード
 }
 
 /// <summary>規則 GlrExpr → GlrExpr + GlrExpr</summary>

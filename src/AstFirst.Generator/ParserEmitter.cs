@@ -381,12 +381,13 @@ public static class ParserEmitter
         // RuleName: 抽象基底、または継承プロパティがない (基底が RuleName を持たない) 場合のみ生成。
         if (node.Rules.Count > 0 && (isAbstractBase || !hasInherited))
             sb.AppendLine("    public readonly string RuleName;");
-        // OnReduce/OnAccepted は常に読み取り専用 SemanticContext (ctx の書き換えを防ぐ)。
+        // OnReduce は読み取り専用 SemanticContext (ctx の書き換えを防ぐ)。
+        // OnAccepted はルート確定後なのでユーザーの ctx 型 (書き込み可) を渡す。
         sb.AppendLine("    partial void OnReduce(" + (ctxType is not null ? "AstFirst.SemanticContext ctx" : "") + ");");
-        sb.AppendLine("    partial void OnAccepted(" + (ctxType is not null ? "AstFirst.SemanticContext ctx" : "") + ");");
-        // NotifyAccepted: 常に override を生成 (ctx なしノードでも OnAccepted を呼ぶ)。
+        sb.AppendLine("    partial void OnAccepted" + ctxParam + ";");
+        // NotifyAccepted: 常に override を生成。
         if (ctxType is not null)
-            sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted(ctx);");
+            sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted((" + ctxType + ")ctx!);");
         else
             sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted();");
 
