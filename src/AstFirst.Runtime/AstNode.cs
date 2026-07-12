@@ -10,7 +10,7 @@ namespace AstFirst;
 /// AST ノードの基底。非終端記号の具象形 (= 1つの生成規則) はこれを継承します。
 /// ノードの構築 (コンストラクタ) が還元時のアクション＋意味解析を兼ねます。
 /// </remarks>
-public abstract class AstNode
+public abstract partial class AstNode
 {
     /// <summary>このノードが覆うソース範囲。コンストラクタで子から計算して設定する。</summary>
     public SourceSpan Span { get; protected set; }
@@ -38,11 +38,18 @@ public abstract class AstNode
     protected void Reject() => AcceptState = AcceptState.Rejected;
 
     /// <summary>GLR で経路が確定 (fork が収束、または他が dead) した時に呼ぶ。Undecided → Accepted に確定。</summary>
-    internal void MarkAccepted()
+    public void MarkAccepted()
     {
         if (AcceptState == AcceptState.Undecided)
+        {
             AcceptState = AcceptState.Accepted;
+            OnAccepted();
+        }
     }
+
+    /// <summary>GLR でルートが1つに確定した時に呼ばれるコールバック (partial)。ユーザーが定義可能。
+    /// LALR モードや fork がない場合は reduce 時に即座に確定するので OnReduce の直後と同じ。</summary>
+    partial void OnAccepted();
 
     /// <summary>受領されたか (Accepted、または既定の Undecided)。パーサ生成コードが参照。</summary>
     public bool IsAccepted => AcceptState != AcceptState.Rejected;

@@ -173,6 +173,7 @@ public static class ParserEmitter
         sb.AppendLine("            else if (dk == 2) // Reduce (仮想 reduce)");
         sb.AppendLine("            {");
         sb.AppendLine("                var node = ReduceNode(dv, valuesSpan, top, ctx);");
+        sb.AppendLine("                if (node is AstFirst.AstNode __na) __na.MarkAccepted();");
         sb.AppendLine("                if (node is AstFirst.AstNode __an && !__an.IsAccepted)");
         sb.AppendLine("                {");
         sb.AppendLine("                    // Reject: フォールバック候補を試す");
@@ -389,6 +390,7 @@ public static class ParserEmitter
         if (node.Rules.Count > 0 && (isAbstractBase || !hasInherited))
             sb.AppendLine("    public readonly string RuleName;");
         sb.AppendLine("    partial void OnReduce" + ctxParam + ";");
+        sb.AppendLine("    partial void OnAccepted();");
 
         // コンストラクタ: 抽象基底は protected (派生から : base で呼ばれる)、具象は internal。
         // 同じ引数型シグネチャの[Rule]が複数ある場合は1つに統合 (ruleName で実行時に区別)。
