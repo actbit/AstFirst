@@ -54,23 +54,39 @@ public static class LightGlrDriver
                 int la = ErrorRepair.LookaheadSym(t, tokens, s.Pos);
                 if (la < 0) { s.Alive = false; continue; } // 未知トークン
                 var acts = t.Actions(s.State, la);
-                bool hasShift = false, hasAccept = false;
+                // shift/accept の数を数える。単一 shift なら in-place (Clone 不要)。
+                int shiftCount = 0; int firstShiftState = -1;
+                bool hasAccept = false;
                 foreach (var act in acts)
                 {
-                    if (act.Kind == 1) // Shift
+                    if (act.Kind == 1) { shiftCount++; if (shiftCount == 1) firstShiftState = act.Value; }
+                    else if (act.Kind == 3) hasAccept = true;
+                }
+
+                if (shiftCount == 1 && !hasAccept)
+                {
+                    // 単一 shift: in-place (Clone 不要)。最も多いパス。
+                    object? val = la == t.EofSym ? null : (object)toToken(tokens[s.Pos]);
+                    s.Push(firstShiftState, val);
+                    s.Pos = s.Pos + 1;
+                    shifted.Add(s);
+                }
+                else
+                {
+                    // 複数 shift または accept あり: Clone する
+                    foreach (var act in acts)
                     {
-                        var ns = s.Clone();
-                        object? val = la == t.EofSym ? null : (object)toToken(tokens[s.Pos]);
-                        ns.Push(act.Value, val);
-                        ns.Pos = s.Pos + 1;
-                        shifted.Add(ns);
-                        hasShift = true;
-                    }
-                    else if (act.Kind == 3) // Accept
-                    {
-                        hasAccept = true;
+                        if (act.Kind == 1) // Shift
+                        {
+                            var ns = s.Clone();
+                            object? val = la == t.EofSym ? null : (object)toToken(tokens[s.Pos]);
+                            ns.Push(act.Value, val);
+                            ns.Pos = s.Pos + 1;
+                            shifted.Add(ns);
+                        }
                     }
                 }
+                bool hasShift = shiftCount > 0;
                 if (hasAccept)
                 {
                     // AstFirst のテーブルは $ を shift する (S'→S $)。accept 時のスタックトップが $ (null) なら
@@ -146,15 +162,23 @@ public static class LightGlrDriver
                 continue;
             }
 
-            // 複数 reduce 候補 → 最初を s に、残りを reduce 前の snapshot の clone に適用 (fork)。
-            // snapshot は reduce 前のスタック (i==0 で s が変更される前に取る)。
-            var snapshot = s.Clone();
-            for (int i = 0; i < reduceActs.Count; i++)
+            // reduce 候補を適用。単一なら in-place (Clone 不要)、複数なら snapshot から fork。
+            if (reduceActs.Count == 1)
             {
-                var target = i == 0 ? s : snapshot.Clone();
-                try { ErrorRepair.ApplyReduce(t, reduce, ctx, target, reduceActs[i]); }
-                catch { target.Alive = false; }
-                work.Enqueue(target);
+                try { ErrorRepair.ApplyReduce(t, reduce, ctx, s, reduceActs[0]); }
+                catch { s.Alive = false; }
+                work.Enqueue(s);
+            }
+            else
+            {
+                var snapshot = s.Clone();
+                for (int i = 0; i < reduceActs.Count; i++)
+                {
+                    var target = i == 0 ? s : snapshot.Clone();
+                    try { ErrorRepair.ApplyReduce(t, reduce, ctx, target, reduceActs[i]); }
+                    catch { target.Alive = false; }
+                    work.Enqueue(target);
+                }
             }
         }
         return done;
