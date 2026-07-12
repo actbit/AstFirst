@@ -50,6 +50,32 @@ public abstract partial class Expr : AstNode { }
   - **SimulateForward は最初の経路のみ確認**: コンフリクトセルでも fork せず最初の shift/reduce のみ追うため、本番の fork 経路との完全一致は保証しない。
 - **エラー回復の挙動**: LightGlr の Corchuelo 修復は、LALR モードの panic mode 回復とは異なり、トークンを補完/削除してパースを続行する。同じ入力でもモードによりエラー位置・メッセージが変わる場合がある。
 
+### ⚠ バージョン互換性のない変更 (0.4.0)
+
+以下の変更は**後方互換性がありません**。既存コードの修正が必要です。
+
+- **OnReduce の ctx が読み取り専用**: `OnReduce(MyCtx ctx)` → `OnReduce(SemanticContext ctx)`。ctx の型が常に `SemanticContext` (基底) になります。
+- **SemanticContext.Symbols が読み取り専用**: `IReadOnlySymbolTable` を返す (`Lookup` のみ)。`TryDeclare` / `PushScope` / `PopScope` は不可。
+- **SemanticContext.Diagnostics が削除**: `Diagnostics` は `BasicSemanticContext` に移動。OnReduce で `ctx.Diagnostics.Error(...)` はコンパイルエラーになります。
+- **書き込みは [Enter]/[Exit] で**: `ctx.WritableSymbols.TryDeclare(...)` / `ctx.Diagnostics.Error(...)` は `[Enter]`/`[Exit]` 属性メソッド (2パス目 Walker) 内で行う。
+
+**移行例**:
+```csharp
+// ❌ 前 (0.3.0): OnReduce で宣言・診断
+partial void OnReduce(MyCtx ctx)
+{
+    if (!ctx.Symbols.TryDeclare(...)) ctx.Diagnostics.Error(...);
+}
+
+// ✅ 後 (0.4.0): OnReduce はノードローカルのみ、宣言は [Enter] で
+partial void OnReduce(SemanticContext ctx) { Name = ...; Span = ...; }
+// [Grammar] ルートクラスで:
+[Enter] static void Declare(MyNode n, BasicSemanticContext ctx)
+{
+    if (!ctx.WritableSymbols.TryDeclare(...)) ctx.Diagnostics.Error(...);
+}
+```
+
 ## `[Rule]`
 
 生成規則を定義する static メソッドに付ける。1クラスに複数置ける。本体は空（意味アクションは `OnReduce` に書く）。

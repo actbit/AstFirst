@@ -50,6 +50,32 @@ The `ParseMode` named property selects the parser execution mode. Default is `La
   - **SimulateForward checks the first path only**: Does not fork at conflict cells during simulation, so full agreement with production fork paths is not guaranteed.
 - **Error recovery behavior**: LightGlr's Corchuelo repair differs from the panic-mode recovery used in Lalr mode — it inserts/deletes tokens to continue parsing. The same input may produce different error positions/messages depending on the mode.
 
+### ⚠ Breaking Changes (0.4.0)
+
+The following changes are **not backward compatible**. Existing code must be updated.
+
+- **OnReduce ctx is read-only**: `OnReduce(MyCtx ctx)` → `OnReduce(SemanticContext ctx)`. The ctx type is always `SemanticContext` (base class).
+- **SemanticContext.Symbols is read-only**: Returns `IReadOnlySymbolTable` (`Lookup` only). `TryDeclare` / `PushScope` / `PopScope` are not available.
+- **SemanticContext.Diagnostics removed**: `Diagnostics` moved to `BasicSemanticContext`. `ctx.Diagnostics.Error(...)` in OnReduce is a compile error.
+- **Writes go in [Enter]/[Exit]**: Use `ctx.WritableSymbols.TryDeclare(...)` / `ctx.Diagnostics.Error(...)` inside `[Enter]`/`[Exit]` attribute methods (2nd-pass Walker).
+
+**Migration example**:
+```csharp
+// ❌ Before (0.3.0): declarations/diagnostics in OnReduce
+partial void OnReduce(MyCtx ctx)
+{
+    if (!ctx.Symbols.TryDeclare(...)) ctx.Diagnostics.Error(...);
+}
+
+// ✅ After (0.4.0): OnReduce for node-local only, declarations in [Enter]
+partial void OnReduce(SemanticContext ctx) { Name = ...; Span = ...; }
+// In [Grammar] root class:
+[Enter] static void Declare(MyNode n, BasicSemanticContext ctx)
+{
+    if (!ctx.WritableSymbols.TryDeclare(...)) ctx.Diagnostics.Error(...);
+}
+```
+
 ## `[Rule]`
 
 Attach to a static method that defines a production. Multiple per class allowed. The body is empty (semantic actions go in `OnReduce`).
