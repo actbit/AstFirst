@@ -139,7 +139,7 @@ public static class LightGlrDriver
                 // 同一 state,pos は先着を残す。ルートが1つに確定 → MarkAccepted。
                 if (seen.Add((s.State, s.Pos)))
                 {
-                    if (s.PeekValue() is AstNode survivor) survivor.NotifyAccepted();
+                    if (s.PeekValue() is AstNode survivor) survivor.NotifyAccepted(ctx);
                     done.Add(s);
                 }
                 else s.Alive = false;

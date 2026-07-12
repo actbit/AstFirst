@@ -37,11 +37,9 @@ public abstract partial class AstNode
     /// <summary>この構文を受領しない。優先度順の別候補 (別規則/shift) へフォールバックする。</summary>
     protected void Reject() => AcceptState = AcceptState.Rejected;
 
-    /// <summary>GLR でルートが1つに確定した時に呼ばれる (fork が収束、または LALR で reduce 時)。</summary>
-    public void NotifyAccepted() => OnAccepted();
-
-    /// <summary>ルート確定時のコールバック (partial)。ユーザーが定義可能。</summary>
-    partial void OnAccepted();
+    /// <summary>ルートが1つに確定した時に呼ばれる (GLR の fork 収束、または LALR の reduce 時)。
+    /// 派生クラスの partial 生成コードが override して OnAccepted(ctx) を呼ぶ。</summary>
+    public virtual void NotifyAccepted(SemanticContext? ctx) { }
 
     /// <summary>受領されたか (Accepted、または既定の Undecided)。パーサ生成コードが参照。</summary>
     public bool IsAccepted => AcceptState != AcceptState.Rejected;
