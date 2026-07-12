@@ -48,6 +48,7 @@ public abstract partial class Expr : AstNode { }
   - **N=3・コスト固定**: ER3 の Forward move 確認シンボル数 `N=3`、挿入コスト=1/削除コスト=2 は固定値。Corchuelo 論文では言語に応じたチューニングを推奨しているが、本実装では未対応。
   - **1 回修復 (再帰なし)**: Corchuelo 本来は ER1/ER2/ER3 を再帰的に適用するが、本実装は1回の ER1/ER2 + ER3 のみ。連続エラーは次の dead で順次修復される。
   - **SimulateForward は最初の経路のみ確認**: コンフリクトセルでも fork せず最初の shift/reduce のみ追うため、本番の fork 経路との完全一致は保証しない。
+- **エラー回復の挙動**: LightGlr の Corchuelo 修復は、LALR モードの panic mode 回復とは異なり、トークンを補完/削除してパースを続行する。同じ入力でもモードによりエラー位置・メッセージが変わる場合がある。
 
 ## `[Rule]`
 

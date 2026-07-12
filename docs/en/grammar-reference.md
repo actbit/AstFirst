@@ -48,6 +48,7 @@ The `ParseMode` named property selects the parser execution mode. Default is `La
   - **N=3 and costs are fixed**: Forward move symbols `N=3`, insert cost=1/delete cost=2 are hardcoded. The Corchuelo paper recommends per-language tuning; not yet supported.
   - **Single-pass repair (no recursion)**: The original Corchuelo applies ER1/ER2/ER3 recursively; this implementation applies one round only. Consecutive errors are repaired one at a time on subsequent dead states.
   - **SimulateForward checks the first path only**: Does not fork at conflict cells during simulation, so full agreement with production fork paths is not guaranteed.
+- **Error recovery behavior**: LightGlr's Corchuelo repair differs from the panic-mode recovery used in Lalr mode — it inserts/deletes tokens to continue parsing. The same input may produce different error positions/messages depending on the mode.
 
 ## `[Rule]`
 

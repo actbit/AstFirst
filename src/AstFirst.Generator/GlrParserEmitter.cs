@@ -12,7 +12,7 @@ namespace AstFirst.Generator;
 /// reduce は <c>object?[] children</c> を受け取り COW (copy-on-write) でリストを構築 (GSS での共有安全)。
 /// partial ノード生成は <see cref="ParserEmitter.EmitPartial"/> をそのまま流用 (OnReduce は reduce 時呼び出し)。
 /// </summary>
-public static class GlrParserEmitter
+internal static class GlrParserEmitter
 {
     public static string EmitParser(GrammarModel model, Grammar grammar, LalrTable table, IReadOnlyList<LexerRule> rules, string ns)
     {

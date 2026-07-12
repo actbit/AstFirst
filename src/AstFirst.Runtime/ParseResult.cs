@@ -21,7 +21,8 @@ public sealed class ParseResult
     /// <summary>意味解析の診断 (<see cref="SemanticContext"/> から生成)。既定は空。</summary>
     public IReadOnlyList<Diagnostic> Diagnostics { get; }
 
-    /// <summary>LightGlr モードで複数解釈が accept まで残った場合の候補 AST (先頭 = Ast と同じ)。LALR モード・非曖昧入力では空。</summary>
+    /// <summary>LightGlr モードで複数解釈が accept まで残った場合の候補 AST (先頭 = Ast と同じ)。
+    /// LALR モードでは確定パースのため常に空。LightGlr モードでも非曖昧入力では空。</summary>
     public IReadOnlyList<object?> AmbiguousCandidates { get; }
 
     /// <summary>構文エラー、または意味解析の Error 診断が 1 つでもあれば true。</summary>
