@@ -34,6 +34,9 @@ public abstract class Token
     /// <summary>トークンの字面。スライスから必要時だけ生成する (Substring を遅延)。</summary>
     public string Text => _text ??= _textSpan.ToString();
 
+    /// <summary>ErrorRepair で挿入されたトークンか (ユーザーが書いていない)。</summary>
+    public bool IsInserted { get; internal set; }
+
     public override string ToString() => Text;
 }
 

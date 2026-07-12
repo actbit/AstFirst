@@ -26,7 +26,7 @@ public static class ErrorRepair
         int bestCost = int.MaxValue;
         int qm = s.State;
         // 挿入トークンの Span を前後のトークンから推測 (子の Span 自動計算で (0,0) が混ざるのを防ぐ)
-        var dummyToken = new BasicToken("", EstimateInsertedSpan(tokens, s.Pos));
+        var dummyToken = new BasicToken("", EstimateInsertedSpan(tokens, s.Pos)) { IsInserted = true };
 
         // ER1: 現状態 qm で shift 可能な終端 t0 (≠$) を挿入候補。
         for (int t0 = 0; t0 < t.SymbolCount; t0++)
