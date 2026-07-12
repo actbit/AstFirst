@@ -316,7 +316,7 @@ Japanese versions are under `docs/ja/` and [README.md](README.md).
 
 ## Tests
 
-293 tests (AstFirst.Tests 247 + Generator.Tests 46). Covers lexer/DFA/LALR stages, end-to-end, error recovery, semantic analysis (scopes, two-pass, type checking, ctx -> `ParseResult.Diagnostics` integration), `Accept`/`Reject` fallback, and positions (line/column).
+352 tests (AstFirst.Tests 299 + Generator.Tests 53). Covers lexer/DFA/LALR stages, end-to-end, error recovery (Corchuelo), GLR fork/dedup, semantic analysis (scopes, two-pass, type checking, ctx -> `ParseResult.Diagnostics` integration), `Accept`/`Reject` fallback, `OnAccepted` callback, and positions (line/column).
 
 ## License
 
