@@ -188,26 +188,28 @@ public static class ModelExtraction
             var isChild = astNodeBase is not null && p.Type.TypeKind == Microsoft.CodeAnalysis.TypeKind.Class && InheritsFromOrEquals(p.Type, astNodeBase);
             var isToken = tokenBase is not null && InheritsFrom(p.Type, tokenBase);
             int repeatMin = HasAttribute(p, "RepeatAttribute") ? GetRepeatMin(p) : -1;
-            var (pattern, priority) = GetPattern(p);
-            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, isChild, priority, isToken, repeatMin);
+            var (pattern, priority, kind) = GetPattern(p);
+            yield return new ParamModel(p.Type.ToDisplayString(), p.Name, pattern, isContext, isChild, priority, isToken, repeatMin, kind);
         }
     }
 
-    /// <summary>[Token]/[Pattern] から (Regex, Priority) を取得。未設定なら (null,0)。</summary>
-    private static (string? regex, int priority) GetPattern(Microsoft.CodeAnalysis.ISymbol symbol)
+    /// <summary>[Token]/[Pattern] から (Regex, Priority, Kind) を取得。未設定なら (null,0,null)。</summary>
+    private static (string? regex, int priority, string? kind) GetPattern(Microsoft.CodeAnalysis.ISymbol symbol)
     {
         foreach (var a in symbol.GetAttributes())
         {
             if (a.AttributeClass?.Name is not ("PatternAttribute" or "TokenAttribute")) continue;
             string? regex = a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string s ? s : null;
             int priority = 0;
+            string? kind = null;
             foreach (var na in a.NamedArguments)
             {
                 if (na.Key == "Priority" && na.Value.Value is int pr) priority = pr;
+                if (na.Key == "Kind" && na.Value.Value is string k) kind = k;
             }
-            return (regex, priority);
+            return (regex, priority, kind);
         }
-        return (null, 0);
+        return (null, 0, null);
     }
 
     /// <summary>[Repeat] の Min (0=Star=0回以上、1=Plus=1回以上)。既定は 1 (Plus)。</summary>
@@ -254,7 +256,7 @@ public static class ModelExtraction
                 if (p.Pattern is null) continue;
                 // Token 派生型 (共通 Token 以外) ならその型をキーに、それ以外は共通 Token 型。
                 var key = p.IsToken ? p.TypeFullName : TokenFullName;
-                yield return new TokenDefModel(key, p.Pattern, p.Priority, isHidden: false);
+                yield return new TokenDefModel(key, p.Pattern, p.Priority, isHidden: false, p.Kind);
             }
     }
 

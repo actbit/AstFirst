@@ -10,10 +10,9 @@ namespace AstFirst;
 public sealed class PatternAttribute(string regex) : Attribute
 {
     public string Regex { get; } = regex;
-
-    /// <summary>演算子優先度 (大きいほど高優先。* を + より大きくする等)。
-    /// 同一入力で複数トークンが受理した際のレクサ優先度と shift-reduce 衝突解決に使う。</summary>
     public int Priority { get; set; }
+    /// <summary>トークンの種別 (例: "number", "keyword", "operator")。Token.Kind に設定される。</summary>
+    public string? Kind { get; set; }
 }
 
 /// <summary>パーサの実行モード。</summary>
@@ -83,6 +82,8 @@ public sealed class TokenAttribute(string regex) : Attribute
     public string Regex { get; } = regex;
     /// <summary>演算子/トークン優先度。同一入力で複数トークン受理時のレクサ優先度。</summary>
     public int Priority { get; set; }
+    /// <summary>トークンの種別。Token.Kind に設定される。</summary>
+    public string? Kind { get; set; }
 }
 
 /// <summary>

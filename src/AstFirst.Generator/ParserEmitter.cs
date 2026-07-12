@@ -43,6 +43,16 @@ public static class ParserEmitter
             if (patternToTerminalId.TryGetValue(r.Pattern, out var sid))
                 tokenIdToSym[r.TokenId] = sid;
 
+        // TokenId → Kind マッピング ([Token]/[Pattern] の Kind 属性から)。
+        var kindByPattern = new Dictionary<string, string>();
+        foreach (var td in model.TokenDefs)
+            if (td.Kind is string k) kindByPattern[td.Pattern] = k;
+        var tokenIdToKind = new string?[maxTokenId + 1];
+        foreach (var r in rules)
+            if (kindByPattern.TryGetValue(r.Pattern, out var kind))
+                tokenIdToKind[r.TokenId] = kind;
+        bool hasKinds = tokenIdToKind.Any(k => k is not null);
+
         int eofSym = grammar.EndOfFile.Id;
 
         // コンフリクトセルのフォールバック候補を収集 (候補2以上のセルのみ)。
@@ -93,6 +103,19 @@ public static class ParserEmitter
         sb.Append("    public static readonly int[] TokenIdToSym = new int[] { ");
         for (int i = 0; i < tokenIdToSym.Length; i++) { if (i > 0) sb.Append(", "); sb.Append(tokenIdToSym[i]); }
         sb.AppendLine(" };");
+
+        if (hasKinds)
+        {
+            sb.Append("    private static readonly string?[] __tokenKinds = new string?[] { ");
+            for (int i = 0; i < tokenIdToKind.Length; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                var k = tokenIdToKind[i];
+                if (k is null) sb.Append("null");
+                else sb.Append("\"").Append(k.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"");
+            }
+            sb.AppendLine(" };");
+        }
 
         sb.AppendLine("    public const int EofSym = " + eofSym + ";");
         sb.AppendLine("    public const int StateCount = " + stateCount + ";");
@@ -338,7 +361,15 @@ public static class ParserEmitter
         sb.AppendLine("    }");
 
         sb.AppendLine("    private static AstFirst.Token ToToken(AstFirst.Core.Lexing.LexToken t)");
-        sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var __tok = new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
+        if (hasKinds)
+        {
+            sb.AppendLine("        if (t.TokenId >= 0 && t.TokenId < __tokenKinds.Length)");
+            sb.AppendLine("            __tok.Kind = __tokenKinds[t.TokenId];");
+        }
+        sb.AppendLine("        return __tok;");
+        sb.AppendLine("    }");
     }
 
     /// <summary>各具象ノードの partial コード (子/終端 readonly フィールド + RuleName + OnReduce 宣言 + 各[Rule]の partial コンストラクタ) を生成。</summary>
