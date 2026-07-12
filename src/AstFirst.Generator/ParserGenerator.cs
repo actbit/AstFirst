@@ -65,9 +65,7 @@ public sealed class ParserGenerator : IIncrementalGenerator
                 {
                     if (node.IsAbstract && node.Rules.Count == 0) continue;
                     var simple = CodeEmitter.SplitFullName(node.FullName).type;
-                    spc.AddSource(typeName + suffix + "_" + simple + ".partial.g.cs", model.ParseMode == ParseMode.LightGlr
-                        ? GlrParserEmitter.EmitPartial(model, node, ns)
-                        : ParserEmitter.EmitPartial(model, node, ns));
+                    spc.AddSource(typeName + suffix + "_" + simple + ".partial.g.cs", ParserEmitter.EmitPartial(model, node, ns));
                 }
             }
         });

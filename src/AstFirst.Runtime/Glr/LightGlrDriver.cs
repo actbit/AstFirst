@@ -76,7 +76,12 @@ public static class LightGlrDriver
                     // AstFirst のテーブルは $ を shift する (S'→S $)。accept 時のスタックトップが $ (null) なら
                     // 開始記号の値はその下。LALR の Accept (top-- で $ を捨てて result = その下) と同義。
                     var top = s.PeekValue();
-                    accepted.Add(top is null ? s.Values[s.Top - 2] : top);
+                    var candidate = top is null ? s.Values[s.Top - 2] : top;
+                    // Accept/Reject: Rejected な候補は破棄 (fork の他方が生き残る、または dead)
+                    if (candidate is AstNode an && an.AcceptState == AcceptState.Rejected)
+                        s.Alive = false;
+                    else
+                        accepted.Add(candidate);
                 }
                 if (!hasShift)
                 {
@@ -125,16 +130,24 @@ public static class LightGlrDriver
 
             if (reduceActs.Count == 0)
             {
-                // reduce 収束 → shift 待ち (同一 state,pos は先着を残す)
+                // reduce 収束 → shift 待ち. Rejected な候補は破棄 (Accept/Reject 統合)。
+                if (s.PeekValue() is AstNode an && an.AcceptState == AcceptState.Rejected)
+                {
+                    s.Alive = false;
+                    continue;
+                }
+                // 同一 state,pos は先着を残す (Tomita の最適化)
                 if (seen.Add((s.State, s.Pos))) done.Add(s);
                 else s.Alive = false;
                 continue;
             }
 
-            // 複数 reduce 候補 → 最初を s に、残りを s の clone に適用 (fork)。全て cascade 継続。
+            // 複数 reduce 候補 → 最初を s に、残りを reduce 前の snapshot の clone に適用 (fork)。
+            // snapshot は reduce 前のスタック (i==0 で s が変更される前に取る)。
+            var snapshot = s.Clone();
             for (int i = 0; i < reduceActs.Count; i++)
             {
-                var target = i == 0 ? s : s.Clone();
+                var target = i == 0 ? s : snapshot.Clone();
                 ApplyReduce(t, reduce, ctx, target, reduceActs[i]);
                 work.Enqueue(target);
             }
