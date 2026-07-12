@@ -51,7 +51,7 @@ public static class LightGlrDriver
             foreach (var s in active)
             {
                 if (!s.Alive) continue;
-                int la = LookaheadSym(t, tokens, s.Pos);
+                int la = ErrorRepair.LookaheadSym(t, tokens, s.Pos);
                 if (la < 0) { s.Alive = false; continue; } // 未知トークン
                 var acts = t.Actions(s.State, la);
                 bool hasShift = false, hasAccept = false;
@@ -121,7 +121,7 @@ public static class LightGlrDriver
         {
             var s = work.Dequeue();
             if (!s.Alive) continue;
-            int la = LookaheadSym(t, tokens, s.Pos);
+            int la = ErrorRepair.LookaheadSym(t, tokens, s.Pos);
             if (la < 0) { s.Alive = false; continue; }
 
             var acts = t.Actions(s.State, la);
@@ -148,35 +148,13 @@ public static class LightGlrDriver
             for (int i = 0; i < reduceActs.Count; i++)
             {
                 var target = i == 0 ? s : snapshot.Clone();
-                ApplyReduce(t, reduce, ctx, target, reduceActs[i]);
+                ErrorRepair.ApplyReduce(t, reduce, ctx, target, reduceActs[i]);
                 work.Enqueue(target);
             }
         }
         return done;
     }
 
-    /// <summary>規則 prodId で reduce。右辺長分を Pop せず参照して children を組み立て → reduce デリゲートでノード構築 →
-    /// Pop して GOTO 先状態を push。</summary>
-    private static void ApplyReduce(GlrTables t, System.Func<int, object?[], SemanticContext, object?> reduce,
-        SemanticContext ctx, LightGlrStack s, int prodId)
-    {
-        int len = t.ProdLen[prodId];
-        var children = len == 0 ? System.Array.Empty<object?>() : new object?[len];
-        for (int i = 0; i < len; i++) children[i] = s.Values[s.Top - len + i];
-        var node = reduce(prodId, children, ctx);
-        s.Top -= len;
-        int lhs = t.ProdLhs[prodId];
-        int gotoState = t.Goto[s.State * t.SymbolCount + lhs];
-        s.Push(gotoState, node);
-    }
-
-    private static int LookaheadSym(GlrTables t, IReadOnlyList<LexToken> tokens, int pos)
-    {
-        if (pos >= tokens.Count) return t.EofSym;
-        int tid = tokens[pos].TokenId;
-        if (tid < 0 || tid >= t.TokenIdToSym.Length) return -1;
-        return t.TokenIdToSym[tid];
-    }
 
     /// <summary>同一 (state, pos) のスタックを統合 (先着を残す)。これで fork の指数爆発を防ぐ。</summary>
     private static List<LightGlrStack> Dedup(List<LightGlrStack> stacks)

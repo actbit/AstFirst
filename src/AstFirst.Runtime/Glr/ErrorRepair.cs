@@ -101,7 +101,7 @@ public static class ErrorRepair
         return true;
     }
 
-    private static void ApplyReduce(GlrTables t, System.Func<int, object?[], SemanticContext, object?> reduce,
+    internal static void ApplyReduce(GlrTables t, System.Func<int, object?[], SemanticContext, object?> reduce,
         SemanticContext ctx, LightGlrDriver.LightGlrStack s, int prodId)
     {
         int len = t.ProdLen[prodId];
@@ -114,7 +114,7 @@ public static class ErrorRepair
         s.Push(gotoState, node);
     }
 
-    private static int LookaheadSym(GlrTables t, IReadOnlyList<LexToken> tokens, int pos)
+    internal static int LookaheadSym(GlrTables t, IReadOnlyList<LexToken> tokens, int pos)
     {
         if (pos >= tokens.Count) return t.EofSym;
         int tid = tokens[pos].TokenId;
