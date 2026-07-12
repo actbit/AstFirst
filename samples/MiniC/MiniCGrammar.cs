@@ -20,8 +20,8 @@ public abstract partial class Program : AstNode
     [Exit] public static void ExitAssign(AssignStmt n, MiniCContext ctx) => SemanticAnalyzer.ExitAssign(n, ctx);
     [Exit] public static void ExitIf(IfStmt n, MiniCContext ctx) => SemanticAnalyzer.ExitCondition(n.Cond, n.Cond.Span, "if", ctx);
     [Exit] public static void ExitWhile(WhileStmt n, MiniCContext ctx) => SemanticAnalyzer.ExitCondition(n.Cond, n.Cond.Span, "while", ctx);
-    [Enter] public static void EnterBlock(BlockStmt n, MiniCContext ctx) => ctx.Symbols.PushScope();
-    [Exit] public static void ExitBlock(BlockStmt n, MiniCContext ctx) => ctx.Symbols.PopScope();
+    [Enter] public static void EnterBlock(BlockStmt n, MiniCContext ctx) => ctx.WritableSymbols.PushScope();
+    [Exit] public static void ExitBlock(BlockStmt n, MiniCContext ctx) => ctx.WritableSymbols.PopScope();
     [Enter] public static void EnterVar(VarExpr n, MiniCContext ctx) => SemanticAnalyzer.EnterVar(n, ctx);
     [Exit] public static void ExitNum(NumExpr n, MiniCContext ctx) => SemanticAnalyzer.SetType(n, SemanticAnalyzer.Int, ctx);
     [Exit] public static void ExitBool(BoolExpr n, MiniCContext ctx) => SemanticAnalyzer.SetType(n, SemanticAnalyzer.Bool, ctx);
@@ -48,7 +48,7 @@ public sealed partial class DeclStmt : Stmt
     public string Name { get; private set; } = "";
     [Rule]
     public static void Decl([Token(@"int", Priority = 1)] Token kw, [Token(@"[A-Za-z_]\w*")] Token nameTok, [Token(@";")] Token semi, MiniCContext ctx) { }
-    partial void OnReduce(MiniCContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
+    partial void OnReduce(SemanticContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
 }
 
 // int x = expr; (初期化付き)
@@ -57,7 +57,7 @@ public sealed partial class DeclStmtInit : Stmt
     public string Name { get; private set; } = "";
     [Rule]
     public static void DeclInit([Token(@"int", Priority = 1)] Token kw, [Token(@"[A-Za-z_]\w*")] Token nameTok, [Token(@"=")] Token eq, Expr init, [Token(@";")] Token semi, MiniCContext ctx) { }
-    partial void OnReduce(MiniCContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
+    partial void OnReduce(SemanticContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
 }
 
 // x = expr;
@@ -66,7 +66,7 @@ public sealed partial class AssignStmt : Stmt
     public string Name { get; private set; } = "";
     [Rule]
     public static void Assign([Token(@"[A-Za-z_]\w*")] Token nameTok, [Token(@"=")] Token eq, Expr value, [Token(@";")] Token semi, MiniCContext ctx) { }
-    partial void OnReduce(MiniCContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
+    partial void OnReduce(SemanticContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
 }
 
 // print(expr);
@@ -95,7 +95,7 @@ public sealed partial class BlockStmt : Stmt
 {
     [Rule]
     public static void Block([Token(@"\{")] Token lb, [Repeat(Min = 0)] Stmt statements, [Token(@"\}")] Token rb, MiniCContext ctx) { }
-    partial void OnReduce(MiniCContext ctx) { Span = SourceSpan.Merge(Lb.Span, Rb.Span); }
+    partial void OnReduce(SemanticContext ctx) { Span = SourceSpan.Merge(Lb.Span, Rb.Span); }
 }
 
 // --- 式 ---
@@ -106,7 +106,7 @@ public sealed partial class NumExpr : Expr
     public int Value { get; private set; }
     [Rule]
     public static void NumToken([Token(@"[0-9]+")] Token num, MiniCContext ctx) { }
-    partial void OnReduce(MiniCContext ctx) { Value = int.Parse(Num.Text); Span = Num.Span; }
+    partial void OnReduce(SemanticContext ctx) { Value = int.Parse(Num.Text); Span = Num.Span; }
 }
 
 public sealed partial class BoolExpr : Expr
@@ -114,7 +114,7 @@ public sealed partial class BoolExpr : Expr
     public bool Value { get; private set; }
     [Rule]
     public static void Bool([Token(@"true|false", Priority = 1)] Token kw, MiniCContext ctx) { }
-    partial void OnReduce(MiniCContext ctx) { Value = Kw.Text == "true"; Span = Kw.Span; }
+    partial void OnReduce(SemanticContext ctx) { Value = Kw.Text == "true"; Span = Kw.Span; }
 }
 
 public sealed partial class VarExpr : Expr
@@ -122,7 +122,7 @@ public sealed partial class VarExpr : Expr
     public string Name { get; private set; } = "";
     [Rule]
     public static void Var([Token(@"[A-Za-z_]\w*")] Token nameTok, MiniCContext ctx) { }
-    partial void OnReduce(MiniCContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
+    partial void OnReduce(SemanticContext ctx) { Name = NameTok.Text; Span = NameTok.Span; }
 }
 
 [Precedence(1)]

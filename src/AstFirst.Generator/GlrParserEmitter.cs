@@ -137,7 +137,7 @@ internal static class GlrParserEmitter
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input) => Parse(input, null);");
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)");
         sb.AppendLine("    {");
-        sb.AppendLine("        var ctx = context ?? new AstFirst.BasicSemanticContext();");
+        sb.AppendLine("        var ctx = (context as AstFirst.BasicSemanticContext) ?? new AstFirst.BasicSemanticContext();");
         sb.AppendLine("        var tokens = " + lexerName + ".Tokenize(input);");
         sb.AppendLine("        var __tables = new AstFirst.Glr.GlrTables(ActionKind, ActionValue, Goto, ProdLhs, ProdLen, DefaultReduce, TokenIdToSym, AltKeys, AltActs, StateCount, SymbolCount, EofSym, 0, SymNames);");
         sb.AppendLine("        var __r = AstFirst.Glr.LightGlrDriver.Run(__tables, tokens, ctx, __ReduceNode, __ToToken);");

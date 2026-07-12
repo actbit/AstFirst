@@ -15,12 +15,12 @@ public static class SemanticAnalyzer
     // --- 宣言: int x; / int x = expr; ---
     public static void EnterDecl(DeclStmt n, MiniCContext ctx)
     {
-        if (!ctx.Symbols.TryDeclare(n.Name, n.Span, null, out _))
+        if (!ctx.WritableSymbols.TryDeclare(n.Name, n.Span, null, out _))
             ctx.Diagnostics.Error($"変数 '{n.Name}' は既に宣言されています", n.Span);
     }
     public static void EnterDeclInit(DeclStmtInit n, MiniCContext ctx)
     {
-        if (!ctx.Symbols.TryDeclare(n.Name, n.Span, null, out _))
+        if (!ctx.WritableSymbols.TryDeclare(n.Name, n.Span, null, out _))
             ctx.Diagnostics.Error($"変数 '{n.Name}' は既に宣言されています", n.Span);
     }
     public static void ExitDeclInit(DeclStmtInit n, MiniCContext ctx)
@@ -29,7 +29,7 @@ public static class SemanticAnalyzer
     // --- 代入 ---
     public static void EnterAssign(AssignStmt n, MiniCContext ctx)
     {
-        var sym = ctx.Symbols.ResolveOrError(n.Name, n.Span, ctx.Diagnostics);
+        var sym = ctx.WritableSymbols.ResolveOrError(n.Name, n.Span, ctx.Diagnostics);
         if (sym is not null) n.SetAnnotation("symbol", sym); // 束縛: ノードにシンボルを紐付け
     }
     public static void ExitAssign(AssignStmt n, MiniCContext ctx)
@@ -38,7 +38,7 @@ public static class SemanticAnalyzer
     // --- 変数参照 ---
     public static void EnterVar(VarExpr n, MiniCContext ctx)
     {
-        var sym = ctx.Symbols.ResolveOrError(n.Name, n.Span, ctx.Diagnostics);
+        var sym = ctx.WritableSymbols.ResolveOrError(n.Name, n.Span, ctx.Diagnostics);
         if (sym is not null)
         {
             n.SetAnnotation("symbol", sym); // 束縛

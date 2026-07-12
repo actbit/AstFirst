@@ -85,24 +85,26 @@ public sealed class DiagnosticBag
 }
 
 /// <summary>
-/// Semantic analysis context. Declare a constructor parameter of a <see cref="SemanticContext"/>-derived type
-/// and the generator injects an instance from the parser (providing a <see cref="ScopedSymbolTable"/> and <see cref="DiagnosticBag"/>).
+/// 意味解析コンテキスト (読み取り専用)。OnReduce に渡される。
+/// シンボル表の読み取り (Lookup) のみ可能。宣言 (Declare) や診断追加 (Error) は不可。
+/// 書き込みは <see cref="BasicSemanticContext"/> ([Enter]/[Exit] Walker 用) を使う。
 /// </summary>
-/// <remarks>
-/// 意味解析コンテキスト。<see cref="SemanticContext"/> 派生型のコンストラクタ引数として宣言すると、
-/// Generator がパーサからインスタンスを注入します (<see cref="ScopedSymbolTable"/> と <see cref="DiagnosticBag"/> を提供)。
-/// </remarks>
 public abstract class SemanticContext
 {
-    public abstract ScopedSymbolTable Symbols { get; }
-    public abstract DiagnosticBag Diagnostics { get; }
+    /// <summary>読み取り専用のシンボル表 (Lookup のみ)。OnReduce で宣言を防ぐ。</summary>
+    public abstract IReadOnlySymbolTable Symbols { get; }
 }
 
-/// <summary>SemanticContext の標準実装。生成コードが既定で使う。ユーザーが派生して独自 ctx を定義可能。</summary>
+/// <summary>SemanticContext の標準実装。[Enter]/[Exit] Walker で書き込み可能。</summary>
 public class BasicSemanticContext : SemanticContext
 {
-    public override ScopedSymbolTable Symbols { get; } = new ScopedSymbolTable();
-    public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag();
-    /// <summary>ノード→型 の対応 (型推論・型チェックの結果)。意味解析ウォークで使用。</summary>
+    private readonly ScopedSymbolTable _symbols = new ScopedSymbolTable();
+    /// <summary>読み取り専用ビュー (基底 API)。</summary>
+    public override IReadOnlySymbolTable Symbols => _symbols;
+    /// <summary>書き込み可能なシンボル表 ([Enter]/[Exit] で宣言・スコープ操作に使用)。</summary>
+    public ScopedSymbolTable WritableSymbols => _symbols;
+    /// <summary>診断バグ ([Enter]/[Exit] でエラー・警告の追加に使用)。</summary>
+    public DiagnosticBag Diagnostics { get; } = new DiagnosticBag();
+    /// <summary>ノード→型 の対応 (型推論・型チェックの結果)。</summary>
     public TypeContext Types { get; } = new TypeContext();
 }

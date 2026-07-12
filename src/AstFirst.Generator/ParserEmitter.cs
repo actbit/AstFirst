@@ -139,7 +139,7 @@ public static class ParserEmitter
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input) => Parse(input, null);");
         sb.AppendLine("    public static AstFirst.ParseResult Parse(string input, AstFirst.SemanticContext? context)");
         sb.AppendLine("    {");
-        sb.AppendLine("        var ctx = context ?? new AstFirst.BasicSemanticContext();");
+        sb.AppendLine("        var ctx = (context as AstFirst.BasicSemanticContext) ?? new AstFirst.BasicSemanticContext();");
         sb.AppendLine("        var tokens = " + lexerName + ".Tokenize(input);");
         sb.AppendLine("        var states = new int[64];");
         sb.AppendLine("        var values = new object?[64];");
@@ -389,11 +389,12 @@ public static class ParserEmitter
         // RuleName: 抽象基底、または継承プロパティがない (基底が RuleName を持たない) 場合のみ生成。
         if (node.Rules.Count > 0 && (isAbstractBase || !hasInherited))
             sb.AppendLine("    public readonly string RuleName;");
-        sb.AppendLine("    partial void OnReduce" + ctxParam + ";");
-        sb.AppendLine("    partial void OnAccepted" + ctxParam + ";");
+        // OnReduce/OnAccepted は常に読み取り専用 SemanticContext (ctx の書き換えを防ぐ)。
+        sb.AppendLine("    partial void OnReduce(" + (ctxType is not null ? "AstFirst.SemanticContext ctx" : "") + ");");
+        sb.AppendLine("    partial void OnAccepted(" + (ctxType is not null ? "AstFirst.SemanticContext ctx" : "") + ");");
         // NotifyAccepted: LightGlrDriver / LALR パーサから OnAccepted を呼ぶ override
         if (ctxType is not null)
-            sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted((" + ctxType + ")ctx);");
+            sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted(ctx);");
 
         // コンストラクタ: 抽象基底は protected (派生から : base で呼ばれる)、具象は internal。
         // 同じ引数型シグネチャの[Rule]が複数ある場合は1つに統合 (ruleName で実行時に区別)。

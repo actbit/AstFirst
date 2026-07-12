@@ -80,7 +80,16 @@ public sealed class Scope
 /// LALR のボトムアップ reduce では親スコープを子ノードに伝えられないため、正確なブロックスコープには
 /// Parse 後の AST ウォーク (2パス) を推奨します。
 /// </remarks>
-public sealed class ScopedSymbolTable
+/// <summary>読み取り専用のシンボル表インターフェース。OnReduce の ctx に渡す (書き込みを防ぐ)。</summary>
+public interface IReadOnlySymbolTable
+{
+    /// <summary>現在のスコープ。</summary>
+    Scope Current { get; }
+    /// <summary>名前でシンボルを検索 (見つからなければ null)。</summary>
+    SymbolEntry? Lookup(string name);
+}
+
+public sealed class ScopedSymbolTable : IReadOnlySymbolTable
 {
     /// <summary>現在の (最も内側の) スコープ。</summary>
     public Scope Current { get; private set; }
