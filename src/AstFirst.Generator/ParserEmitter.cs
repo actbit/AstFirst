@@ -467,7 +467,7 @@ public static class ParserEmitter
                 if (ar.Phase != AnalyzePhase.OnReduce) continue;
                 if (ar.TargetNodeFullName != node.FullName) continue;
                 if (ctxCall.Length == 0) continue; // ctx なしノードには注入不可
-                sb.AppendLine("        " + ar.GrammarClassFullName + "." + ar.MethodName + "(this, (" + ar.CtxTypeFullName + ")" + ctxCall + ");");
+                sb.AppendLine("        " + ar.GrammarClassFullName + "." + ar.MethodName + "(this, (AstFirst.SemanticContext)" + ctxCall + ");");
             }
             sb.AppendLine("    }");
         }
