@@ -312,7 +312,11 @@ public static class ParserEmitter
                         var p = action.Parameters[j];
                         // 子は values[top - len + ChildIndex] で参照 (Pop せず)。右辺の ChildIndex 番目の記号。
                         if (p.IsContext) sb.Append("(").Append(p.CastTypeName).Append(")ctx");
-                        else if (tokenDerivedTypes.Contains(p.CastTypeName)) sb.Append("new ").Append(p.CastTypeName).Append("(((AstFirst.Token)values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!).Text)");
+                        else if (tokenDerivedTypes.Contains(p.CastTypeName))
+                        {
+                            // Token 派生型: BasicToken から Text + Kind + IsInserted を引き継いで再構築。
+                            sb.Append("__ct_").Append(p.CastTypeName.Replace(".", "_")).Append("((AstFirst.Token)values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!)");
+                        }
                         else sb.Append("(").Append(p.CastTypeName).Append(")values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!");
                     }
                     sb.AppendLine("); }");
@@ -370,6 +374,19 @@ public static class ParserEmitter
         }
         sb.AppendLine("        return __tok;");
         sb.AppendLine("    }");
+
+        // Token 派生型の再構築ヘルパー: 型ごとに生成。BasicToken から Text + Kind + IsInserted を引き継ぐ。
+        foreach (var tdt in tokenDerivedTypes)
+        {
+            var methodName = "__ct_" + tdt.Replace(".", "_");
+            sb.AppendLine("    private static ").Append(tdt).Append(" ").Append(methodName).Append("(AstFirst.Token src)");
+            sb.AppendLine("    {");
+            sb.AppendLine("        var t = new ").Append(tdt).Append("(src.Text);");
+            sb.AppendLine("        t.Kind = src.Kind;");
+            sb.AppendLine("        t.IsInserted = src.IsInserted;");
+            sb.AppendLine("        return t;");
+            sb.AppendLine("    }");
+        }
     }
 
     /// <summary>各具象ノードの partial コード (子/終端 readonly フィールド + RuleName + OnReduce 宣言 + 各[Rule]の partial コンストラクタ) を生成。</summary>
