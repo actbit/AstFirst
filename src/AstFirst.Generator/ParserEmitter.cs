@@ -314,8 +314,11 @@ public static class ParserEmitter
                     sb.Append("            case ").Append(prod.Id).Append(": { ");
                     if (listAction.IsRecursive)
                     {
-                        // List_T → List_T item: 既存リスト (右辺0) に item (右辺1) を Add。
-                        sb.Append("var __list = (").Append(listType).Append(")values[top - ").Append(len).Append(" + 0]!; ");
+                        // List_T → List_T item: COW (copy-on-write)。既存リストをコピーして末尾に Add。
+                        // ErrorRepair の probe (浅いコピー) でリストが共有されるため、破壊的 Add は不可。
+                        sb.Append("var __src = (").Append(listType).Append(")values[top - ").Append(len).Append(" + 0]!; ");
+                        sb.Append("var __list = new ").Append(listType).Append("(__src.Count + 1); ");
+                        sb.Append("foreach (var __x in __src) __list.Add(__x); ");
                         sb.Append("__list.Add((").Append(elemType).Append(")values[top - ").Append(len).Append(" + 1]!); ");
                     }
                     else if (listAction.IsEmpty)
@@ -392,9 +395,11 @@ public static class ParserEmitter
         // OnReduce/OnAccepted は常に読み取り専用 SemanticContext (ctx の書き換えを防ぐ)。
         sb.AppendLine("    partial void OnReduce(" + (ctxType is not null ? "AstFirst.SemanticContext ctx" : "") + ");");
         sb.AppendLine("    partial void OnAccepted(" + (ctxType is not null ? "AstFirst.SemanticContext ctx" : "") + ");");
-        // NotifyAccepted: LightGlrDriver / LALR パーサから OnAccepted を呼ぶ override
+        // NotifyAccepted: 常に override を生成 (ctx なしノードでも OnAccepted を呼ぶ)。
         if (ctxType is not null)
             sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted(ctx);");
+        else
+            sb.AppendLine("    public override void NotifyAccepted(AstFirst.SemanticContext? ctx) => OnAccepted();");
 
         // コンストラクタ: 抽象基底は protected (派生から : base で呼ばれる)、具象は internal。
         // 同じ引数型シグネチャの[Rule]が複数ある場合は1つに統合 (ruleName で実行時に区別)。
