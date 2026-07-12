@@ -11,9 +11,11 @@ public abstract partial class GlrExpr : AstNode { }
 public sealed partial class GlrNum : GlrExpr
 {
     public int Value { get; private set; }
+    public bool OnAcceptedCalled { get; private set; }
     [Rule]
     public static void N([Token(@"[0-9]+")] Token num) { }
     partial void OnReduce() { Value = int.Parse(Num.Text); }
+    partial void OnAccepted() { OnAcceptedCalled = true; }
 }
 
 /// <summary>規則 GlrExpr → GlrExpr + GlrExpr</summary>

@@ -152,7 +152,8 @@ public static class LightGlrDriver
             for (int i = 0; i < reduceActs.Count; i++)
             {
                 var target = i == 0 ? s : snapshot.Clone();
-                ErrorRepair.ApplyReduce(t, reduce, ctx, target, reduceActs[i]);
+                try { ErrorRepair.ApplyReduce(t, reduce, ctx, target, reduceActs[i]); }
+                catch { target.Alive = false; }
                 work.Enqueue(target);
             }
         }
