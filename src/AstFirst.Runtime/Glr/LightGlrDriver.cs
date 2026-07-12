@@ -94,7 +94,7 @@ public static class LightGlrDriver
                             errors.Add(MakeError(t, tokens, s));
                             lastErrorPos = s.Pos;
                         }
-                        var repaired = Repair(t, tokens, reduce, ctx, toToken, s);
+                        var repaired = ErrorRepair.TryRepair(t, tokens, s, reduce, toToken, ctx);
                         if (repaired != null) shifted.Add(repaired);
                         else s.Alive = false;
                     }
@@ -291,7 +291,7 @@ public static class LightGlrDriver
         return new ParseError("予期しないトークン" + (exp.Length > 0 ? " (期待: " + exp + ")" : ""), pos);
     }
 
-    private sealed class LightGlrStack
+    public sealed class LightGlrStack
     {
         public int[] States;
         public object?[] Values;
@@ -299,7 +299,7 @@ public static class LightGlrDriver
         public int Pos;
         public bool Alive = true;
 
-        private LightGlrStack(int[] states, object?[] values, int top, int pos)
+        public LightGlrStack(int[] states, object?[] values, int top, int pos)
         {
             States = states; Values = values; Top = top; Pos = pos;
         }

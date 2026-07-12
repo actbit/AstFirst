@@ -210,6 +210,10 @@ public static class ParserEmitter
         sb.AppendLine("                    errors.Add(new AstFirst.ParseError(\"予期しないトークン\" + (exp.Length > 0 ? \" (期待: \" + exp + \")\" : \"\"), pos));");
         sb.AppendLine("                    lastErrorPos = i;");
         sb.AppendLine("                }");
+        sb.AppendLine("                var __et = new AstFirst.Glr.GlrTables(ActionKind, ActionValue, Goto, ProdLhs, ProdLen, DefaultReduce, TokenIdToSym, AltKeys, AltActs, StateCount, SymbolCount, EofSym, 0, SymNames);");
+        sb.AppendLine("                var __es = new AstFirst.Glr.LightGlrDriver.LightGlrStack(states, values, top, i);");
+        sb.AppendLine("                var __er = AstFirst.Glr.ErrorRepair.TryRepair(__et, tokens, __es, (int p, object?[] c, AstFirst.SemanticContext x) => ReduceNode(p, c.AsSpan(), c.Length, x), ToToken, ctx);");
+        sb.AppendLine("                if (__er != null) { states = __er.States; values = __er.Values; top = __er.Top; i = __er.Pos; statesSpan = states; valuesSpan = values; continue; }");
         sb.AppendLine("                bool recovered = false;");
         sb.AppendLine("                while (top > 1 && i < tokens.Count)");
         sb.AppendLine("                {");
