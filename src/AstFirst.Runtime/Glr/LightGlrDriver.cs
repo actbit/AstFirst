@@ -89,7 +89,7 @@ public static class LightGlrDriver
                             errors.Add(MakeError(t, tokens, s));
                             lastErrorPos = s.Pos;
                         }
-                        var repaired = Repair(t, tokens, reduce, ctx, s);
+                        var repaired = Repair(t, tokens, reduce, ctx, toToken, s);
                         if (repaired != null) shifted.Add(repaired);
                         else s.Alive = false;
                     }
@@ -160,7 +160,8 @@ public static class LightGlrDriver
     /// <summary>Corchuelo et al. のエラー修復 (ER1 挿入 / ER2 削除) を生成し、ER3 (Forward move) で
     /// N シンボル先までパース可能か確認した上で、最小コストの修復を適用したスタックを返す。</summary>
     private static LightGlrStack? Repair(GlrTables t, IReadOnlyList<LexToken> tokens,
-        System.Func<int, object?[], SemanticContext, object?> reduce, SemanticContext ctx, LightGlrStack s)
+        System.Func<int, object?[], SemanticContext, object?> reduce, SemanticContext ctx,
+        System.Func<LexToken, Token> toToken, LightGlrStack s)
     {
         const int N = 3;            // ER3 の Forward move シンボル数
         const int costInsert = 1;
@@ -168,6 +169,7 @@ public static class LightGlrDriver
         LightGlrStack? best = null;
         int bestCost = int.MaxValue;
         int qm = s.State;
+        var dummyToken = new BasicToken("", default(SourceSpan));   // 挿入トークン (空文字で NRE 対策)
 
         // ER1: 現状態 qm で shift 可能な終端 t0 (≠$) を挿入候補。
         for (int t0 = 0; t0 < t.SymbolCount; t0++)
@@ -175,11 +177,11 @@ public static class LightGlrDriver
             if (t0 == t.EofSym) continue;
             if (t.ActionKind[qm * t.SymbolCount + t0] != 1) continue;   // shift のみ
             var probe = s.Clone();
-            probe.Push(t.ActionValue[qm * t.SymbolCount + t0], null);
-            if (SimulateForward(t, tokens, reduce, ctx, probe, N) && costInsert < bestCost)
+            probe.Push(t.ActionValue[qm * t.SymbolCount + t0], dummyToken);
+            if (SimulateForward(t, tokens, reduce, ctx, toToken, probe, N) && costInsert < bestCost)
             {
                 best = s.Clone();
-                best.Push(t.ActionValue[qm * t.SymbolCount + t0], null);
+                best.Push(t.ActionValue[qm * t.SymbolCount + t0], dummyToken);
                 bestCost = costInsert;
             }
         }
@@ -189,7 +191,7 @@ public static class LightGlrDriver
         {
             var probe = s.Clone();
             probe.Pos = s.Pos + 1;
-            if (SimulateForward(t, tokens, reduce, ctx, probe, N) && costDelete < bestCost)
+            if (SimulateForward(t, tokens, reduce, ctx, toToken, probe, N) && costDelete < bestCost)
             {
                 best = s.Clone();
                 best.Pos = s.Pos + 1;
@@ -201,7 +203,8 @@ public static class LightGlrDriver
 
     /// <summary>ER3 Forward move: N シンボル (または accept) までパースを進められるか確認。</summary>
     private static bool SimulateForward(GlrTables t, IReadOnlyList<LexToken> tokens,
-        System.Func<int, object?[], SemanticContext, object?> reduce, SemanticContext ctx, LightGlrStack sim, int N)
+        System.Func<int, object?[], SemanticContext, object?> reduce, SemanticContext ctx,
+        System.Func<LexToken, Token> toToken, LightGlrStack sim, int N)
     {
         int parsed = 0;
         var visited = new HashSet<(int, int)>();
@@ -233,7 +236,7 @@ public static class LightGlrDriver
             }
             if (hasAccept) return parsed > 0;   // 元の入力を1シンボル以上消費して accept
             if (!hasShift) return false;
-            sim.Push(shiftState, null);
+            sim.Push(shiftState, la2 == t.EofSym ? null : (object)toToken(tokens[sim.Pos]));
             sim.Pos++;
             parsed++;
         }
