@@ -43,6 +43,16 @@ public static class ParserEmitter
             if (patternToTerminalId.TryGetValue(r.Pattern, out var sid))
                 tokenIdToSym[r.TokenId] = sid;
 
+        // TokenId → Kind マッピング ([Token]/[Pattern] の Kind 属性から)。
+        var kindByPattern = new Dictionary<string, string>();
+        foreach (var td in model.TokenDefs)
+            if (td.Kind is string k) kindByPattern[td.Pattern] = k;
+        var tokenIdToKind = new string?[maxTokenId + 1];
+        foreach (var r in rules)
+            if (kindByPattern.TryGetValue(r.Pattern, out var kind))
+                tokenIdToKind[r.TokenId] = kind;
+        bool hasKinds = tokenIdToKind.Any(k => k is not null);
+
         int eofSym = grammar.EndOfFile.Id;
 
         // コンフリクトセルのフォールバック候補を収集 (候補2以上のセルのみ)。
@@ -94,6 +104,19 @@ public static class ParserEmitter
         for (int i = 0; i < tokenIdToSym.Length; i++) { if (i > 0) sb.Append(", "); sb.Append(tokenIdToSym[i]); }
         sb.AppendLine(" };");
 
+        if (hasKinds)
+        {
+            sb.Append("    private static readonly string?[] __tokenKinds = new string?[] { ");
+            for (int i = 0; i < tokenIdToKind.Length; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                var k = tokenIdToKind[i];
+                if (k is null) sb.Append("null");
+                else sb.Append("\"").Append(k.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"");
+            }
+            sb.AppendLine(" };");
+        }
+
         sb.AppendLine("    public const int EofSym = " + eofSym + ";");
         sb.AppendLine("    public const int StateCount = " + stateCount + ";");
         sb.AppendLine("    public const int SymbolCount = " + symbolCount + ";");
@@ -128,7 +151,7 @@ public static class ParserEmitter
         sb.AppendLine("    };");
 
         EmitParse(sb, lexerName, model);
-        EmitHelpers(sb, grammar, model, tokenDerivedTypes);
+        EmitHelpers(sb, grammar, model, tokenDerivedTypes, hasKinds);
 
         sb.AppendLine("}");
         return sb.ToString();
@@ -227,7 +250,7 @@ public static class ParserEmitter
         sb.AppendLine("    }");
     }
 
-    private static void EmitHelpers(StringBuilder sb, Grammar grammar, GrammarModel model, HashSet<string> tokenDerivedTypes)
+    private static void EmitHelpers(StringBuilder sb, Grammar grammar, GrammarModel model, HashSet<string> tokenDerivedTypes, bool hasKinds)
     {
         // Grow: スタック配列が足りなくなったら 2 倍に拡張。
         sb.AppendLine("    private static void Grow(ref int[] states, ref object?[] values)");
@@ -289,7 +312,11 @@ public static class ParserEmitter
                         var p = action.Parameters[j];
                         // 子は values[top - len + ChildIndex] で参照 (Pop せず)。右辺の ChildIndex 番目の記号。
                         if (p.IsContext) sb.Append("(").Append(p.CastTypeName).Append(")ctx");
-                        else if (tokenDerivedTypes.Contains(p.CastTypeName)) sb.Append("new ").Append(p.CastTypeName).Append("(((AstFirst.Token)values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!).Text)");
+                        else if (tokenDerivedTypes.Contains(p.CastTypeName))
+                        {
+                            // Token 派生型: BasicToken から Text + Kind + IsInserted を引き継いで再構築。
+                            sb.Append("__ct_").Append(p.CastTypeName.Replace(".", "_")).Append("((AstFirst.Token)values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!)");
+                        }
                         else sb.Append("(").Append(p.CastTypeName).Append(")values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!");
                     }
                     sb.AppendLine("); }");
@@ -338,7 +365,28 @@ public static class ParserEmitter
         sb.AppendLine("    }");
 
         sb.AppendLine("    private static AstFirst.Token ToToken(AstFirst.Core.Lexing.LexToken t)");
-        sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var __tok = new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
+        if (hasKinds)
+        {
+            sb.AppendLine("        if (t.TokenId >= 0 && t.TokenId < __tokenKinds.Length)");
+            sb.AppendLine("            __tok.Kind = __tokenKinds[t.TokenId];");
+        }
+        sb.AppendLine("        return __tok;");
+        sb.AppendLine("    }");
+
+        // Token 派生型の再構築ヘルパー: 型ごとに生成。BasicToken から Text + Kind + IsInserted を引き継ぐ。
+        foreach (var tdt in tokenDerivedTypes)
+        {
+            var methodName = "__ct_" + tdt.Replace(".", "_");
+            sb.Append("    private static ").Append(tdt).Append(" ").Append(methodName).AppendLine("(AstFirst.Token src)");
+            sb.AppendLine("    {");
+            sb.Append("        var t = new ").Append(tdt).AppendLine("(src.Text);");
+            sb.AppendLine("        t.Kind = src.Kind;");
+            sb.AppendLine("        t.IsInserted = src.IsInserted;");
+            sb.AppendLine("        return t;");
+            sb.AppendLine("    }");
+        }
     }
 
     /// <summary>各具象ノードの partial コード (子/終端 readonly フィールド + RuleName + OnReduce 宣言 + 各[Rule]の partial コンストラクタ) を生成。</summary>

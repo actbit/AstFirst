@@ -10,7 +10,7 @@ AstFirst grammars are written with C# classes and attributes. The generator emit
 |---|---|---|
 | `[Grammar]` | class | Start symbol (root nonterminal). Generator's extraction entry point. `Mode` switches dialects. |
 | `[Rule]` | static method | A production. The method's **parameters** are the RHS. Multiple per class allowed (see below). |
-| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority. |
+| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority, `Kind` sets token category. |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. |
 | `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more. Expands to `IReadOnlyList<T>`. |
 | `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
@@ -44,7 +44,7 @@ The `ParseMode` named property selects the parser execution mode. Default is `La
 - **One mode per class**: `Lalr` and `LightGlr` cannot be specified simultaneously on the same `[Grammar]` root (choose one). Combinable with `Mode` (dialect).
 - **OnReduce constraint**: In LightGlr, `OnReduce` is invoked at reduce time even for undetermined branches. Therefore `OnReduce` (partial) must only set the node's own properties (`Name`/`Value`/`Span`, etc.) and must **not** mutate external state (`ScopedSymbolTable` / `DiagnosticBag`, etc.). Do semantic analysis in the second pass via `[Enter]`/`[Exit]` (Walker) to avoid leftover side effects from discarded branches.
 - **Error repair (Corchuelo et al. ER1/ER2/ER3) known limitations**:
-  - **Inserted tokens have null value**: Tokens inserted by ER1 have no value (the user did not write them). `OnReduce` that accesses `Token.Text` on such a token will throw `NullReferenceException`. SimulateForward (ER3) validates with real reduce + try/catch to reject candidates that throw, but fork divergence means zero risk is not guaranteed. Write `OnReduce` null-safe.
+  - **Inserted tokens have empty text + estimated Span**: Tokens inserted by ER1 are `BasicToken("", ...)` (empty text) since the user did not write them. The Span is interpolated from surrounding tokens (prev token's End ~ next token's Start). `Token.Text` is empty string `""`, so `int.Parse("")` throws `FormatException`, but ER3 SimulateForward validates with real reduce + try/catch to reject such candidates.
   - **N=3 and costs are fixed**: Forward move symbols `N=3`, insert cost=1/delete cost=2 are hardcoded. The Corchuelo paper recommends per-language tuning; not yet supported.
   - **Single-pass repair (no recursion)**: The original Corchuelo applies ER1/ER2/ER3 recursively; this implementation applies one round only. Consecutive errors are repaired one at a time on subsequent dead states.
   - **SimulateForward checks the first path only**: Does not fork at conflict cells during simulation, so full agreement with production fork paths is not guaranteed.
@@ -113,10 +113,48 @@ Attach to a `Token` parameter of a `[Rule]` method to specify the lexical rule (
 Named properties:
 
 - `Priority` — lexer priority (higher wins). Used to resolve when several tokens match the same input.
+- `Kind` — token category (string). Set on `Token.Kind`. Checkable in OnReduce/OnAccepted via `token.Kind`.
 
 ```csharp
 [Token(@"[A-Za-z_]\w*", Priority = 0)]    // identifier (low priority)
 [Token(@"if", Priority = 1)]               // keyword if (high priority, beats identifier)
+[Token(@"[0-9]+", Kind = "number")]         // number literal (Kind = "number")
+[Token(@"\+", Kind = "operator")]         // operator (Kind = "operator")
+```
+
+### Token properties
+
+Generated `Token` instances have the following properties:
+
+| Property | Type | Description |
+|---|---|---|
+| `Text` | `string` | Matched text |
+| `Span` | `SourceSpan` | Source range (position/line/column) |
+| `Kind` | `string?` | Category from `[Token]`/`[Pattern]`'s `Kind` |
+| `IsInserted` | `bool` | Whether inserted by ErrorRepair |
+
+```csharp
+partial void OnReduce(SemanticContext ctx)
+{
+    if (Num.Kind == "number" && !Num.IsInserted)
+        Value = int.Parse(Num.Text);
+}
+```
+
+### Token-derived types
+
+A `Token` subclass can be used as a `[Rule]` parameter type. The generator reconstructs the derived type from `BasicToken`, carrying over `Text` + `Kind` + `IsInserted`.
+
+```csharp
+public sealed class NumberToken : Token
+{
+    public int Value { get; }
+    public NumberToken(string text) : base(text, default) { Value = int.Parse(text); }
+}
+
+[Rule]
+public static void Num([Token(@"[0-9]+")] NumberToken num) { }
+// at reduce: new NumberToken(basicToken.Text) + Kind/IsInserted copied
 ```
 
 ## `[Precedence]`

@@ -156,8 +156,9 @@ public sealed class ParamModel : IEquatable<ParamModel>
     public int RepeatMin { get; }
     public bool IsRepeat => RepeatMin >= 0;  // [Repeat] 付き (IReadOnlyList<T> に展開)
     public int Priority { get; }        // [Token]/[Pattern] の Priority
+    public string? Kind { get; }        // [Token]/[Pattern] の Kind
 
-    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, bool isChild, int priority, bool isToken = false, int repeatMin = -1)
+    public ParamModel(string typeFullName, string? name, string? pattern, bool isContext, bool isChild, int priority, bool isToken = false, int repeatMin = -1, string? kind = null)
     {
         TypeFullName = typeFullName;
         Name = name;
@@ -167,12 +168,14 @@ public sealed class ParamModel : IEquatable<ParamModel>
         IsToken = isToken;
         RepeatMin = repeatMin;
         Priority = priority;
+        Kind = kind;
     }
 
     public bool Equals(ParamModel? other) =>
         other is not null && TypeFullName == other.TypeFullName && Name == other.Name
         && Pattern == other.Pattern && IsContext == other.IsContext && IsChild == other.IsChild
-        && IsToken == other.IsToken && RepeatMin == other.RepeatMin && Priority == other.Priority;
+        && IsToken == other.IsToken && RepeatMin == other.RepeatMin && Priority == other.Priority
+        && Kind == other.Kind;
     public override bool Equals(object? obj) => obj is ParamModel p && Equals(p);
     public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(TypeFullName);
 }
@@ -180,22 +183,24 @@ public sealed class ParamModel : IEquatable<ParamModel>
 /// <summary>字句定義: [Token]/[Pattern] の正規表現と優先度。</summary>
 public sealed class TokenDefModel : IEquatable<TokenDefModel>
 {
-    public string Key { get; }          // トークン種別の識別キー (型名 or 引数名)
+    public string Key { get; }
     public string Pattern { get; }
     public int Priority { get; }
     public bool IsHidden { get; }
+    public string? Kind { get; }
 
-    public TokenDefModel(string key, string pattern, int priority, bool isHidden)
+    public TokenDefModel(string key, string pattern, int priority, bool isHidden, string? kind = null)
     {
         Key = key;
         Pattern = pattern;
         Priority = priority;
         IsHidden = isHidden;
+        Kind = kind;
     }
 
     public bool Equals(TokenDefModel? other) =>
         other is not null && Key == other.Key && Pattern == other.Pattern
-        && Priority == other.Priority && IsHidden == other.IsHidden;
+        && Priority == other.Priority && IsHidden == other.IsHidden && Kind == other.Kind;
     public override bool Equals(object? obj) => obj is TokenDefModel t && Equals(t);
     public override int GetHashCode() => (Key, Pattern).GetHashCode();
 }

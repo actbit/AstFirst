@@ -25,7 +25,8 @@ public static class ErrorRepair
         LightGlrDriver.LightGlrStack? best = null;
         int bestCost = int.MaxValue;
         int qm = s.State;
-        var dummyToken = new BasicToken("", default(SourceSpan));
+        // 挿入トークンの Span を前後のトークンから推測 (子の Span 自動計算で (0,0) が混ざるのを防ぐ)
+        var dummyToken = new BasicToken("", EstimateInsertedSpan(tokens, s.Pos)) { IsInserted = true };
 
         // ER1: 現状態 qm で shift 可能な終端 t0 (≠$) を挿入候補。
         for (int t0 = 0; t0 < t.SymbolCount; t0++)
@@ -112,6 +113,43 @@ public static class ErrorRepair
         int lhs = t.ProdLhs[prodId];
         int gotoState = t.Goto[s.State * t.SymbolCount + lhs];
         s.Push(gotoState, node);
+    }
+
+    /// <summary>挿入位置 pos に対応する Span を前後のトークンから推測。
+    /// prev トークンの End 〜 cur トークンの Start の範囲。EOF 時は prev の End。</summary>
+    private static SourceSpan EstimateInsertedSpan(IReadOnlyList<LexToken> tokens, int pos)
+    {
+        if (tokens.Count == 0) return default;
+
+        int sOff, sLine, sCol;
+        if (pos > 0)
+        {
+            sOff = tokens[pos - 1].End;
+            sLine = tokens[pos - 1].EndLine;
+            sCol = tokens[pos - 1].EndColumn;
+        }
+        else
+        {
+            sOff = 0; sLine = 1; sCol = 1;
+        }
+
+        int eOff, eLine, eCol;
+        if (pos < tokens.Count)
+        {
+            eOff = tokens[pos].Start;
+            eLine = tokens[pos].StartLine;
+            eCol = tokens[pos].StartColumn;
+        }
+        else
+        {
+            eOff = sOff; eLine = sLine; eCol = sCol;  // EOF: prev と同じ
+        }
+
+        if (eOff < sOff) { eOff = sOff; eLine = sLine; eCol = sCol; }  // 安全弁
+
+        return new SourceSpan(
+            new Position(sOff, sLine, sCol),
+            new Position(eOff, eLine, eCol));
     }
 
     internal static int LookaheadSym(GlrTables t, IReadOnlyList<LexToken> tokens, int pos)

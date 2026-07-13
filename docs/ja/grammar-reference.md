@@ -10,7 +10,7 @@ AstFirst では C# のクラスと属性で文法を書く。Generator がコン
 |---|---|---|
 | `[Grammar]` | クラス | 文法の開始記号（ルート非終端）。Generator の抽出開始点。`Mode` で複数方言を切り替え。 |
 | `[Rule]` | static メソッド | 生成規則。メソッドの**引数**が右辺。1クラスに複数置ける（後述）。 |
-| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度。 |
+| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度、`Kind` でトークン種別。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。 |
 | `[Repeat]` / `[Repeat(Min=0)]` | `[Rule]` メソッドの `AstNode` 派生引数 | リスト（繰り返し）。`Min=1`（既定）= 1回以上、`Min=0` = 0回以上。`IReadOnlyList<T>` に展開。 |
 | `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
@@ -44,7 +44,7 @@ public abstract partial class Expr : AstNode { }
 - **1 クラス 1 モード**: `Lalr` と `LightGlr` を同じ `[Grammar]` ルートに同時指定はできない（1 モード選択）。`Mode`（方言）とは併用可。
 - **OnReduce の制約**: LightGlr では未確定の分岐でも reduce 時に `OnReduce` が呼ばれる。そのため `OnReduce`（partial）は**ノード自身のプロパティ設定（`Name`/`Value`/`Span` 等）のみ**とし、外部の mutable 状態（`ScopedSymbolTable` / `DiagnosticBag` 等）の変更を行ってはならない。意味解析は 2 パス目の `[Enter]`/`[Exit]`（Walker）で行うこと（破棄された分岐の副作用が残るのを防ぐ）。
 - **エラー修復 (Corchuelo et al. ER1/ER2/ER3) の既知の制限**:
-  - **挿入トークンは値 null**: ER1 で補完されたトークンはユーザーが書いていないため値が `null`。これを子に持つノードの `OnReduce` で `Token.Text` 等を呼ぶと `NullReferenceException` になる。修復検証 (ER3 SimulateForward) で実 reduce を try/catch して例外を出す候補は弾くが、fork 差により本番で漏れる可能性がゼロではない。`OnReduce` は null 安全に書くことが望ましい。
+  - **挿入トークンは空文字 + 推測 Span**: ER1 で補完されたトークンはユーザーが書いていないため `BasicToken("", ...)` (空文字) になる。Span は前後のトークンから推測して補間される (前トークンの End 〜 次トークンの Start)。`Token.Text` は空文字 `""` なので `int.Parse("")` 等は `FormatException` を投げるが、ER3 SimulateForward で実 reduce を try/catch して例外を出す候補は弾く。
   - **N=3・コスト固定**: ER3 の Forward move 確認シンボル数 `N=3`、挿入コスト=1/削除コスト=2 は固定値。Corchuelo 論文では言語に応じたチューニングを推奨しているが、本実装では未対応。
   - **1 回修復 (再帰なし)**: Corchuelo 本来は ER1/ER2/ER3 を再帰的に適用するが、本実装は1回の ER1/ER2 + ER3 のみ。連続エラーは次の dead で順次修復される。
   - **SimulateForward は最初の経路のみ確認**: コンフリクトセルでも fork せず最初の shift/reduce のみ追うため、本番の fork 経路との完全一致は保証しない。
@@ -113,10 +113,48 @@ public sealed partial class BinaryExpr : Expr
 名前付きプロパティ:
 
 - `Priority` — レクサ優先度（大きいほど高優先）。同じ入力で複数トークンが受理した際の解決に使う。
+- `Kind` — トークン種別（文字列）。`Token.Kind` に設定される。OnReduce/OnAccepted で `token.Kind` で判定可能。
 
 ```csharp
 [Token(@"[A-Za-z_]\w*", Priority = 0)]    // 識別子（低優先）
 [Token(@"if", Priority = 1)]               // キーワード if（高優先、識別子に勝つ）
+[Token(@"[0-9]+", Kind = "number")]         // 数字リテラル (Kind = "number")
+[Token(@"\+", Kind = "operator")]         // 演算子 (Kind = "operator")
+```
+
+### Token のプロパティ
+
+生成された `Token` は以下のプロパティを持つ:
+
+| プロパティ | 型 | 説明 |
+|---|---|---|
+| `Text` | `string` | マッチした文字列 |
+| `Span` | `SourceSpan` | ソース上の範囲 (位置・行・列) |
+| `Kind` | `string?` | `[Token]`/`[Pattern]` の `Kind` で指定した種別 |
+| `IsInserted` | `bool` | ErrorRepair で挿入されたトークンか |
+
+```csharp
+partial void OnReduce(SemanticContext ctx)
+{
+    if (Num.Kind == "number" && !Num.IsInserted)
+        Value = int.Parse(Num.Text);
+}
+```
+
+### Token 派生型
+
+`Token` の派生クラスを `[Rule]` の引数に使える。Generator が `BasicToken` から派生型を再構築する際、`Text` + `Kind` + `IsInserted` を引き継ぐ。
+
+```csharp
+public sealed class NumberToken : Token
+{
+    public int Value { get; }
+    public NumberToken(string text) : base(text, default) { Value = int.Parse(text); }
+}
+
+[Rule]
+public static void Num([Token(@"[0-9]+")] NumberToken num) { }
+// reduce 時: new NumberToken(basicToken.Text) + Kind/IsInserted コピー
 ```
 
 ## `[Precedence]`

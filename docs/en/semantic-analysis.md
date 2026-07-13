@@ -10,7 +10,8 @@ AstFirst offers three ways to author semantic logic (they compose):
 
 | Approach | Timing | Where to write | Use case |
 |---|---|---|---|
-| `partial void OnReduce(ctx)` | Pass 1, at reduce (bottom-up) | Inside each node class | Node-local syntactic work (`Name = Tok.Text`, `Span` computation) |
+| `partial void OnReduce(ctx)` | Pass 1, at reduce (bottom-up) | Inside each node class | Node-local syntactic work (`Name = Tok.Text`, `Span` computation). ctx is read-only |
+| `partial void OnAccepted(ctx)` | After reduce, route determined | Inside each node class | Post-determination work. ctx is writable (declarations/diagnostics allowed) |
 | `[OnReduce]` / `[Enter]` / `[Exit]` attributes | Pass 1 (OnReduce) / Pass 2 (Enter/Exit) | Inside the `[Grammar]` root class ★ recommended | Grammar-wide semantics (declaration, resolution, type checks). The ctx cast is injected automatically |
 | `IOnSecondPassEnter` / `IOnSecondPassExit` | Pass 2 (top-down) | Inside each node class (interface impl) | Backward compatible. Attribute style recommended |
 
@@ -44,6 +45,56 @@ public sealed partial class Decl : MyLang
 ```
 
 `[OnReduce]` and partial `OnReduce` **coexist** (partial `OnReduce` runs first, then `[OnReduce]`).
+
+## OnAccepted — route-determined callback
+
+`partial void OnAccepted(ctx)` is called when the interpretation of a node is **determined**.
+
+### Timing
+
+| Mode | When called |
+|---|---|
+| **LALR** (default) | Right after reduce (single stack = immediately determined = just after `OnReduce`) |
+| **LightGlr** | When forked candidates converge to one (may be later than `OnReduce`) |
+
+### Difference from OnReduce
+
+| | `OnReduce` | `OnAccepted` |
+|---|---|---|
+| **ctx** | `SemanticContext` (read-only) | User's ctx type (writable) |
+| **Declarations/diagnostics** | Not allowed | Allowed |
+| **Timing** | At reduce (interpretation may be undetermined) | Route determined |
+| **LALR** | Per reduce | Right after each reduce |
+| **LightGlr** | Once per fork candidate | Only for the surviving candidate |
+
+### Usage
+
+```csharp
+public sealed partial class MyDecl : MyLang
+{
+    public string Name { get; private set; } = "";
+    [Rule] public static void DeclRule([Token("[A-Za-z]+")] Token name, MyCtx ctx) { }
+
+    // At reduce: node-local initialization only (ctx is read-only)
+    partial void OnReduce(SemanticContext ctx)
+    {
+        Name = NameTok.Text;
+        Span = NameTok.Span;
+    }
+
+    // Route determined: ctx writes are allowed
+    partial void OnAccepted(MyCtx ctx)
+    {
+        // Declare symbol only after this interpretation is confirmed
+        ctx.WritableSymbols.TryDeclare(Name, Span, null, out _);
+    }
+}
+```
+
+### When to use OnAccepted
+
+- **OnReduce is enough** (most cases): setting `Name`, `Value`, computing `Span` — node-local work.
+- **OnAccepted is useful**: when you want declarations/diagnostics only after forked candidates converge in LightGlr mode. In LALR mode, it runs right after `OnReduce`, so `[Enter]`/`[Exit]` (2nd-pass Walker) is generally more appropriate.
 
 ## SemanticContext injection
 

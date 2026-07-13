@@ -43,9 +43,20 @@ public class ParserEmitterTests
     private static Compilation Compile(params string[] sources)
     {
         var trusted = (string)System.AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!;
+        // Generator.dll は Core のソースを埋め込みコンパイルしているため LexToken 等が
+        // Core.dll と重複する (CS0433)。Core.dll を正とするため Generator.dll は参照から除外。
+        // Runtime.dll は stubs (namespace AstFirst の AstNode/Token/SemanticContext 等) と同名型を
+        // 含み、生成コードが ErrorRepair.TryRepair に渡す lambda の SemanticContext と型 identity が
+        // 衝突する (CS1678)。stubs を正とするため Runtime.dll も参照から除外し、Glr 系は stubs で補う。
         var refs = trusted.Split(Path.PathSeparator)
+            .Where(p => !p.EndsWith("AstFirst.Generator.dll", StringComparison.OrdinalIgnoreCase)
+                     && !p.EndsWith("AstFirst.Runtime.dll", StringComparison.OrdinalIgnoreCase))
             .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p)).ToList();
-        refs.Add(MetadataReference.CreateFromFile(typeof(Dfa).Assembly.Location)); // AstFirst.Core
+        // AstFirst.Core.dll は TPA に含まれない (テスト csproj が Generator 埋め込み Core との
+        // CS0433 を避けるため推移参照を除外)。生成コードが LexToken を使い、Glr stubs の
+        // ErrorRepair シグネチャも Core の LexToken を参照するため Core.dll を明示追加 (CS0012 回避)。
+        var corePath = System.IO.Path.Combine(System.AppContext.BaseDirectory, "AstFirst.Core.dll");
+        refs.Add(MetadataReference.CreateFromFile(corePath));
         return CSharpCompilation.Create("Generated",
             sources.Select(s => CSharpSyntaxTree.ParseText(s)),
             refs,
@@ -62,8 +73,8 @@ public class ParserEmitterTests
         var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         var stubs = @"
 namespace AstFirst {
-    public abstract class AstNode { public bool IsAccepted => true; public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
-    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
+    public abstract class AstNode { public bool IsAccepted => true; public virtual void NotifyAccepted(SemanticContext? ctx) { } public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
+    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; public bool IsInserted { get; set; } public string? Kind { get; set; } }
     public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
     public readonly struct Position { public Position(int o, int l, int c) { } }
     public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
@@ -74,6 +85,24 @@ namespace AstFirst {
     public sealed class ParseResult { public ParseResult(object? a, System.Collections.Generic.IReadOnlyList<ParseError> e, System.Collections.Generic.IReadOnlyList<Diagnostic>? d) { } }
     public abstract class SemanticContext { public abstract DiagnosticBag Diagnostics { get; } }
     public sealed class BasicSemanticContext : SemanticContext { public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag(); }
+}
+namespace AstFirst.Glr {
+    // 生成コードが panic 後のエラー修復で参照する Glr 系の最小 stub (Runtime.dll は参照から除外)。
+    public sealed class GlrTables {
+        public GlrTables(byte[] actionKind, int[] actionValue, int[] gotoTable, int[] prodLhs, int[] prodLen, int[] defaultReduce, int[] tokenIdToSym, int[] altKeys, int[][] altActs, int stateCount, int symbolCount, int eofSym, int startState, System.Collections.Generic.IReadOnlyList<string?>? symNames = null) { }
+    }
+    public static class ErrorRepair {
+        public static LightGlrDriver.LightGlrStack? TryRepair(GlrTables t, System.Collections.Generic.IReadOnlyList<AstFirst.Core.Lexing.LexToken> tokens, LightGlrDriver.LightGlrStack s, System.Func<int, object?[], AstFirst.SemanticContext, object?> reduce, System.Func<AstFirst.Core.Lexing.LexToken, AstFirst.Token> toToken, AstFirst.SemanticContext ctx) => null;
+    }
+}
+namespace AstFirst.Glr.LightGlrDriver {
+    public sealed class LightGlrStack {
+        public int[] States { get; }
+        public object?[] Values { get; }
+        public int Top { get; }
+        public int Pos { get; }
+        public LightGlrStack(int[] states, object?[] values, int top, int pos) { States = states; Values = values; Top = top; Pos = pos; }
+    }
 }
 public class Expr : AstFirst.AstNode { }
 public class NumExpr : Expr { public NumExpr(string ruleName, AstFirst.Token t) { } }
@@ -130,8 +159,11 @@ public class AddExpr : Expr { public AddExpr(string ruleName, Expr a, AstFirst.T
         ModelToDfa.Build(model, out var rules);
         var (grammar, table) = ModelToTable.BuildWithGrammar(model);
         var source = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
-        Assert.Contains("new NumToken(", source);
-        Assert.DoesNotContain("(NumToken)c[", source);
+        // G7: Token派生型 (NumToken) は __ct_ ヘルパーで再構築 (キャストでない)。
+        // ヘルパーが生成され、reduce から呼ばれる。ヘルパー内で new NumToken(src.Text) する。
+        Assert.Contains("__ct_NumToken", source);            // ヘルパー定義 + reduce からの呼出
+        Assert.Contains("NumToken(src.Text)", source);        // ヘルパー内で new NumToken(src.Text) 再構築
+        Assert.DoesNotContain("(NumToken)values", source);    // reduce でキャストは使わない (再構築)
     }
 
     [Fact]
@@ -145,8 +177,8 @@ public class AddExpr : Expr { public AddExpr(string ruleName, Expr a, AstFirst.T
         var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         var stubs = @"
 namespace AstFirst {
-    public abstract class AstNode { public bool IsAccepted => true; public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
-    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
+    public abstract class AstNode { public bool IsAccepted => true; public virtual void NotifyAccepted(SemanticContext? ctx) { } public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
+    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; public bool IsInserted { get; set; } public string? Kind { get; set; } }
     public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
     public readonly struct Position { public Position(int o, int l, int c) { } }
     public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
@@ -157,6 +189,24 @@ namespace AstFirst {
     public sealed class ParseResult { public ParseResult(object? a, System.Collections.Generic.IReadOnlyList<ParseError> e, System.Collections.Generic.IReadOnlyList<Diagnostic>? d) { } }
     public abstract class SemanticContext { public abstract DiagnosticBag Diagnostics { get; } }
     public sealed class BasicSemanticContext : SemanticContext { public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag(); }
+}
+namespace AstFirst.Glr {
+    // 生成コードが panic 後のエラー修復で参照する Glr 系の最小 stub (Runtime.dll は参照から除外)。
+    public sealed class GlrTables {
+        public GlrTables(byte[] actionKind, int[] actionValue, int[] gotoTable, int[] prodLhs, int[] prodLen, int[] defaultReduce, int[] tokenIdToSym, int[] altKeys, int[][] altActs, int stateCount, int symbolCount, int eofSym, int startState, System.Collections.Generic.IReadOnlyList<string?>? symNames = null) { }
+    }
+    public static class ErrorRepair {
+        public static LightGlrDriver.LightGlrStack? TryRepair(GlrTables t, System.Collections.Generic.IReadOnlyList<AstFirst.Core.Lexing.LexToken> tokens, LightGlrDriver.LightGlrStack s, System.Func<int, object?[], AstFirst.SemanticContext, object?> reduce, System.Func<AstFirst.Core.Lexing.LexToken, AstFirst.Token> toToken, AstFirst.SemanticContext ctx) => null;
+    }
+}
+namespace AstFirst.Glr.LightGlrDriver {
+    public sealed class LightGlrStack {
+        public int[] States { get; }
+        public object?[] Values { get; }
+        public int Top { get; }
+        public int Pos { get; }
+        public LightGlrStack(int[] states, object?[] values, int top, int pos) { States = states; Values = values; Top = top; Pos = pos; }
+    }
 }
 public class NumToken : AstFirst.Token { public NumToken(string t) : base(t, default) { } }
 public class Expr : AstFirst.AstNode { }
@@ -252,8 +302,8 @@ public class NumExpr : Expr { public NumExpr(string ruleName, NumToken n) { } }
         var parserSource = ParserEmitter.EmitParser(model, grammar, table, rules, "TestNs");
         var stubs = @"
 namespace AstFirst {
-    public abstract class AstNode { public bool IsAccepted => true; public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
-    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; }
+    public abstract class AstNode { public bool IsAccepted => true; public virtual void NotifyAccepted(SemanticContext? ctx) { } public virtual void OnSecondPassEnter(SemanticContext ctx) { } public virtual void OnSecondPassExit(SemanticContext ctx) { } }
+    public abstract class Token { public Token(string t, SourceSpan s) { } public Token(System.ReadOnlyMemory<char> t, SourceSpan s) { } public virtual string Text => string.Empty; public bool IsInserted { get; set; } public string? Kind { get; set; } }
     public sealed class BasicToken : Token { public BasicToken(string t, SourceSpan s) : base(t, s) { } public BasicToken(System.ReadOnlyMemory<char> t, SourceSpan s) : base(t, s) { } }
     public readonly struct Position { public Position(int o, int l, int c) { } }
     public readonly struct SourceSpan { public SourceSpan(Position s, Position e) { } }
@@ -264,6 +314,24 @@ namespace AstFirst {
     public sealed class ParseResult { public ParseResult(object? a, System.Collections.Generic.IReadOnlyList<ParseError> e, System.Collections.Generic.IReadOnlyList<Diagnostic>? d) { } }
     public abstract class SemanticContext { public abstract DiagnosticBag Diagnostics { get; } }
     public sealed class BasicSemanticContext : SemanticContext { public override DiagnosticBag Diagnostics { get; } = new DiagnosticBag(); }
+}
+namespace AstFirst.Glr {
+    // 生成コードが panic 後のエラー修復で参照する Glr 系の最小 stub (Runtime.dll は参照から除外)。
+    public sealed class GlrTables {
+        public GlrTables(byte[] actionKind, int[] actionValue, int[] gotoTable, int[] prodLhs, int[] prodLen, int[] defaultReduce, int[] tokenIdToSym, int[] altKeys, int[][] altActs, int stateCount, int symbolCount, int eofSym, int startState, System.Collections.Generic.IReadOnlyList<string?>? symNames = null) { }
+    }
+    public static class ErrorRepair {
+        public static LightGlrDriver.LightGlrStack? TryRepair(GlrTables t, System.Collections.Generic.IReadOnlyList<AstFirst.Core.Lexing.LexToken> tokens, LightGlrDriver.LightGlrStack s, System.Func<int, object?[], AstFirst.SemanticContext, object?> reduce, System.Func<AstFirst.Core.Lexing.LexToken, AstFirst.Token> toToken, AstFirst.SemanticContext ctx) => null;
+    }
+}
+namespace AstFirst.Glr.LightGlrDriver {
+    public sealed class LightGlrStack {
+        public int[] States { get; }
+        public object?[] Values { get; }
+        public int Top { get; }
+        public int Pos { get; }
+        public LightGlrStack(int[] states, object?[] values, int top, int pos) { States = states; Values = values; Top = top; Pos = pos; }
+    }
 }
 public class Program : AstFirst.AstNode { }
 public class ProgramBody : Program { public ProgramBody(string ruleName, System.Collections.Generic.IReadOnlyList<StmtItem> statements) { } }

@@ -34,6 +34,12 @@ public abstract class Token
     /// <summary>トークンの字面。スライスから必要時だけ生成する (Substring を遅延)。</summary>
     public string Text => _text ??= _textSpan.ToString();
 
+    /// <summary>ErrorRepair で挿入されたトークンか (ユーザーが書いていない)。</summary>
+    public bool IsInserted { get; set; }
+
+    /// <summary>[Token]/[Pattern] の Kind 属性で指定された種別 (例: "number", "keyword")。</summary>
+    public string? Kind { get; set; }
+
     public override string ToString() => Text;
 }
 
