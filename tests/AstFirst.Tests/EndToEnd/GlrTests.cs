@@ -34,6 +34,25 @@ public class GlrTests
     }
 
     [Fact]
+    public void Kind_IsSet_OnToken()
+    {
+        // [Token(@"[0-9]+", Kind = "number")] → Token.Kind == "number"
+        var result = GlrExprParser.Parse("42");
+        var num = Assert.IsType<GlrNum>(result.Ast);
+        Assert.Equal("number", num.CapturedKind);
+    }
+
+    [Fact]
+    public void IsInserted_OnOperator_LightGlr()
+    {
+        // 入力 "1 2" (演算子欠落) → ER1 が "+" を挿入 → GlrAdd.Op.IsInserted == true。
+        // GlrAdd.Op は非派生 Token なので dummyToken がそのまま渡る。
+        var result = GlrExprParser.Parse("1 2");
+        var add = Assert.IsType<GlrAdd>(result.Ast);
+        Assert.True(add.Op.IsInserted);
+    }
+
+    [Fact]
     public void OnAccepted_Called_ForCtxLessNode()
     {
         // GlrNum は ctx なし ([Rule] に SemanticContext なし)。

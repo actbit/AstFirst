@@ -151,7 +151,7 @@ public static class ParserEmitter
         sb.AppendLine("    };");
 
         EmitParse(sb, lexerName, model);
-        EmitHelpers(sb, grammar, model, tokenDerivedTypes);
+        EmitHelpers(sb, grammar, model, tokenDerivedTypes, hasKinds);
 
         sb.AppendLine("}");
         return sb.ToString();
@@ -250,7 +250,7 @@ public static class ParserEmitter
         sb.AppendLine("    }");
     }
 
-    private static void EmitHelpers(StringBuilder sb, Grammar grammar, GrammarModel model, HashSet<string> tokenDerivedTypes)
+    private static void EmitHelpers(StringBuilder sb, Grammar grammar, GrammarModel model, HashSet<string> tokenDerivedTypes, bool hasKinds)
     {
         // Grow: スタック配列が足りなくなったら 2 倍に拡張。
         sb.AppendLine("    private static void Grow(ref int[] states, ref object?[] values)");
@@ -379,9 +379,9 @@ public static class ParserEmitter
         foreach (var tdt in tokenDerivedTypes)
         {
             var methodName = "__ct_" + tdt.Replace(".", "_");
-            sb.AppendLine("    private static ").Append(tdt).Append(" ").Append(methodName).Append("(AstFirst.Token src)");
+            sb.Append("    private static ").Append(tdt).Append(" ").Append(methodName).AppendLine("(AstFirst.Token src)");
             sb.AppendLine("    {");
-            sb.AppendLine("        var t = new ").Append(tdt).Append("(src.Text);");
+            sb.Append("        var t = new ").Append(tdt).AppendLine("(src.Text);");
             sb.AppendLine("        t.Kind = src.Kind;");
             sb.AppendLine("        t.IsInserted = src.IsInserted;");
             sb.AppendLine("        return t;");

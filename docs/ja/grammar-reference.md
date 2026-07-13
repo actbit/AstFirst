@@ -10,7 +10,7 @@ AstFirst では C# のクラスと属性で文法を書く。Generator がコン
 |---|---|---|
 | `[Grammar]` | クラス | 文法の開始記号（ルート非終端）。Generator の抽出開始点。`Mode` で複数方言を切り替え。 |
 | `[Rule]` | static メソッド | 生成規則。メソッドの**引数**が右辺。1クラスに複数置ける（後述）。 |
-| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度。 |
+| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度、`Kind` でトークン種別。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。 |
 | `[Repeat]` / `[Repeat(Min=0)]` | `[Rule]` メソッドの `AstNode` 派生引数 | リスト（繰り返し）。`Min=1`（既定）= 1回以上、`Min=0` = 0回以上。`IReadOnlyList<T>` に展開。 |
 | `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
@@ -113,10 +113,48 @@ public sealed partial class BinaryExpr : Expr
 名前付きプロパティ:
 
 - `Priority` — レクサ優先度（大きいほど高優先）。同じ入力で複数トークンが受理した際の解決に使う。
+- `Kind` — トークン種別（文字列）。`Token.Kind` に設定される。OnReduce/OnAccepted で `token.Kind` で判定可能。
 
 ```csharp
 [Token(@"[A-Za-z_]\w*", Priority = 0)]    // 識別子（低優先）
 [Token(@"if", Priority = 1)]               // キーワード if（高優先、識別子に勝つ）
+[Token(@"[0-9]+", Kind = "number")]         // 数字リテラル (Kind = "number")
+[Token(@"\+", Kind = "operator")]         // 演算子 (Kind = "operator")
+```
+
+### Token のプロパティ
+
+生成された `Token` は以下のプロパティを持つ:
+
+| プロパティ | 型 | 説明 |
+|---|---|---|
+| `Text` | `string` | マッチした文字列 |
+| `Span` | `SourceSpan` | ソース上の範囲 (位置・行・列) |
+| `Kind` | `string?` | `[Token]`/`[Pattern]` の `Kind` で指定した種別 |
+| `IsInserted` | `bool` | ErrorRepair で挿入されたトークンか |
+
+```csharp
+partial void OnReduce(SemanticContext ctx)
+{
+    if (Num.Kind == "number" && !Num.IsInserted)
+        Value = int.Parse(Num.Text);
+}
+```
+
+### Token 派生型
+
+`Token` の派生クラスを `[Rule]` の引数に使える。Generator が `BasicToken` から派生型を再構築する際、`Text` + `Kind` + `IsInserted` を引き継ぐ。
+
+```csharp
+public sealed class NumberToken : Token
+{
+    public int Value { get; }
+    public NumberToken(string text) : base(text, default) { Value = int.Parse(text); }
+}
+
+[Rule]
+public static void Num([Token(@"[0-9]+")] NumberToken num) { }
+// reduce 時: new NumberToken(basicToken.Text) + Kind/IsInserted コピー
 ```
 
 ## `[Precedence]`

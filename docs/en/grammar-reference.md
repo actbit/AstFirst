@@ -10,7 +10,7 @@ AstFirst grammars are written with C# classes and attributes. The generator emit
 |---|---|---|
 | `[Grammar]` | class | Start symbol (root nonterminal). Generator's extraction entry point. `Mode` switches dialects. |
 | `[Rule]` | static method | A production. The method's **parameters** are the RHS. Multiple per class allowed (see below). |
-| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority. |
+| `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority, `Kind` sets token category. |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. |
 | `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more. Expands to `IReadOnlyList<T>`. |
 | `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
@@ -113,10 +113,48 @@ Attach to a `Token` parameter of a `[Rule]` method to specify the lexical rule (
 Named properties:
 
 - `Priority` — lexer priority (higher wins). Used to resolve when several tokens match the same input.
+- `Kind` — token category (string). Set on `Token.Kind`. Checkable in OnReduce/OnAccepted via `token.Kind`.
 
 ```csharp
 [Token(@"[A-Za-z_]\w*", Priority = 0)]    // identifier (low priority)
 [Token(@"if", Priority = 1)]               // keyword if (high priority, beats identifier)
+[Token(@"[0-9]+", Kind = "number")]         // number literal (Kind = "number")
+[Token(@"\+", Kind = "operator")]         // operator (Kind = "operator")
+```
+
+### Token properties
+
+Generated `Token` instances have the following properties:
+
+| Property | Type | Description |
+|---|---|---|
+| `Text` | `string` | Matched text |
+| `Span` | `SourceSpan` | Source range (position/line/column) |
+| `Kind` | `string?` | Category from `[Token]`/`[Pattern]`'s `Kind` |
+| `IsInserted` | `bool` | Whether inserted by ErrorRepair |
+
+```csharp
+partial void OnReduce(SemanticContext ctx)
+{
+    if (Num.Kind == "number" && !Num.IsInserted)
+        Value = int.Parse(Num.Text);
+}
+```
+
+### Token-derived types
+
+A `Token` subclass can be used as a `[Rule]` parameter type. The generator reconstructs the derived type from `BasicToken`, carrying over `Text` + `Kind` + `IsInserted`.
+
+```csharp
+public sealed class NumberToken : Token
+{
+    public int Value { get; }
+    public NumberToken(string text) : base(text, default) { Value = int.Parse(text); }
+}
+
+[Rule]
+public static void Num([Token(@"[0-9]+")] NumberToken num) { }
+// at reduce: new NumberToken(basicToken.Text) + Kind/IsInserted copied
 ```
 
 ## `[Precedence]`

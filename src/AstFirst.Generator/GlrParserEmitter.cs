@@ -41,6 +41,16 @@ internal static class GlrParserEmitter
             if (patternToTerminalId.TryGetValue(r.Pattern, out var sid))
                 tokenIdToSym[r.TokenId] = sid;
 
+        // TokenId → Kind マッピング ([Token]/[Pattern] の Kind 属性から)。
+        var kindByPattern = new Dictionary<string, string>();
+        foreach (var td in model.TokenDefs)
+            if (td.Kind is string k) kindByPattern[td.Pattern] = k;
+        var tokenIdToKind = new string?[maxTokenId + 1];
+        foreach (var r in rules)
+            if (kindByPattern.TryGetValue(r.Pattern, out var kind))
+                tokenIdToKind[r.TokenId] = kind;
+        bool hasKinds = tokenIdToKind.Any(k => k is not null);
+
         int eofSym = grammar.EndOfFile.Id;
 
         // コンフリクトセルの全候補を収集 (ParserEmitter と同一)。
@@ -90,6 +100,19 @@ internal static class GlrParserEmitter
         for (int i = 0; i < tokenIdToSym.Length; i++) { if (i > 0) sb.Append(", "); sb.Append(tokenIdToSym[i]); }
         sb.AppendLine(" };");
 
+        if (hasKinds)
+        {
+            sb.Append("    private static readonly string?[] __tokenKinds = new string?[] { ");
+            for (int i = 0; i < tokenIdToKind.Length; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                var k = tokenIdToKind[i];
+                if (k is null) sb.Append("null");
+                else sb.Append("\"").Append(k.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"");
+            }
+            sb.AppendLine(" };");
+        }
+
         sb.AppendLine("    public const int EofSym = " + eofSym + ";");
         sb.AppendLine("    public const int StateCount = " + stateCount + ";");
         sb.AppendLine("    public const int SymbolCount = " + symbolCount + ";");
@@ -123,7 +146,7 @@ internal static class GlrParserEmitter
         sb.AppendLine("    };");
 
         EmitGlrParse(sb, lexerName, model);
-        EmitGlrHelpers(sb, grammar, model, tokenDerivedTypes);
+        EmitGlrHelpers(sb, grammar, model, tokenDerivedTypes, hasKinds);
 
         sb.AppendLine("}");
         return sb.ToString();
@@ -148,7 +171,7 @@ internal static class GlrParserEmitter
         sb.AppendLine("    }");
     }
 
-    private static void EmitGlrHelpers(StringBuilder sb, Grammar grammar, GrammarModel model, HashSet<string> tokenDerivedTypes)
+    private static void EmitGlrHelpers(StringBuilder sb, Grammar grammar, GrammarModel model, HashSet<string> tokenDerivedTypes, bool hasKinds)
     {
         // __ReduceNode: 規則 prodId で reduce。children[i] (右辺 i 番目) を参照 → partial コンストラクタ new。
         // ListReduceActionModel の再帰ケースは COW (copy-on-write): 共有スタックで破壊しないよう新リストを構築。
@@ -168,7 +191,10 @@ internal static class GlrParserEmitter
                         sb.Append(", ");
                         var p = action.Parameters[j];
                         if (p.IsContext) sb.Append("(").Append(p.CastTypeName).Append(")ctx");
-                        else if (tokenDerivedTypes.Contains(p.CastTypeName)) sb.Append("new ").Append(p.CastTypeName).Append("(((AstFirst.Token)children[").Append(p.ChildIndex).Append("]!).Text)");
+                        else if (tokenDerivedTypes.Contains(p.CastTypeName))
+                        {
+                            sb.Append("__ct_").Append(p.CastTypeName.Replace(".", "_")).Append("((AstFirst.Token)children[").Append(p.ChildIndex).Append("]!)");
+                        }
                         else sb.Append("(").Append(p.CastTypeName).Append(")children[").Append(p.ChildIndex).Append("]!");
                     }
                     sb.AppendLine("); }");
@@ -211,7 +237,28 @@ internal static class GlrParserEmitter
         sb.AppendLine("    }");
 
         sb.AppendLine("    private static AstFirst.Token __ToToken(AstFirst.Core.Lexing.LexToken t)");
-        sb.AppendLine("        => new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var __tok = new AstFirst.BasicToken(t.Span, new AstFirst.SourceSpan(new AstFirst.Position(t.Start, t.StartLine, t.StartColumn), new AstFirst.Position(t.End, t.EndLine, t.EndColumn)));");
+        if (hasKinds)
+        {
+            sb.AppendLine("        if (t.TokenId >= 0 && t.TokenId < __tokenKinds.Length)");
+            sb.AppendLine("            __tok.Kind = __tokenKinds[t.TokenId];");
+        }
+        sb.AppendLine("        return __tok;");
+        sb.AppendLine("    }");
+
+        // Token 派生型の再構築ヘルパー: 型ごとに生成。BasicToken から Text + Kind + IsInserted を引き継ぐ。
+        foreach (var tdt in tokenDerivedTypes)
+        {
+            var methodName = "__ct_" + tdt.Replace(".", "_");
+            sb.Append("    private static ").Append(tdt).Append(" ").Append(methodName).AppendLine("(AstFirst.Token src)");
+            sb.AppendLine("    {");
+            sb.Append("        var t = new ").Append(tdt).AppendLine("(src.Text);");
+            sb.AppendLine("        t.Kind = src.Kind;");
+            sb.AppendLine("        t.IsInserted = src.IsInserted;");
+            sb.AppendLine("        return t;");
+            sb.AppendLine("    }");
+        }
     }
 
     private static int EncodeAction(LrAction a)
