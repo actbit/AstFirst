@@ -92,6 +92,9 @@ public static class ModelExtraction
         foreach (var a in rootType.GetAttributes())
             if (a.AttributeClass?.Name == "SkipAttribute" && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
                 skipPatterns.Add(ss);
+        foreach (var a in compilation.Assembly.GetAttributes())
+            if (a.AttributeClass?.Name == "SkipAttribute" && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
+                skipPatterns.Add(ss);
 
         // [OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド) を収集。
         var analyzeRules = ExtractAnalyzeRules(rootType, astNodeBase, contextBase);

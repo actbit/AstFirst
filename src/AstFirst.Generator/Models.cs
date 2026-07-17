@@ -62,7 +62,10 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
 
     public bool Equals(GrammarModel? other) =>
         other is not null && RootTypeFullName == other.RootTypeFullName
+        && Mode == other.Mode
         && SeqEqual(Nodes, other.Nodes) && SeqEqual(TokenDefs, other.TokenDefs)
+        && SeqEqual(SkipPatterns, other.SkipPatterns)
+        && SeqEqual(TokenDerivedWarnings, other.TokenDerivedWarnings)
         && SeqEqual(AnalyzeRules, other.AnalyzeRules) && ParseMode == other.ParseMode
         && Discovery == other.Discovery;
 
@@ -85,6 +88,10 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     {
         int h = StringComparer.Ordinal.GetHashCode(RootTypeFullName);
         for (int i = 0; i < Nodes.Count; i++) h = unchecked(h * 31 + Nodes[i].GetHashCode());
+        for (int i = 0; i < TokenDefs.Count; i++) h = unchecked(h * 31 + TokenDefs[i].GetHashCode());
+        for (int i = 0; i < SkipPatterns.Count; i++) h = unchecked(h * 31 + StringComparer.Ordinal.GetHashCode(SkipPatterns[i]));
+        if (Mode is not null) h = unchecked(h * 31 + StringComparer.Ordinal.GetHashCode(Mode));
+        for (int i = 0; i < TokenDerivedWarnings.Count; i++) h = unchecked(h * 31 + StringComparer.Ordinal.GetHashCode(TokenDerivedWarnings[i]));
         for (int i = 0; i < AnalyzeRules.Count; i++) h = unchecked(h * 31 + AnalyzeRules[i].GetHashCode());
         h = unchecked(h * 31 + (int)ParseMode);
         h = unchecked(h * 31 + (int)Discovery);

@@ -21,7 +21,7 @@ AstFirst は 3 層 + Generator で構成されるパーサジェネレータ。
 ## 生成コードの構造
 
 - **Lexer**: DFA の遷移表と受理ルールを `static readonly` 配列に埋め込み、`Tokenize()` で最長一致 + 優先度駆動。各トークンの行・列（1 ベース）も計算。
-- **Parser**: ACTION/GOTO テーブル + Productions を配列に埋め込み、shift/reduce/accept を駆動。reduce 時に AST クラスのコンストラクタを呼び AST を構築（`[OnReduce]` 属性メソッドは partial `OnReduce` の直後に呼出）。panic mode のエラー回復付き。
+- **Parser**: ACTION/GOTO テーブル + Productions を配列に埋め込み、shift/reduce/accept を駆動。reduce 時に AST クラスのコンストラクタを呼び AST を構築（`[OnReduce]` 属性メソッドは partial `OnReduce` の直後に呼出）。Corchuelo ER1/ER2/ER3 エラー修復付き。
 - **Walker**: 各具象ノードの `EnterXxx` / `ExitXxx`（virtual、空実装）+ `Walk`（反復スタックで Enter → 子 → Exit）。`IOnSecondPassEnter`/`Exit` と `[Enter]`/`[Exit]` 属性メソッドも呼出。子は各ノードの public プロパティから AstNode 派生を収集して辿る。意味解析フックが1つもない文法では生成を省略（ゼロコスト）。
 
 ## キャッシュ戦略

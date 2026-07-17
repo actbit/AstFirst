@@ -14,7 +14,7 @@ AstFirst grammars are written with C# classes and attributes. The generator emit
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority, `Kind` sets token category. |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. |
 | `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more. Expands to `IReadOnlyList<T>`. |
-| `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
+| `[Skip(@"regex")]` | `[Grammar]` class / assembly | Skip pattern (whitespace, comments). Assembly-level patterns apply to every grammar. |
 | `[OnReduce]` / `[Enter]` / `[Exit]` | static method (on the `[Grammar]` root class) | Semantic rule. The generator dispatches it from the constructor (`[OnReduce]`) / Walker (`[Enter]`/`[Exit]`); the ctx cast is injected. |
 
 ## `[Grammar]`
@@ -71,7 +71,7 @@ The `ParseMode` named property selects the parser execution mode. Default is `La
   - **N=3 and costs are fixed**: Forward move symbols `N=3`, insert cost=1/delete cost=2 are hardcoded. The Corchuelo paper recommends per-language tuning; not yet supported.
   - **Single-pass repair (no recursion)**: The original Corchuelo applies ER1/ER2/ER3 recursively; this implementation applies one round only. Consecutive errors are repaired one at a time on subsequent dead states.
   - **SimulateForward checks the first path only**: Does not fork at conflict cells during simulation, so full agreement with production fork paths is not guaranteed.
-- **Error recovery behavior**: LightGlr's Corchuelo repair differs from the panic-mode recovery used in Lalr mode — it inserts/deletes tokens to continue parsing. The same input may produce different error positions/messages depending on the mode.
+- **Error recovery behavior**: Both Lalr and LightGlr use Corchuelo ER1/ER2/ER3 to insert/delete tokens and continue parsing. GLR branching can still produce different error positions/messages between modes for the same input.
 
 ### ⚠ Breaking Changes (0.4.0)
 
@@ -220,10 +220,11 @@ public sealed partial class NonEmpty : Program
 
 ## `[Skip]`
 
-Skip pattern (whitespace, comments). Attach to the same class as `[Grammar]`. Matched spans are removed from the token stream.
+Skip pattern (whitespace, comments). Attach it to a `[Grammar]` class for one grammar or to the assembly for every grammar. Matched spans are removed from the token stream.
 
 ```csharp
 [Skip(@"(\s|//[^\n]*)+")]   // whitespace and line comments
+[assembly: Skip(@"//[^\n]*")]   // shared by every grammar
 ```
 
 ## Writing grammar

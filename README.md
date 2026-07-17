@@ -15,13 +15,13 @@ AstFirst sits in the same space as parser generators and combinator libraries, b
 |---|---|---|---|---|
 | Grammar in | plain C# classes + attributes | external `.g4` DSL | C# parser combinators | n/a — C#/VB syntax only |
 | Code generated | **compile time** (Source Generator) | build-time codegen tool | **never** — interpreted at runtime | n/a |
-| Runtime parse cost | **zero** — static tables, no dispatch | generated code | interpreted (allocation/dispatch per parse) | n/a |
+| Runtime strategy | static tables, no parser construction | generated code | interpreted (allocation/dispatch per parse) | n/a |
 | AOT / Native AOT | ✓ no runtime codegen | △ | ✓ | n/a |
 | Algorithm | LALR(1) + Lightweight GLR (LightGlr) | LL(\*) / ALL(\*) | recursive-descent combinators | n/a |
 | Error recovery | Corchuelo et al. ER1/ER2/ER3 (built-in) | yes | hand-rolled | n/a |
 | Grammar power | LALR(1) + GLR — resolve conflicts with `[Precedence]` / fork | LL(\*) | **Turing-complete** (branch on any C#) | n/a |
 
-**Strengths vs combinators (Superpower/Pidgin)**: the parser is emitted *at compile time* as static tables — no interpretation, no delegate dispatch, no per-parse construction. Startup and per-parse cost are effectively zero, it AOTs / Native-AOTs cleanly, and Corchuelo et al. error recovery (ER1 insert / ER2 delete / ER3 Forward move) is built in. The grammar is declarative C#, so the IDE can navigate and refactor it.
+**Strengths vs combinators (Superpower/Pidgin)**: the parser is emitted *at compile time* as static tables, so runtime interpretation, delegate dispatch, and parser construction are unnecessary. It AOTs / Native-AOTs cleanly, and Corchuelo et al. error recovery (ER1 insert / ER2 delete / ER3 Forward move) is built in. The grammar is declarative C#, so the IDE can navigate and refactor it.
 
 **Trade-offs**: LALR(1) needs `[Precedence]`/associativity to resolve shift-reduce conflicts. However, LightGlr mode (`[Grammar(ParseMode = ParseMode.LightGlr)]`) handles inherent ambiguity (cast/paren, generics) via parallel fork. A C#-only toolchain.
 
@@ -97,7 +97,7 @@ var result = ExprParser.Parse("1+2*3");
 // result.HasErrors -> false
 
 var result2 = ExprParser.Parse("1+");
-// result2.HasErrors -> true (recovered via panic mode)
+// result2.HasErrors -> true (recovered via Corchuelo ER1/ER2/ER3)
 ```
 
 ## Semantic analysis
@@ -232,7 +232,7 @@ See [docs/en/grammar-reference.md](docs/en/grammar-reference.md) for details.
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority (higher wins). |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. `IsRightAssociative`/`IsNonAssociative`. |
 | `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more (empty list allowed). Expands to `IReadOnlyList<T>`. |
-| `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
+| `[Skip(@"regex")]` | `[Grammar]` class / assembly | Skip pattern (whitespace, comments). Assembly-level patterns apply to every grammar. |
 
 ### `[Rule]` method parameters (type-based classification)
 
@@ -317,7 +317,7 @@ Japanese versions are under `docs/ja/` and [README.md](README.md).
 
 ## Tests
 
-365 tests (AstFirst.Tests 308 + Generator.Tests 57). Covers lexer/DFA/LALR stages, end-to-end, error recovery (Corchuelo), GLR fork/dedup, semantic analysis, grammar discovery, Core model immutability, `Accept`/`Reject` fallback, `OnAccepted`, and positions.
+367 tests (AstFirst.Tests 308 + Generator.Tests 59). Covers lexer/DFA/LALR stages, end-to-end, error recovery (Corchuelo), GLR fork/dedup, semantic analysis, grammar discovery, Core build snapshot stability, `Accept`/`Reject` fallback, `OnAccepted`, and positions.
 
 ## License
 

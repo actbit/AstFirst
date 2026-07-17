@@ -14,7 +14,7 @@ AstFirst では C# のクラスと属性で文法を書く。Generator がコン
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度、`Kind` でトークン種別。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。 |
 | `[Repeat]` / `[Repeat(Min=0)]` | `[Rule]` メソッドの `AstNode` 派生引数 | リスト（繰り返し）。`Min=1`（既定）= 1回以上、`Min=0` = 0回以上。`IReadOnlyList<T>` に展開。 |
-| `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
+| `[Skip(@"regex")]` | `[Grammar]` クラス／アセンブリ | スキップパターン（空白・コメント等）。アセンブリ指定は全Grammar共通。 |
 | `[OnReduce]` / `[Enter]` / `[Exit]` | static メソッド（`[Grammar]` ルートクラス） | 意味ルール。Generator がコンストラクタ（`[OnReduce]`）/ Walker（`[Enter]`/`[Exit]`）から dispatch（ctx キャスト自動注入）。 |
 
 ## `[Grammar]`
@@ -71,7 +71,7 @@ public sealed partial class SharedValue : AstNode { }
   - **N=3・コスト固定**: ER3 の Forward move 確認シンボル数 `N=3`、挿入コスト=1/削除コスト=2 は固定値。Corchuelo 論文では言語に応じたチューニングを推奨しているが、本実装では未対応。
   - **1 回修復 (再帰なし)**: Corchuelo 本来は ER1/ER2/ER3 を再帰的に適用するが、本実装は1回の ER1/ER2 + ER3 のみ。連続エラーは次の dead で順次修復される。
   - **SimulateForward は最初の経路のみ確認**: コンフリクトセルでも fork せず最初の shift/reduce のみ追うため、本番の fork 経路との完全一致は保証しない。
-- **エラー回復の挙動**: LightGlr の Corchuelo 修復は、LALR モードの panic mode 回復とは異なり、トークンを補完/削除してパースを続行する。同じ入力でもモードによりエラー位置・メッセージが変わる場合がある。
+- **エラー回復の挙動**: LALR・LightGlr とも Corchuelo ER1/ER2/ER3 でトークンを補完/削除してパースを続行する。GLRの分岐により、同じ入力でもモードごとにエラー位置・メッセージが変わる場合がある。
 
 ### ⚠ バージョン互換性のない変更 (0.4.0)
 
@@ -220,10 +220,11 @@ public sealed partial class NonEmpty : Program
 
 ## `[Skip]`
 
-スキップパターン（空白・コメント等）。`[Grammar]` を付けたクラスに併せて付ける。マッチした部分はトークン列から除外される。
+スキップパターン（空白・コメント等）。`[Grammar]` クラスに付けるとその文法へ、アセンブリに付けると全Grammarへ適用される。マッチした部分はトークン列から除外される。
 
 ```csharp
 [Skip(@"(\s|//[^\n]*)+")]   // 空白と行コメント
+[assembly: Skip(@"//[^\n]*")]   // 全Grammar共通
 ```
 
 ## 規則の書き方

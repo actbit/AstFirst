@@ -121,6 +121,21 @@ public sealed partial class NumTokenExpr : Expr
         Assert.Equal(a.GetHashCode(), b.GetHashCode());
     }
 
+    [Fact]
+    public void ModelEqualityIncludesIncrementalGeneratorInputs()
+    {
+        var nodes = new List<NodeModel>();
+        var tokens = new List<TokenDefModel>();
+        var baseline = new GrammarModel("Expr", nodes, tokens);
+
+        Assert.NotEqual(baseline, new GrammarModel("Expr", nodes, tokens, skipPatterns: new[] { "\\s+" }));
+        Assert.NotEqual(baseline, new GrammarModel("Expr", nodes, tokens, mode: "V2"));
+        Assert.NotEqual(baseline, new GrammarModel("Expr", nodes, tokens,
+            tokenDerivedWarnings: new[] { "MissingStringCtorToken" }));
+        Assert.NotEqual(baseline, new GrammarModel("Expr", nodes, tokens,
+            discovery: AstFirst.Generator.GrammarDiscovery.TypeHierarchy));
+    }
+
     private static GrammarModel ExtractSource(string source, string rootName)
     {
         var comp = CreateCompilation(source);
@@ -143,6 +158,19 @@ public sealed class A : S { public A([Pattern(""a"")] Token t) { } }
 ";
         var model = ExtractSource(source, "S");
         Assert.Contains(model.SkipPatterns, p => p == "\\s+");
+    }
+
+    [Fact]
+    public void AssemblySkipPatternCollected()
+    {
+        var source = @"
+using AstFirst;
+[assembly: Skip(""//[^\\n]*"")]
+[Grammar]
+public abstract class S : AstNode { }
+";
+        var model = ExtractSource(source, "S");
+        Assert.Contains("//[^\\n]*", model.SkipPatterns);
     }
 
     [Fact]

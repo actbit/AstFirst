@@ -5,6 +5,7 @@
 - **別名前空間の文法ノード**: 既定探索で `[Grammar]` ルートの派生型をアセンブリ全体から収集。
 - **探索モード**: `GrammarDiscovery.TypeHierarchy` で名前空間走査を無効化。`Namespace` で従来境界も選択可能。
 - **明示参加**: `[GrammarPart(typeof(Root))]` で名前空間・型階層外の `AstNode` を文法へ追加。
+- **アセンブリ共通Skip**: 宣言済みだが未収集だった `[assembly: Skip(...)]` をGeneratorへ反映。
 - **安定した Core モデル**: `Grammar` が入力コレクションのスナップショットを保持し、`Production` が右辺入力を防御コピー。`GrammarBuilder.Build` を反復可能に。
 - **品質ゲート**: CI と公開フローで全テストを実行。Generator の Core 型競合警告を解消。
 
