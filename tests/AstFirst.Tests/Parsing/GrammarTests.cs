@@ -125,4 +125,35 @@ public class GrammarTests
         Assert.Empty(g.UnreachableNonTerminals);
         Assert.Empty(g.UndefinedNonTerminals);
     }
+
+    [Fact]
+    public void BuildReturnsAnImmutableSnapshotAndCanBeRepeated()
+    {
+        var builder = new GrammarBuilder();
+        var start = builder.NonTerminal("S");
+        var token = builder.Terminal("a");
+        builder.Production(start, token);
+
+        var first = builder.Build(start);
+        var second = builder.Build(start);
+
+        Assert.Equal(2, first.Productions.Count);
+        Assert.Equal(2, second.Productions.Count);
+        Assert.Equal(first.Productions.Count, second.Productions.Count);
+    }
+
+    [Fact]
+    public void ProductionCopiesItsRightHandSide()
+    {
+        var builder = new GrammarBuilder();
+        var start = builder.NonTerminal("S");
+        var first = builder.Terminal("a");
+        var replacement = builder.Terminal("b");
+        var rhs = new[] { first };
+
+        var production = new Production(0, start, rhs);
+        rhs[0] = replacement;
+
+        Assert.Equal(first, production.Rhs[0]);
+    }
 }

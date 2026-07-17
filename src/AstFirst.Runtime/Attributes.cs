@@ -24,6 +24,17 @@ public enum ParseMode
     LightGlr,
 }
 
+/// <summary>文法に含めるノードを探索する方法。</summary>
+public enum GrammarDiscovery
+{
+    /// <summary>同じ名前空間の AstNode 派生型に加え、別名前空間のルート派生型と明示的な GrammarPart を含める。</summary>
+    NamespaceAndTypeHierarchy,
+    /// <summary>名前空間を使わず、ルート派生型と明示的な GrammarPart だけを含める。</summary>
+    TypeHierarchy,
+    /// <summary>従来互換: 同じ名前空間の AstNode 派生型と明示的な GrammarPart を含める。</summary>
+    Namespace,
+}
+
 /// <summary>文法の開始記号 (ルート非終端) のクラスに付ける。Generator の抽出開始点。</summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public sealed class GrammarAttribute : Attribute
@@ -33,6 +44,18 @@ public sealed class GrammarAttribute : Attribute
     /// <summary>パーサの実行モード。既定は <see cref="ParseMode.Lalr"/> (確定 LALR(1))。
     /// <see cref="ParseMode.LightGlr"/> は軽量 GLR (コンフリクトを並行 fork で解決)。</summary>
     public ParseMode ParseMode { get; set; } = ParseMode.Lalr;
+    /// <summary>文法ノードの探索方法。</summary>
+    public GrammarDiscovery Discovery { get; set; } = GrammarDiscovery.NamespaceAndTypeHierarchy;
+}
+
+/// <summary>
+/// 名前空間や型階層だけでは発見できない AST ノードを、指定した文法へ明示的に参加させる。
+/// 複数文法への参加も可能。
+/// </summary>
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = false)]
+public sealed class GrammarPartAttribute(Type grammarRoot) : Attribute
+{
+    public Type GrammarRoot { get; } = grammarRoot;
 }
 
 /// <summary>スキップパターン (空白・コメント等)。クラスまたはアセンブリに付ける。</summary>

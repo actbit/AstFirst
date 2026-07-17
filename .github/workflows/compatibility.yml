@@ -9,6 +9,22 @@ on:
   pull_request:
 
 jobs:
+  tests:
+    name: test suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Prepare local package feed
+        run: |
+          mkdir -p artifacts/packages
+          dotnet pack src/AstFirst.Core/AstFirst.Core.csproj -c Release -o artifacts/packages
+          dotnet pack src/AstFirst.Runtime/AstFirst.Runtime.csproj -c Release -o artifacts/packages
+      - name: Run tests
+        run: dotnet test AstFirst.slnx -c Release --nologo
+
   compat:
     name: ${{ matrix.sdk }} / ${{ matrix.framework }}
     strategy:

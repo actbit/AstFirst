@@ -71,6 +71,10 @@ jobs:
         if: steps.check.outputs.published == 'false'
         run: dotnet pack src/AstFirst.Runtime/AstFirst.Runtime.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -p:PackageReadmePath="$PWD/README.nuget.md" -o artifacts/packages
 
+      - name: Test
+        if: steps.check.outputs.published == 'false'
+        run: dotnet test AstFirst.slnx -c Release --nologo
+
       - name: Pack Generator
         if: steps.check.outputs.published == 'false'
         run: dotnet pack src/AstFirst.Generator/AstFirst.Generator.csproj -c Release -p:Version=${{ steps.ver.outputs.version }} -p:PackageReadmePath="$PWD/README.nuget.md" -o artifacts/packages

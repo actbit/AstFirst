@@ -15,6 +15,14 @@ public enum ParseMode
     LightGlr,
 }
 
+/// <summary>Runtime の AstFirst.GrammarDiscovery と値を一致させる。</summary>
+public enum GrammarDiscovery
+{
+    NamespaceAndTypeHierarchy,
+    TypeHierarchy,
+    Namespace,
+}
+
 /// <summary>DSL から抽出した文法モデル。等価比較可能 (IncrementalGenerator のキャッシュ判定用)。
 /// シンボル/構文ノードは一切持たず、文字列/整数/bool のみ。</summary>
 public sealed class GrammarModel : IEquatable<GrammarModel>
@@ -22,6 +30,7 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     public string RootTypeFullName { get; }
     public string? Mode { get; }                     // [Grammar(Mode=...)] の Mode
     public ParseMode ParseMode { get; }              // [Grammar(ParseMode=...)] の ParseMode (既定 Lalr)
+    public GrammarDiscovery Discovery { get; }
     public IReadOnlyList<NodeModel> Nodes { get; }
     public IReadOnlyList<TokenDefModel> TokenDefs { get; }
     public IReadOnlyList<string> SkipPatterns { get; }
@@ -36,7 +45,8 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs,
         IReadOnlyList<string>? skipPatterns = null, string? mode = null, Location? rootLocation = null,
         IReadOnlyList<string>? tokenDerivedWarnings = null, IReadOnlyList<AnalyzeRuleModel>? analyzeRules = null,
-        ParseMode parseMode = ParseMode.Lalr)
+        ParseMode parseMode = ParseMode.Lalr,
+        GrammarDiscovery discovery = GrammarDiscovery.NamespaceAndTypeHierarchy)
     {
         RootTypeFullName = rootTypeFullName;
         Nodes = nodes;
@@ -47,12 +57,14 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
         TokenDerivedWarnings = tokenDerivedWarnings ?? Array.Empty<string>();
         AnalyzeRules = analyzeRules ?? Array.Empty<AnalyzeRuleModel>();
         ParseMode = parseMode;
+        Discovery = discovery;
     }
 
     public bool Equals(GrammarModel? other) =>
         other is not null && RootTypeFullName == other.RootTypeFullName
         && SeqEqual(Nodes, other.Nodes) && SeqEqual(TokenDefs, other.TokenDefs)
-        && SeqEqual(AnalyzeRules, other.AnalyzeRules) && ParseMode == other.ParseMode;
+        && SeqEqual(AnalyzeRules, other.AnalyzeRules) && ParseMode == other.ParseMode
+        && Discovery == other.Discovery;
 
     /// <summary>いずれかのノードが IOnSecondPassEnter/Exit を実装するか、[Enter]/[Exit] ルールがあるか。
     /// いずれもなければ Walker/Walk を生成しない (空走査回避・ゼロコスト)。</summary>
@@ -75,6 +87,7 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
         for (int i = 0; i < Nodes.Count; i++) h = unchecked(h * 31 + Nodes[i].GetHashCode());
         for (int i = 0; i < AnalyzeRules.Count; i++) h = unchecked(h * 31 + AnalyzeRules[i].GetHashCode());
         h = unchecked(h * 31 + (int)ParseMode);
+        h = unchecked(h * 31 + (int)Discovery);
         return h;
     }
 

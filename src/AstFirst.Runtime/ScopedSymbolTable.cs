@@ -100,7 +100,7 @@ public sealed class ScopedSymbolTable : IReadOnlySymbolTable
     }
 
     /// <summary>キー+種類付きの子スコープを開き、それを <see cref="Current"/> にする。同名種類の複数スコープもキーで区別。</summary>
-    public Scope PushScope(string key, ScopeKind kind)
+    public Scope PushScope(string? key, ScopeKind kind)
     {
         Current = new Scope(Current, Current.Depth + 1, key, kind);
         return Current;

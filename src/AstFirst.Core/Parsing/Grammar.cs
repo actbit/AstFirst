@@ -32,15 +32,17 @@ public sealed class Grammar
         IReadOnlyList<Symbol>? unreachableNonTerminals = null,
         IReadOnlyList<Symbol>? undefinedNonTerminals = null)
     {
-        Productions = productions;
-        Symbols = symbols;
+        Productions = productions.ToArray();
+        Symbols = symbols.ToArray();
         StartSymbol = startSymbol;
         AugmentedStart = augmentedStart;
         EndOfFile = endOfFile;
         AugmentedProduction = augmentedProduction;
-        TerminalPrecedence = terminalPrecedence ?? new Dictionary<int, Precedence>();
-        UnreachableNonTerminals = unreachableNonTerminals ?? Array.Empty<Symbol>();
-        UndefinedNonTerminals = undefinedNonTerminals ?? Array.Empty<Symbol>();
+        TerminalPrecedence = terminalPrecedence is null
+            ? new Dictionary<int, Precedence>()
+            : terminalPrecedence.ToDictionary(pair => pair.Key, pair => pair.Value);
+        UnreachableNonTerminals = unreachableNonTerminals?.ToArray() ?? Array.Empty<Symbol>();
+        UndefinedNonTerminals = undefinedNonTerminals?.ToArray() ?? Array.Empty<Symbol>();
     }
 }
 
@@ -98,7 +100,6 @@ public sealed class GrammarBuilder
         var augStart = GetOrAdd(startSymbol.Name + "'", isTerminal: false);
         var eof = GetOrAdd("$", isTerminal: true);
         var augProd = new Core.Parsing.Production(_productions.Count, augStart, new[] { startSymbol, eof });
-        _productions.Add(augProd);
 
         // 到達不能/未定義非終端を検出。
         var reachable = ComputeReachable(startSymbol);
@@ -112,7 +113,8 @@ public sealed class GrammarBuilder
                 if (!s.IsTerminal) rightSideNonTerminals.Add(s);
         var undefined = rightSideNonTerminals.Where(nt => !lhsNonTerminals.Contains(nt)).ToList();
 
-        return new Grammar(_productions, _symbolList, startSymbol, augStart, eof, augProd, _terminalPrecedence, unreachable, undefined);
+        var productions = new List<Production>(_productions) { augProd };
+        return new Grammar(productions, _symbolList, startSymbol, augStart, eof, augProd, _terminalPrecedence, unreachable, undefined);
     }
 
     /// <summary>開始記号から到達可能な非終端を BFS で集める。</summary>

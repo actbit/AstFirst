@@ -166,4 +166,84 @@ public sealed class A : M { public A([Pattern(""a"")] Token t) { } }
         var model = Extract();
         Assert.Null(model.Mode);
     }
+
+    [Fact]
+    public void DefaultDiscoveryIncludesRootDescendantsFromOtherNamespaces()
+    {
+        var source = @"
+using AstFirst;
+namespace RootNs { [Grammar] public abstract partial class Expr : AstNode { } }
+namespace NodeNs {
+    public sealed partial class Num : RootNs.Expr {
+        [Rule] public static void Reduce([Token(""[0-9]+"")] Token value) { }
+    }
+}
+";
+        var model = ExtractSource(source, "RootNs.Expr");
+        Assert.Contains(model.Nodes, n => n.FullName == "NodeNs.Num");
+        Assert.Equal(AstFirst.Generator.GrammarDiscovery.NamespaceAndTypeHierarchy, model.Discovery);
+    }
+
+    [Fact]
+    public void TypeHierarchyDiscoveryDoesNotScanTheNamespace()
+    {
+        var source = @"
+using AstFirst;
+namespace Shared {
+    [Grammar(Discovery = AstFirst.GrammarDiscovery.TypeHierarchy)]
+    public abstract partial class Expr : AstNode { }
+    public sealed partial class Unrelated : AstNode {
+        [Rule] public static void Reduce([Token(""x"")] Token value) { }
+    }
+}
+namespace Nodes {
+    public sealed partial class Num : Shared.Expr {
+        [Rule] public static void Reduce([Token(""[0-9]+"")] Token value) { }
+    }
+}
+";
+        var model = ExtractSource(source, "Shared.Expr");
+        Assert.Contains(model.Nodes, n => n.FullName == "Nodes.Num");
+        Assert.DoesNotContain(model.Nodes, n => n.FullName == "Shared.Unrelated");
+        Assert.Equal(AstFirst.Generator.GrammarDiscovery.TypeHierarchy, model.Discovery);
+    }
+
+    [Fact]
+    public void GrammarPartCanIncludeANodeOutsideNamespaceAndHierarchy()
+    {
+        var source = @"
+using AstFirst;
+namespace RootNs {
+    [Grammar(Discovery = AstFirst.GrammarDiscovery.TypeHierarchy)]
+    public abstract partial class Expr : AstNode { }
+}
+namespace SharedNodes {
+    [GrammarPart(typeof(RootNs.Expr))]
+    public sealed partial class SharedValue : AstNode {
+        [Rule] public static void Reduce([Token(""value"")] Token value) { }
+    }
+}
+";
+        var model = ExtractSource(source, "RootNs.Expr");
+        Assert.Contains(model.Nodes, n => n.FullName == "SharedNodes.SharedValue");
+    }
+
+    [Fact]
+    public void NamespaceDiscoveryRetainsTheLegacyBoundary()
+    {
+        var source = @"
+using AstFirst;
+namespace RootNs {
+    [Grammar(Discovery = AstFirst.GrammarDiscovery.Namespace)]
+    public abstract partial class Expr : AstNode { }
+}
+namespace NodeNs {
+    public sealed partial class Num : RootNs.Expr {
+        [Rule] public static void Reduce([Token(""[0-9]+"")] Token value) { }
+    }
+}
+";
+        var model = ExtractSource(source, "RootNs.Expr");
+        Assert.DoesNotContain(model.Nodes, n => n.FullName == "NodeNs.Num");
+    }
 }

@@ -1,3 +1,4 @@
+using System;
 namespace AstFirst.Core.Parsing;
 
 /// <summary>生成規則 LHS -> Rhs[0] Rhs[1] ...。Tag には AST クラス等のメタ情報を載せる。</summary>
@@ -16,7 +17,8 @@ public sealed class Production
     {
         Id = id;
         Lhs = lhs;
-        Rhs = rhs;
+        if (rhs is null) throw new ArgumentNullException(nameof(rhs));
+        Rhs = (Symbol[])rhs.Clone();
         Tag = tag;
         RulePrecedence = rulePrecedence;
     }

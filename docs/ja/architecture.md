@@ -13,7 +13,7 @@ AstFirst は 3 層 + Generator で構成されるパーサジェネレータ。
 
 ## Generator の処理フロー
 
-1. **抽出** (`ModelExtraction`): `[Grammar]` ルートから AstNode 派生・Token 派生・`[Pattern]` を走査し、`[OnReduce]`/`[Enter]`/`[Exit]` 属性付き意味規則を収集して、等価比較可能な POCO モデル (`GrammarModel`/`AnalyzeRuleModel`) に変換。
+1. **抽出** (`ModelExtraction`): `[Grammar]` の `Discovery` に従い、同一名前空間・ルート型階層・`[GrammarPart]` から文法ノードを収集する。`[Rule]`/`[Token]` と意味規則を等価比較可能な POCO モデルへ変換する。
 2. **DFA 構築** (`ModelToDfa`): 字句ルールの正規表現 → NFA (Thompson) → DFA (部分集合構成法) → 最小化 (Hopcroft)。
 3. **LALR テーブル** (`ModelToTable`): LR(0) オートマトン → FIRST/NULLABLE → DeRemer-Pennello ルックアヘッド伝播 → ACTION/GOTO テーブル + 衝突検出。
 4. **コード生成** (`CodeEmitter` / `ParserEmitter` / `WalkerEmitter`): Lexer（DFA 配列）、Parser（LALR テーブル + shift/reduce 駆動）、Walker（Enter/Exit/Walk + `[Enter]`/`[Exit]` dispatch）、各ノードの partial（`[OnReduce]` dispatch 含む）の C# コードを生成。

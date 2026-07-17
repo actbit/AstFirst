@@ -50,4 +50,11 @@
     <InternalsVisibleTo Include="AstFirst.Generator.Tests" />
   </ItemGroup>
 
+  <!-- Runtime の推移依存 Core.dll と、Generator に直接取り込んだ Core ソースの型競合を避ける。 -->
+  <Target Name="RemoveTransitiveCore" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferencePath Remove="@(ReferencePath)" Condition="'%(Filename)' == 'AstFirst.Core'" />
+    </ItemGroup>
+  </Target>
+
 </Project>

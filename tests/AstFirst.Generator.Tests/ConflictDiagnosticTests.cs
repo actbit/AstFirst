@@ -110,7 +110,7 @@ public class Unused : AstFirst.AstNode {
 [AstFirst.Grammar]
 public abstract class Root : AstFirst.AstNode { }
 public class A : Root {
-    public A(B b) { }
+    [AstFirst.Rule] public static void Reduce(B b) { }
 }
 public abstract class B : AstFirst.AstNode { }
 ";
@@ -127,7 +127,7 @@ public abstract class B : AstFirst.AstNode { }
 [AstFirst.Grammar]
 public class RootExpr : AstFirst.AstNode { }
 public class Num : RootExpr {
-    public Num([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+    [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""[0-9]+"")] IntToken n) { }
 }
 public class IntToken : AstFirst.Token {
     public IntToken([AstFirst.Pattern(""[0-9]+"")] int n) { }

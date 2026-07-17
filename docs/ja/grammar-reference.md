@@ -9,6 +9,7 @@ AstFirst では C# のクラスと属性で文法を書く。Generator がコン
 | 属性 | 対象 | 役割 |
 |---|---|---|
 | `[Grammar]` | クラス | 文法の開始記号（ルート非終端）。Generator の抽出開始点。`Mode` で複数方言を切り替え。 |
+| `[GrammarPart(typeof(Root))]` | クラス | 名前空間・ルート型階層外の `AstNode` を指定文法へ明示的に参加させる。 |
 | `[Rule]` | static メソッド | 生成規則。メソッドの**引数**が右辺。1クラスに複数置ける（後述）。 |
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度、`Kind` でトークン種別。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。 |
@@ -27,6 +28,28 @@ public abstract partial class Expr : AstNode { }
 ```
 
 `Mode` 名前付きプロパティで複数方言を切り替えられる（後述）。
+
+### GrammarDiscovery（ノード探索）
+
+`Discovery` で文法ノードの探索範囲を選択する。
+
+| 値 | 動作 |
+|---|---|
+| `NamespaceAndTypeHierarchy`（既定） | ルートと同じ名前空間の `AstNode` 派生型、アセンブリ内のルート派生型、明示的な `[GrammarPart]` を収集する。 |
+| `TypeHierarchy` | 名前空間を走査せず、アセンブリ内のルート派生型と明示的な `[GrammarPart]` だけを収集する。 |
+| `Namespace` | 従来互換。同じ名前空間の `AstNode` 派生型と明示的な `[GrammarPart]` を収集する。 |
+
+```csharp
+[Grammar(Discovery = GrammarDiscovery.TypeHierarchy)]
+public abstract partial class Expr : AstNode { }
+
+// 別名前空間でも Expr 派生型なので自動収集される。
+public sealed partial class NumberExpr : Expr { }
+
+// Expr 派生でない共有ノードは明示的に参加させられる。
+[GrammarPart(typeof(Expr))]
+public sealed partial class SharedValue : AstNode { }
+```
 
 ### ParseMode（パーサの実行モード）
 

@@ -9,6 +9,7 @@ AstFirst grammars are written with C# classes and attributes. The generator emit
 | Attribute | Target | Role |
 |---|---|---|
 | `[Grammar]` | class | Start symbol (root nonterminal). Generator's extraction entry point. `Mode` switches dialects. |
+| `[GrammarPart(typeof(Root))]` | class | Explicitly includes an `AstNode` outside the grammar namespace/root hierarchy. |
 | `[Rule]` | static method | A production. The method's **parameters** are the RHS. Multiple per class allowed (see below). |
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority, `Kind` sets token category. |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. |
@@ -27,6 +28,28 @@ public abstract partial class Expr : AstNode { }
 ```
 
 The `Mode` named property switches dialects (see below).
+
+### GrammarDiscovery (node discovery)
+
+Use `Discovery` to select how grammar nodes are found.
+
+| Value | Behavior |
+|---|---|
+| `NamespaceAndTypeHierarchy` (default) | Includes `AstNode` types in the root namespace, root-derived types anywhere in the assembly, and explicit `[GrammarPart]` types. |
+| `TypeHierarchy` | Disables namespace scanning; includes root-derived types anywhere in the assembly and explicit `[GrammarPart]` types. |
+| `Namespace` | Legacy boundary; includes `AstNode` types in the root namespace and explicit `[GrammarPart]` types. |
+
+```csharp
+[Grammar(Discovery = GrammarDiscovery.TypeHierarchy)]
+public abstract partial class Expr : AstNode { }
+
+// Discovered across namespaces because it derives from Expr.
+public sealed partial class NumberExpr : Expr { }
+
+// A shared node outside the hierarchy can opt in explicitly.
+[GrammarPart(typeof(Expr))]
+public sealed partial class SharedValue : AstNode { }
+```
 
 ### ParseMode (parser execution mode)
 

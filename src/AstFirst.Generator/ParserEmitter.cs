@@ -424,7 +424,7 @@ public static class ParserEmitter
                 var typeStr = p.IsRepeat
                     ? "System.Collections.Generic.IReadOnlyList<" + p.TypeFullName + ">"
                     : p.TypeFullName;
-                sb.AppendLine("    public readonly " + typeStr + " " + prop + ";");
+                sb.AppendLine("    public readonly " + typeStr + " " + prop + " = default!;");
             }
         // RuleName: 抽象基底、または継承プロパティがない (基底が RuleName を持たない) 場合のみ生成。
         if (node.Rules.Count > 0 && (isAbstractBase || !hasInherited))
