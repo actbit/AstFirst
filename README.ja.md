@@ -227,7 +227,7 @@ var result = ProgramParser.Parse(code, new MiniCContext());
 | 属性 | 対象 | 役割 |
 |---|---|---|
 | `[Grammar]` | クラス | 文法の開始記号（ルート非終端）。Generator の抽出開始点。`Mode` で複数方言を切り替え。 |
-| `[GrammarPart(typeof(Root))]` | クラス | 名前空間・ルート型階層外のノードを文法へ明示的に追加。`Grammar.Discovery` で探索方法を選択可能。 |
+| `[GrammarPart(typeof(Root))]` | クラス | 名前空間・ルート型階層外のノードを文法へ明示的に追加。`[Grammar].Discovery` で探索方法を選択可能。 |
 | `[Rule]` | static メソッド | 生成規則（1クラス1つ）。メソッドの**引数**が右辺。 |
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度（大きいほど高優先）。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。`IsRightAssociative`/`IsNonAssociative` で結合性。 |
@@ -366,7 +366,7 @@ AstFirst.slnx
 
 ## テスト
 
-367 テスト（AstFirst.Tests 308 + Generator.Tests 59）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復 (Corchuelo)、GLR fork/dedup、意味解析、文法ノード探索、Coreビルドのスナップショット安定性、`Accept`/`Reject` フォールバック、`OnAccepted`、位置情報を検証。
+374 テスト（AstFirst.Tests 308 + Generator.Tests 66）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復 (Corchuelo)、GLR fork/dedup、意味解析、文法ノード探索、Coreビルドのスナップショット安定性、`Accept`/`Reject` フォールバック、`OnAccepted`、位置情報を検証。
 
 ## ライセンス
 

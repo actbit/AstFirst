@@ -23,10 +23,14 @@ namespace AstFirst {
     public class GrammarAttribute : System.Attribute { public string Mode { get; set; } }
     [System.AttributeUsage(System.AttributeTargets.Parameter)]
     public class PatternAttribute : System.Attribute { public PatternAttribute(string regex) {} }
+    [System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple = true)]
+    public class GrammarPartAttribute : System.Attribute { public GrammarPartAttribute(System.Type root) {} }
     [System.AttributeUsage(System.AttributeTargets.Class)]
     public class PrecedenceAttribute : System.Attribute { public PrecedenceAttribute(int priority) {} }
     [System.AttributeUsage(System.AttributeTargets.Method)]
     public class RuleAttribute : System.Attribute { }
+    [System.AttributeUsage(System.AttributeTargets.Method)]
+    public class OnReduceAttribute : System.Attribute { }
 }
 ";
 
@@ -232,5 +236,40 @@ public sealed partial class Number : Expr {
         Assert.Contains(sourceText, source => source.Contains("class Expr_BLexer"));
         Assert.Contains(sourceText, source => source.Contains("class Expr_BParser"));
         Assert.Single(generated.Where(source => source.SourceText.ToString().Contains("partial class Number")));
+    }
+
+    [Fact]
+    public void GrammarPartSharedByTwoRootsEmitsOnePartialAndGrammarSpecificHooks()
+    {
+        var grammar = @"
+namespace FirstNs {
+    [AstFirst.Grammar]
+    public abstract partial class Root : AstFirst.AstNode {
+        [AstFirst.OnReduce] public static void Analyze(Shared.Value node, AstFirst.SemanticContext ctx) { }
+    }
+}
+namespace SecondNs {
+    [AstFirst.Grammar]
+    public abstract partial class Root : AstFirst.AstNode {
+        [AstFirst.OnReduce] public static void Analyze(Shared.Value node, AstFirst.SemanticContext ctx) { }
+    }
+}
+namespace Shared {
+    [AstFirst.GrammarPart(typeof(FirstNs.Root))]
+    [AstFirst.GrammarPart(typeof(SecondNs.Root))]
+    public sealed partial class Value : AstFirst.AstNode {
+        [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""value"")] AstFirst.Token token, AstFirst.SemanticContext ctx) { }
+    }
+}
+";
+
+        var result = RunGeneratorResult(grammar);
+        var generated = result.Results.Single().GeneratedSources;
+        var sourceText = generated.Select(source => source.SourceText.ToString()).ToList();
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Id == "CS8785");
+        Assert.Single(sourceText, source => source.Contains("partial class Value"));
+        Assert.Contains(sourceText, source => source.Contains("FirstNs.Root.Analyze(__node"));
+        Assert.Contains(sourceText, source => source.Contains("SecondNs.Root.Analyze(__node"));
     }
 }

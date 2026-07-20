@@ -227,7 +227,7 @@ See [docs/en/grammar-reference.md](docs/en/grammar-reference.md) for details.
 | Attribute | Target | Role |
 |---|---|---|
 | `[Grammar]` | class | Start symbol (root nonterminal). Generator's extraction entry point. `Mode` switches dialects. |
-| `[GrammarPart(typeof(Root))]` | class | Explicitly adds a node outside the grammar namespace/root hierarchy. `Grammar.Discovery` selects discovery behavior. |
+| `[GrammarPart(typeof(Root))]` | class | Explicitly adds a node outside the grammar namespace/root hierarchy. `[Grammar].Discovery` selects discovery behavior. |
 | `[Rule]` | static method | A production (one per class). The method's **parameters** are the RHS. |
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority (higher wins). |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. `IsRightAssociative`/`IsNonAssociative`. |
@@ -317,7 +317,7 @@ Japanese versions are under `docs/ja/` and [README.md](README.md).
 
 ## Tests
 
-367 tests (AstFirst.Tests 308 + Generator.Tests 59). Covers lexer/DFA/LALR stages, end-to-end, error recovery (Corchuelo), GLR fork/dedup, semantic analysis, grammar discovery, Core build snapshot stability, `Accept`/`Reject` fallback, `OnAccepted`, and positions.
+374 tests (AstFirst.Tests 308 + Generator.Tests 66). Covers lexer/DFA/LALR stages, end-to-end, error recovery (Corchuelo), GLR fork/dedup, semantic analysis, grammar discovery, Core build snapshot stability, `Accept`/`Reject` fallback, `OnAccepted`, and positions.
 
 ## License
 

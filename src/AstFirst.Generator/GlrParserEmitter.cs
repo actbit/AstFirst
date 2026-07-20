@@ -185,7 +185,7 @@ internal static class GlrParserEmitter
             {
                 case ReduceActionModel action:
                 {
-                    sb.Append("            case ").Append(prod.Id).Append(": { return new ").Append(action.AstTypeName).Append("(\"").Append(action.RuleName).Append("\"");
+                    sb.Append("            case ").Append(prod.Id).Append(": { var __node = new ").Append(action.AstTypeName).Append("(\"").Append(action.RuleName).Append("\"");
                     for (int j = 0; j < action.Parameters.Count; j++)
                     {
                         sb.Append(", ");
@@ -197,7 +197,9 @@ internal static class GlrParserEmitter
                         }
                         else sb.Append("(").Append(p.CastTypeName).Append(")children[").Append(p.ChildIndex).Append("]!");
                     }
-                    sb.AppendLine("); }");
+                    sb.Append("); ");
+                    ParserEmitter.EmitOnReduceAnalyzeRules(sb, model, action.AstTypeName, "__node");
+                    sb.AppendLine("return __node; }");
                     break;
                 }
                 case ListReduceActionModel listAction:

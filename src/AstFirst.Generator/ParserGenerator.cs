@@ -68,7 +68,7 @@ public sealed class ParserGenerator : IIncrementalGenerator
                 foreach (var node in model.Nodes)
                 {
                     if (node.IsAbstract && node.Rules.Count == 0) continue;
-                    var partialKey = model.RootTypeFullName + "\0" + node.FullName;
+                    var partialKey = node.FullName;
                     if (!emittedPartials.Add(partialKey)) continue;
                     var hintName = HintNamePart(node.FullName);
                     spc.AddSource(modelHintName + "_" + hintName + ".partial.g.cs", ParserEmitter.EmitPartial(model, node, ns));
