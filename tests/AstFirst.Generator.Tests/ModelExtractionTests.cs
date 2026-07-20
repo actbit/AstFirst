@@ -257,6 +257,61 @@ namespace SharedNodes {
     }
 
     [Fact]
+    public void UnrelatedGrammarPartAttributeIsIgnored()
+    {
+        var source = @"
+using AstFirst;
+namespace Other {
+    [System.AttributeUsage(System.AttributeTargets.Class)]
+    public sealed class GrammarPartAttribute : System.Attribute {
+        public GrammarPartAttribute(System.Type grammarRoot) { }
+    }
+}
+namespace RootNs {
+    [Grammar(Discovery = AstFirst.GrammarDiscovery.TypeHierarchy)]
+    public abstract partial class Expr : AstNode { }
+}
+namespace SharedNodes {
+    [Other.GrammarPart(typeof(RootNs.Expr))]
+    public sealed partial class SharedValue : AstNode {
+        [Rule] public static void Reduce([Token(""value"")] Token value) { }
+    }
+}
+";
+
+        var model = ExtractSource(source, "RootNs.Expr");
+
+        Assert.DoesNotContain(model.Nodes, n => n.FullName == "SharedNodes.SharedValue");
+    }
+
+    [Fact]
+    public void UnrelatedGrammarAndAssemblySkipAttributesAreIgnored()
+    {
+        var source = @"
+using AstFirst;
+[assembly: Other.Skip(""not-a-lexer-pattern"")]
+namespace Other {
+    [System.AttributeUsage(System.AttributeTargets.Class)]
+    public sealed class GrammarAttribute : System.Attribute {
+        public string Mode { get; set; } = """";
+    }
+    [System.AttributeUsage(System.AttributeTargets.Assembly)]
+    public sealed class SkipAttribute : System.Attribute {
+        public SkipAttribute(string value) { }
+    }
+}
+[AstFirst.Grammar(Mode = ""Real"")]
+[Other.Grammar(Mode = ""Fake"")]
+public abstract partial class Expr : AstFirst.AstNode { }
+";
+
+        var model = ExtractSource(source, "Expr");
+
+        Assert.Equal("Real", model.Mode);
+        Assert.Empty(model.SkipPatterns);
+    }
+
+    [Fact]
     public void NamespaceDiscoveryRetainsTheLegacyBoundary()
     {
         var source = @"

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 
@@ -15,14 +16,24 @@ public static class ModelExtraction
     private const string TokenFullName = "AstFirst.Token";
     private const string SemanticContextFullName = "AstFirst.SemanticContext";
 
-    public static GrammarModel? Extract(GeneratorAttributeSyntaxContext context)
+    public static ImmutableArray<GrammarModel> ExtractAll(GeneratorAttributeSyntaxContext context)
     {
-        if (context.TargetSymbol is not INamedTypeSymbol rootType) return null;
+        if (context.TargetSymbol is not INamedTypeSymbol rootType) return ImmutableArray<GrammarModel>.Empty;
         var location = context.TargetNode?.GetLocation();
-        return Extract(context.SemanticModel.Compilation, rootType, location);
+        var models = ImmutableArray.CreateBuilder<GrammarModel>(context.Attributes.Length);
+        foreach (var grammarAttribute in context.Attributes)
+            models.Add(Extract(context.SemanticModel.Compilation, rootType, location, grammarAttribute));
+        return models.MoveToImmutable();
     }
 
     public static GrammarModel Extract(Compilation compilation, INamedTypeSymbol rootType, Location? rootLocation = null)
+    {
+        var grammarAttribute = rootType.GetAttributes()
+            .LastOrDefault(attribute => IsAstFirstAttribute(attribute, "GrammarAttribute"));
+        return Extract(compilation, rootType, rootLocation, grammarAttribute);
+    }
+
+    private static GrammarModel Extract(Compilation compilation, INamedTypeSymbol rootType, Location? rootLocation, AttributeData? grammarAttribute)
     {
         var astNodeBase = compilation.GetTypeByMetadataName(AstNodeFullName);
         var tokenBase = compilation.GetTypeByMetadataName(TokenFullName);
@@ -33,14 +44,13 @@ public static class ModelExtraction
         string? mode = null;
         var parseMode = ParseMode.Lalr;
         var discovery = GrammarDiscovery.NamespaceAndTypeHierarchy;
-        foreach (var a in rootType.GetAttributes())
-            if (a.AttributeClass?.Name == "GrammarAttribute")
-                foreach (var na in a.NamedArguments)
-                {
-                    if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
-                    if (na.Key == "ParseMode" && na.Value.Value is int pm) parseMode = (ParseMode)pm;
-                    if (na.Key == "Discovery" && na.Value.Value is int d) discovery = (GrammarDiscovery)d;
-                }
+        if (grammarAttribute is not null)
+            foreach (var na in grammarAttribute.NamedArguments)
+            {
+                if (na.Key == "Mode" && na.Value.Value is string m) mode = m;
+                if (na.Key == "ParseMode" && na.Value.Value is int pm) parseMode = (ParseMode)pm;
+                if (na.Key == "Discovery" && na.Value.Value is int d) discovery = (GrammarDiscovery)d;
+            }
 
         var nodes = new List<NodeModel>();
         var tokenDefs = new List<TokenDefModel>();
@@ -90,10 +100,10 @@ public static class ModelExtraction
         // [Skip] パターン ([Grammar] クラスまたはアセンブリ) を収集。
         var skipPatterns = new List<string>();
         foreach (var a in rootType.GetAttributes())
-            if (a.AttributeClass?.Name == "SkipAttribute" && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
+            if (IsAstFirstAttribute(a, "SkipAttribute") && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
                 skipPatterns.Add(ss);
         foreach (var a in compilation.Assembly.GetAttributes())
-            if (a.AttributeClass?.Name == "SkipAttribute" && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
+            if (IsAstFirstAttribute(a, "SkipAttribute") && a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string ss)
                 skipPatterns.Add(ss);
 
         // [OnReduce]/[Enter]/[Exit] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド) を収集。
@@ -148,7 +158,7 @@ public static class ModelExtraction
         var precAssoc = AstFirst.Core.Parsing.Associativity.Left;
         foreach (var a in type.GetAttributes())
         {
-            if (a.AttributeClass?.Name != "PrecedenceAttribute") continue;
+            if (!IsAstFirstAttribute(a, "PrecedenceAttribute")) continue;
             if (a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is int pr) precPriority = pr;
             foreach (var na in a.NamedArguments)
             {
@@ -214,7 +224,7 @@ public static class ModelExtraction
     {
         foreach (var a in symbol.GetAttributes())
         {
-            if (a.AttributeClass?.Name is not ("PatternAttribute" or "TokenAttribute")) continue;
+            if (!IsAstFirstAttribute(a, "PatternAttribute") && !IsAstFirstAttribute(a, "TokenAttribute")) continue;
             string? regex = a.ConstructorArguments.Length > 0 && a.ConstructorArguments[0].Value is string s ? s : null;
             int priority = 0;
             string? kind = null;
@@ -233,7 +243,7 @@ public static class ModelExtraction
     {
         foreach (var a in symbol.GetAttributes())
         {
-            if (a.AttributeClass?.Name != "RepeatAttribute") continue;
+            if (!IsAstFirstAttribute(a, "RepeatAttribute")) continue;
             int min = 1;
             foreach (var na in a.NamedArguments)
                 if (na.Key == "Min" && na.Value.Value is int m) min = m;
@@ -279,15 +289,19 @@ public static class ModelExtraction
     private static bool HasAttribute(Microsoft.CodeAnalysis.ISymbol symbol, string attrName)
     {
         foreach (var a in symbol.GetAttributes())
-            if (a.AttributeClass?.Name == attrName) return true;
+            if (IsAstFirstAttribute(a, attrName)) return true;
         return false;
     }
+
+    private static bool IsAstFirstAttribute(AttributeData attribute, string attributeName)
+        => attribute.AttributeClass?.ToDisplayString() == "AstFirst." + attributeName;
 
     private static bool IsGrammarPart(INamedTypeSymbol type, INamedTypeSymbol rootType)
     {
         foreach (var attribute in type.GetAttributes())
         {
-            if (attribute.AttributeClass?.Name != "GrammarPartAttribute" || attribute.ConstructorArguments.Length == 0)
+            if (!IsAstFirstAttribute(attribute, "GrammarPartAttribute")
+                || attribute.ConstructorArguments.Length == 0)
                 continue;
             if (attribute.ConstructorArguments[0].Value is INamedTypeSymbol configuredRoot
                 && SymbolEqualityComparer.Default.Equals(configuredRoot, rootType))
@@ -309,12 +323,14 @@ public static class ModelExtraction
         return false;
     }
 
-    /// <summary>(string) を1つ取る public コンストラクタがあるか (G7: new DerivedType(token.Text) の生成に必要)。</summary>
+    /// <summary>生成された Parser から呼び出せる (string) コンストラクタがあるか。</summary>
     private static bool HasStringConstructor(INamedTypeSymbol type)
     {
         foreach (var ctor in type.Constructors)
         {
-            if (ctor.IsStatic || ctor.DeclaredAccessibility == Accessibility.Private) continue;
+            if (ctor.IsStatic
+                || ctor.DeclaredAccessibility is not (Accessibility.Public or Accessibility.Internal or Accessibility.ProtectedOrInternal))
+                continue;
             var parms = ctor.Parameters;
             if (parms.Length == 1 && parms[0].Type.SpecialType == SpecialType.System_String)
                 return true;

@@ -19,8 +19,8 @@ namespace AstFirst {
     public abstract class AstNode { }
     public abstract class Token { }
     public abstract class SemanticContext { }
-    [System.AttributeUsage(System.AttributeTargets.Class)]
-    public class GrammarAttribute : System.Attribute { }
+    [System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple = true)]
+    public class GrammarAttribute : System.Attribute { public string Mode { get; set; } }
     [System.AttributeUsage(System.AttributeTargets.Parameter)]
     public class PatternAttribute : System.Attribute { public PatternAttribute(string regex) {} }
     [System.AttributeUsage(System.AttributeTargets.Class)]
@@ -30,7 +30,7 @@ namespace AstFirst {
 }
 ";
 
-    private static IReadOnlyList<Microsoft.CodeAnalysis.Diagnostic> RunGenerator(string grammar)
+    private static GeneratorDriverRunResult RunGeneratorResult(string grammar)
     {
         var trusted = (string)System.AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!;
         var refs = trusted.Split(Path.PathSeparator)
@@ -42,8 +42,11 @@ namespace AstFirst {
 
         CSharpGeneratorDriver driver = CSharpGeneratorDriver.Create(new ParserGenerator());
         driver = (CSharpGeneratorDriver)driver.RunGenerators(compilation);
-        return driver.GetRunResult().Diagnostics;
+        return driver.GetRunResult();
     }
+
+    private static IReadOnlyList<Microsoft.CodeAnalysis.Diagnostic> RunGenerator(string grammar)
+        => RunGeneratorResult(grammar).Diagnostics;
 
     [Fact]
     public void AmbiguousGrammarEmitsAstf001()
@@ -135,5 +138,99 @@ public class IntToken : AstFirst.Token {
 ";
         var diagnostics = RunGenerator(grammar);
         Assert.Contains(diagnostics, d => d.Id == "ASTF004");
+    }
+
+    [Fact]
+    public void TokenDerivedWithProtectedStringCtorEmitsAstf004()
+    {
+        var grammar = @"
+[AstFirst.Grammar]
+public class RootExpr : AstFirst.AstNode { }
+public class Num : RootExpr {
+    [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""[0-9]+"")] ProtectedToken n) { }
+}
+public class ProtectedToken : AstFirst.Token {
+    protected ProtectedToken(string text) { }
+}
+";
+
+        var diagnostics = RunGenerator(grammar);
+
+        Assert.Contains(diagnostics, d => d.Id == "ASTF004");
+    }
+
+    [Fact]
+    public void SameSimpleNodeNameInDifferentNamespacesUsesUniqueHintNames()
+    {
+        var grammar = @"
+namespace RootNs {
+    [AstFirst.Grammar]
+    public abstract partial class Expr : AstFirst.AstNode { }
+}
+namespace FirstNs {
+    public sealed partial class Number : RootNs.Expr {
+        [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""1"")] AstFirst.Token n) { }
+    }
+}
+namespace SecondNs {
+    public sealed partial class Number : RootNs.Expr {
+        [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""2"")] AstFirst.Token n) { }
+    }
+}
+";
+
+        var result = RunGeneratorResult(grammar);
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Severity == DiagnosticSeverity.Error);
+        var hintNames = result.Results.Single().GeneratedSources.Select(s => s.HintName).ToList();
+        Assert.Equal(hintNames.Count, hintNames.Distinct().Count());
+        Assert.Contains(hintNames, name => name.Contains("FirstNs_Number"));
+        Assert.Contains(hintNames, name => name.Contains("SecondNs_Number"));
+    }
+
+    [Fact]
+    public void SameSimpleRootNameInDifferentNamespacesUsesUniqueHintNames()
+    {
+        var grammar = @"
+namespace FirstNs {
+    [AstFirst.Grammar]
+    public abstract partial class Expr : AstFirst.AstNode { }
+}
+namespace SecondNs {
+    [AstFirst.Grammar]
+    public abstract partial class Expr : AstFirst.AstNode { }
+}
+";
+
+        var result = RunGeneratorResult(grammar);
+        var generated = result.Results.Single().GeneratedSources;
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Id == "CS8785");
+        Assert.Equal(4, generated.Length);
+        Assert.Equal(generated.Length, generated.Select(source => source.HintName).Distinct().Count());
+    }
+
+    [Fact]
+    public void MultipleGrammarModesGenerateEachParserWithoutDuplicatePartials()
+    {
+        var grammar = @"
+[AstFirst.Grammar(Mode = ""A"")]
+[AstFirst.Grammar(Mode = ""B"")]
+public abstract partial class Expr : AstFirst.AstNode { }
+public sealed partial class Number : Expr {
+    [AstFirst.Rule] public static void Reduce([AstFirst.Pattern(""[0-9]+"")] AstFirst.Token n) { }
+}
+";
+
+        var result = RunGeneratorResult(grammar);
+        var generated = result.Results.Single().GeneratedSources;
+        var sourceText = generated.Select(source => source.SourceText.ToString()).ToList();
+
+        Assert.DoesNotContain(result.Diagnostics, d => d.Id == "CS8785");
+        Assert.Contains(sourceText, source => source.Contains("class Expr_ALexer"));
+        Assert.Contains(sourceText, source => source.Contains("class Expr_AParser"));
+        Assert.Contains(sourceText, source => source.Contains("class Expr_BLexer"));
+        Assert.Contains(sourceText, source => source.Contains("class Expr_BParser"));
+        Assert.Single(generated.Where(source => source.SourceText.ToString().Contains("partial class Number")));
     }
 }
