@@ -89,7 +89,7 @@ public static class CodeEmitter
 
     /// <summary>[Rule] 引数名 (lowerCamel) をプロパティ名 (PascalCase) に。空なら "Item"。</summary>
     public static string Pascalize(string? s)
-        => string.IsNullOrEmpty(s) ? "Item" : char.ToUpperInvariant(s[0]) + s.Substring(1);
+        => string.IsNullOrEmpty(s) ? "Item" : char.ToUpperInvariant(s![0]) + s.Substring(1);
 
     private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

@@ -202,6 +202,6 @@ public class ScopedSymbolTableTests
         var sym = t.ResolveOrError("missing", Span(0), bag);
         Assert.Null(sym);
         Assert.True(bag.HasErrors);
-        Assert.Equal(1, bag.Items.Count);
+        Assert.Single(bag.Items);
     }
 }

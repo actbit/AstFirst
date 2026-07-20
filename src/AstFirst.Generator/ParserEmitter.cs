@@ -305,7 +305,7 @@ public static class ParserEmitter
                 case ReduceActionModel action:
                 {
                     int len = prod.Rhs.Length;
-                    sb.Append("            case ").Append(prod.Id).Append(": { return new ").Append(action.AstTypeName).Append("(\"").Append(action.RuleName).Append("\"");
+                    sb.Append("            case ").Append(prod.Id).Append(": { var __node = new ").Append(action.AstTypeName).Append("(\"").Append(action.RuleName).Append("\"");
                     for (int j = 0; j < action.Parameters.Count; j++)
                     {
                         sb.Append(", ");
@@ -319,7 +319,9 @@ public static class ParserEmitter
                         }
                         else sb.Append("(").Append(p.CastTypeName).Append(")values[top - ").Append(len).Append(" + ").Append(p.ChildIndex).Append("]!");
                     }
-                    sb.AppendLine("); }");
+                    sb.Append("); ");
+                    EmitOnReduceAnalyzeRules(sb, model, action.AstTypeName, "__node");
+                    sb.AppendLine("return __node; }");
                     break;
                 }
                 case ListReduceActionModel listAction:
@@ -424,7 +426,7 @@ public static class ParserEmitter
                 var typeStr = p.IsRepeat
                     ? "System.Collections.Generic.IReadOnlyList<" + p.TypeFullName + ">"
                     : p.TypeFullName;
-                sb.AppendLine("    public readonly " + typeStr + " " + prop + ";");
+                sb.AppendLine("    public readonly " + typeStr + " " + prop + " = default!;");
             }
         // RuleName: 抽象基底、または継承プロパティがない (基底が RuleName を持たない) 場合のみ生成。
         if (node.Rules.Count > 0 && (isAbstractBase || !hasInherited))
@@ -510,18 +512,20 @@ public static class ParserEmitter
                 sb.AppendLine("        if (__autoSpanHas) Span = __autoSpan;");
             }
             sb.AppendLine("        OnReduce(" + ctxCall + ");");
-            // [OnReduce] 属性付き意味解析ルール ([Grammar] ルートクラスの static メソッド)。partial OnReduce の直後に呼ぶ (共存)。
-            foreach (var ar in model.AnalyzeRules)
-            {
-                if (ar.Phase != AnalyzePhase.OnReduce) continue;
-                if (ar.TargetNodeFullName != node.FullName) continue;
-                if (ctxCall.Length == 0) continue; // ctx なしノードには注入不可
-                sb.AppendLine("        " + ar.GrammarClassFullName + "." + ar.MethodName + "(this, (AstFirst.SemanticContext)" + ctxCall + ");");
-            }
             sb.AppendLine("    }");
         }
         sb.AppendLine("}");
         return sb.ToString();
+    }
+
+    internal static void EmitOnReduceAnalyzeRules(StringBuilder sb, GrammarModel model, string nodeTypeName, string nodeVariable)
+    {
+        foreach (var rule in model.AnalyzeRules)
+        {
+            if (rule.Phase != AnalyzePhase.OnReduce || rule.TargetNodeFullName != nodeTypeName) continue;
+            sb.Append(rule.GrammarClassFullName).Append('.').Append(rule.MethodName)
+                .Append('(').Append(nodeVariable).Append(", (").Append(rule.CtxTypeFullName).Append(")ctx); ");
+        }
     }
 
     /// <summary>ノードの [Rule] の最後の SemanticContext 派生引数の型。なければ null (ctx なし)。</summary>

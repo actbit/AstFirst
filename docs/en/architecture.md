@@ -13,7 +13,7 @@ AstFirst is a parser generator built as three layers plus a generator.
 
 ## Generator pipeline
 
-1. **Extraction** (`ModelExtraction`): traverses AstNode/Token derivatives and `[Pattern]` from the `[Grammar]` root, collects `[OnReduce]`/`[Enter]`/`[Exit]` attribute semantic rules, and converts them into an equality-comparable POCO model (`GrammarModel`/`AnalyzeRuleModel`).
+1. **Extraction** (`ModelExtraction`): follows `[Grammar].Discovery` to collect nodes from the root namespace, root type hierarchy, and `[GrammarPart]`; then converts `[Rule]`/`[Token]` and semantic rules into equality-comparable POCO models.
 2. **DFA build** (`ModelToDfa`): regex of each rule -> NFA (Thompson) -> DFA (subset construction) -> minimization (Hopcroft).
 3. **LALR table** (`ModelToTable`): LR(0) automaton -> FIRST/NULLABLE -> DeRemer-Pennello lookahead propagation -> ACTION/GOTO tables + conflict detection.
 4. **Code emission** (`CodeEmitter` / `ParserEmitter` / `WalkerEmitter`): generates C# for Lexer (DFA arrays), Parser (LALR table + shift/reduce driver), Walker (Enter/Exit/Walk + `[Enter]`/`[Exit]` dispatch), and per-node partials (including `[OnReduce]` dispatch).
@@ -21,7 +21,7 @@ AstFirst is a parser generator built as three layers plus a generator.
 ## Generated code shape
 
 - **Lexer**: embeds the DFA transition table and accepting rules in `static readonly` arrays; `Tokenize()` runs longest-match + priority-driven. Also computes each token's 1-based line/column.
-- **Parser**: embeds ACTION/GOTO tables and Productions in arrays and drives shift/reduce/accept. At reduce it calls the AST class constructor to build the AST (`[OnReduce]` attribute methods are called right after partial `OnReduce`). Includes panic-mode error recovery.
+- **Parser**: embeds ACTION/GOTO tables and Productions in arrays and drives shift/reduce/accept. At reduce it calls the AST class constructor to build the AST (`[OnReduce]` attribute methods are called right after partial `OnReduce`). Includes Corchuelo ER1/ER2/ER3 error repair.
 - **Walker**: `EnterXxx` / `ExitXxx` (virtual, empty) per concrete node + `Walk` (iterative stack: Enter -> children -> Exit). Also invokes `IOnSecondPassEnter`/`Exit` and `[Enter]`/`[Exit]` attribute methods. Children are collected from each node's public properties of AstNode-derived types. If a grammar has no semantic hook at all, the Walker is not emitted (zero-cost).
 
 ## Caching strategy

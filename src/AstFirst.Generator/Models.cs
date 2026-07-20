@@ -15,6 +15,14 @@ public enum ParseMode
     LightGlr,
 }
 
+/// <summary>Runtime の AstFirst.GrammarDiscovery と値を一致させる。</summary>
+public enum GrammarDiscovery
+{
+    NamespaceAndTypeHierarchy,
+    TypeHierarchy,
+    Namespace,
+}
+
 /// <summary>DSL から抽出した文法モデル。等価比較可能 (IncrementalGenerator のキャッシュ判定用)。
 /// シンボル/構文ノードは一切持たず、文字列/整数/bool のみ。</summary>
 public sealed class GrammarModel : IEquatable<GrammarModel>
@@ -22,6 +30,7 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     public string RootTypeFullName { get; }
     public string? Mode { get; }                     // [Grammar(Mode=...)] の Mode
     public ParseMode ParseMode { get; }              // [Grammar(ParseMode=...)] の ParseMode (既定 Lalr)
+    public GrammarDiscovery Discovery { get; }
     public IReadOnlyList<NodeModel> Nodes { get; }
     public IReadOnlyList<TokenDefModel> TokenDefs { get; }
     public IReadOnlyList<string> SkipPatterns { get; }
@@ -36,7 +45,8 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     public GrammarModel(string rootTypeFullName, IReadOnlyList<NodeModel> nodes, IReadOnlyList<TokenDefModel> tokenDefs,
         IReadOnlyList<string>? skipPatterns = null, string? mode = null, Location? rootLocation = null,
         IReadOnlyList<string>? tokenDerivedWarnings = null, IReadOnlyList<AnalyzeRuleModel>? analyzeRules = null,
-        ParseMode parseMode = ParseMode.Lalr)
+        ParseMode parseMode = ParseMode.Lalr,
+        GrammarDiscovery discovery = GrammarDiscovery.NamespaceAndTypeHierarchy)
     {
         RootTypeFullName = rootTypeFullName;
         Nodes = nodes;
@@ -47,12 +57,17 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
         TokenDerivedWarnings = tokenDerivedWarnings ?? Array.Empty<string>();
         AnalyzeRules = analyzeRules ?? Array.Empty<AnalyzeRuleModel>();
         ParseMode = parseMode;
+        Discovery = discovery;
     }
 
     public bool Equals(GrammarModel? other) =>
         other is not null && RootTypeFullName == other.RootTypeFullName
+        && Mode == other.Mode
         && SeqEqual(Nodes, other.Nodes) && SeqEqual(TokenDefs, other.TokenDefs)
-        && SeqEqual(AnalyzeRules, other.AnalyzeRules) && ParseMode == other.ParseMode;
+        && SeqEqual(SkipPatterns, other.SkipPatterns)
+        && SeqEqual(TokenDerivedWarnings, other.TokenDerivedWarnings)
+        && SeqEqual(AnalyzeRules, other.AnalyzeRules) && ParseMode == other.ParseMode
+        && Discovery == other.Discovery;
 
     /// <summary>いずれかのノードが IOnSecondPassEnter/Exit を実装するか、[Enter]/[Exit] ルールがあるか。
     /// いずれもなければ Walker/Walk を生成しない (空走査回避・ゼロコスト)。</summary>
@@ -73,8 +88,13 @@ public sealed class GrammarModel : IEquatable<GrammarModel>
     {
         int h = StringComparer.Ordinal.GetHashCode(RootTypeFullName);
         for (int i = 0; i < Nodes.Count; i++) h = unchecked(h * 31 + Nodes[i].GetHashCode());
+        for (int i = 0; i < TokenDefs.Count; i++) h = unchecked(h * 31 + TokenDefs[i].GetHashCode());
+        for (int i = 0; i < SkipPatterns.Count; i++) h = unchecked(h * 31 + StringComparer.Ordinal.GetHashCode(SkipPatterns[i]));
+        if (Mode is not null) h = unchecked(h * 31 + StringComparer.Ordinal.GetHashCode(Mode));
+        for (int i = 0; i < TokenDerivedWarnings.Count; i++) h = unchecked(h * 31 + StringComparer.Ordinal.GetHashCode(TokenDerivedWarnings[i]));
         for (int i = 0; i < AnalyzeRules.Count; i++) h = unchecked(h * 31 + AnalyzeRules[i].GetHashCode());
         h = unchecked(h * 31 + (int)ParseMode);
+        h = unchecked(h * 31 + (int)Discovery);
         return h;
     }
 
@@ -233,7 +253,7 @@ public sealed class ChildModel : IEquatable<ChildModel>
 /// <summary>意味解析ルールのフェーズ。</summary>
 public enum AnalyzePhase
 {
-    /// <summary>1パス目: reduce 時 (ボトムアップ)。[OnReduce] 属性。Walker 不要 (コンストラクタ経路)。</summary>
+    /// <summary>1パス目: reduce 時 (ボトムアップ)。[OnReduce] 属性。Parser の reduce 経路から呼び出す。</summary>
     OnReduce,
     /// <summary>2パス目: ノードに入る時 (トップダウン)。[Enter] 属性。Walker の Enter フェーズ。</summary>
     Enter,

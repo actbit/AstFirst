@@ -6,6 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- FallbackGrammar intentionally verifies an unresolved conflict. -->
+    <NoWarn>$(NoWarn);ASTF001</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -9,12 +9,13 @@ AstFirst では C# のクラスと属性で文法を書く。Generator がコン
 | 属性 | 対象 | 役割 |
 |---|---|---|
 | `[Grammar]` | クラス | 文法の開始記号（ルート非終端）。Generator の抽出開始点。`Mode` で複数方言を切り替え。 |
+| `[GrammarPart(typeof(Root))]` | クラス | 名前空間・ルート型階層外の `AstNode` を指定文法へ明示的に参加させる。 |
 | `[Rule]` | static メソッド | 生成規則。メソッドの**引数**が右辺。1クラスに複数置ける（後述）。 |
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `[Rule]` メソッドの `Token` 引数 | 字句ルール（正規表現）。`Priority` でレクサ優先度、`Kind` でトークン種別。 |
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。 |
 | `[Repeat]` / `[Repeat(Min=0)]` | `[Rule]` メソッドの `AstNode` 派生引数 | リスト（繰り返し）。`Min=1`（既定）= 1回以上、`Min=0` = 0回以上。`IReadOnlyList<T>` に展開。 |
-| `[Skip(@"regex")]` | クラス（`[Grammar]` と同じ） | スキップパターン（空白・コメント等）。 |
-| `[OnReduce]` / `[Enter]` / `[Exit]` | static メソッド（`[Grammar]` ルートクラス） | 意味ルール。Generator がコンストラクタ（`[OnReduce]`）/ Walker（`[Enter]`/`[Exit]`）から dispatch（ctx キャスト自動注入）。 |
+| `[Skip(@"regex")]` | `[Grammar]` クラス／アセンブリ | スキップパターン（空白・コメント等）。アセンブリ指定は全Grammar共通。 |
+| `[OnReduce]` / `[Enter]` / `[Exit]` | static メソッド（`[Grammar]` ルートクラス） | 意味ルール。Generator が `[OnReduce]` を Parser の reduce 処理から、`[Enter]`/`[Exit]` を Walker から dispatch（ctx キャスト自動注入）。 |
 
 ## `[Grammar]`
 
@@ -27,6 +28,28 @@ public abstract partial class Expr : AstNode { }
 ```
 
 `Mode` 名前付きプロパティで複数方言を切り替えられる（後述）。
+
+### GrammarDiscovery（ノード探索）
+
+`Discovery` で文法ノードの探索範囲を選択する。
+
+| 値 | 動作 |
+|---|---|
+| `NamespaceAndTypeHierarchy`（既定） | ルートと同じ名前空間の `AstNode` 派生型、アセンブリ内のルート派生型、明示的な `[GrammarPart]` を収集する。 |
+| `TypeHierarchy` | 名前空間を走査せず、アセンブリ内のルート派生型と明示的な `[GrammarPart]` だけを収集する。 |
+| `Namespace` | 従来互換。同じ名前空間の `AstNode` 派生型と明示的な `[GrammarPart]` を収集する。 |
+
+```csharp
+[Grammar(Discovery = GrammarDiscovery.TypeHierarchy)]
+public abstract partial class Expr : AstNode { }
+
+// 別名前空間でも Expr 派生型なので自動収集される。
+public sealed partial class NumberExpr : Expr { }
+
+// Expr 派生でない共有ノードは明示的に参加させられる。
+[GrammarPart(typeof(Expr))]
+public sealed partial class SharedValue : AstNode { }
+```
 
 ### ParseMode（パーサの実行モード）
 
@@ -48,7 +71,7 @@ public abstract partial class Expr : AstNode { }
   - **N=3・コスト固定**: ER3 の Forward move 確認シンボル数 `N=3`、挿入コスト=1/削除コスト=2 は固定値。Corchuelo 論文では言語に応じたチューニングを推奨しているが、本実装では未対応。
   - **1 回修復 (再帰なし)**: Corchuelo 本来は ER1/ER2/ER3 を再帰的に適用するが、本実装は1回の ER1/ER2 + ER3 のみ。連続エラーは次の dead で順次修復される。
   - **SimulateForward は最初の経路のみ確認**: コンフリクトセルでも fork せず最初の shift/reduce のみ追うため、本番の fork 経路との完全一致は保証しない。
-- **エラー回復の挙動**: LightGlr の Corchuelo 修復は、LALR モードの panic mode 回復とは異なり、トークンを補完/削除してパースを続行する。同じ入力でもモードによりエラー位置・メッセージが変わる場合がある。
+- **エラー回復の挙動**: LALR・LightGlr とも Corchuelo ER1/ER2/ER3 でトークンを補完/削除してパースを続行する。GLRの分岐により、同じ入力でもモードごとにエラー位置・メッセージが変わる場合がある。
 
 ### ⚠ バージョン互換性のない変更 (0.4.0)
 
@@ -197,10 +220,11 @@ public sealed partial class NonEmpty : Program
 
 ## `[Skip]`
 
-スキップパターン（空白・コメント等）。`[Grammar]` を付けたクラスに併せて付ける。マッチした部分はトークン列から除外される。
+スキップパターン（空白・コメント等）。`[Grammar]` クラスに付けるとその文法へ、アセンブリに付けると全Grammarへ適用される。マッチした部分はトークン列から除外される。
 
 ```csharp
 [Skip(@"(\s|//[^\n]*)+")]   // 空白と行コメント
+[assembly: Skip(@"//[^\n]*")]   // 全Grammar共通
 ```
 
 ## 規則の書き方
@@ -242,7 +266,7 @@ public sealed partial class AAdd : ABinary
 - **`OnReduce(ctx)`**: 規則が reduce されたとき（ボトムアップ）に呼ばれる partial メソッド。子プロパティと `Span`（子から自動計算）が既に設定済み。`this.RuleName` で規則を判定、`Span` を上書きする等を行う。
 - **Accept/Reject**: `IsAccepted` をオーバーライドして `false` を返すと、その reduce を拒否（Reject）しフォールバック候補を試す。詳細は [README](../../README.md) の「Accept/Reject とフォールバック」。
 - **`OnSecondPass`**: 2パス目のトラバーサル（トップダウン）。`IOnSecondPassEnter`/`IOnSecondPassExit` を実装したノードに対し、`OnSecondPassEnter`（子の前）→ 子再帰 → `OnSecondPassExit`（子の後）を自動呼出。
-- **`[OnReduce]` / `[Enter]` / `[Exit]` 属性**: `[Grammar]` ルートクラスの `static` メソッドに付けると、Generator が Walker / コンストラクタに dispatch する（ctx キャストは自動注入）。`[OnReduce]` は reduce 時、`[Enter]`/`[Exit]` は 2パス目。詳細は [意味解析ガイド](semantic-analysis.md)。
+- **`[OnReduce]` / `[Enter]` / `[Exit]` 属性**: `[Grammar]` ルートクラスの `static` メソッドに付けると、Generator が `[OnReduce]` を Parser の reduce 処理から、`[Enter]`/`[Exit]` を Walker から dispatch する（ctx キャストは自動注入）。`[OnReduce]` は reduce 時、`[Enter]`/`[Exit]` は 2パス目。詳細は [意味解析ガイド](semantic-analysis.md)。
 
 ## 複数方言（Mode）
 

@@ -11,7 +11,7 @@ public abstract partial class Stmt : AstNode { }
 /// <summary>let x = expr;</summary>
 public sealed partial class LetStmt : Stmt
 {
-    public string Name { get; private set; }
+    public string Name { get; private set; } = "";
     [Rule]
     public static void Let([Token(@"let", Priority = 1)] Token kw, [Token(@"[A-Za-z_]\w*")] Token nameTok,
                            [Token(@"=")] Token eq, Expr value, [Token(@";")] Token semi) { }
@@ -43,7 +43,7 @@ public sealed partial class NumExpr : Expr
 
 public sealed partial class VarExpr : Expr
 {
-    public string Name { get; private set; }
+    public string Name { get; private set; } = "";
     [Rule]
     public static void VarToken([Token(@"[A-Za-z_]\w*")] Token nameTok) { }
     partial void OnReduce()

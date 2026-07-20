@@ -121,6 +121,21 @@ public sealed partial class NumTokenExpr : Expr
         Assert.Equal(a.GetHashCode(), b.GetHashCode());
     }
 
+    [Fact]
+    public void ModelEqualityIncludesIncrementalGeneratorInputs()
+    {
+        var nodes = new List<NodeModel>();
+        var tokens = new List<TokenDefModel>();
+        var baseline = new GrammarModel("Expr", nodes, tokens);
+
+        Assert.NotEqual(baseline, new GrammarModel("Expr", nodes, tokens, skipPatterns: new[] { "\\s+" }));
+        Assert.NotEqual(baseline, new GrammarModel("Expr", nodes, tokens, mode: "V2"));
+        Assert.NotEqual(baseline, new GrammarModel("Expr", nodes, tokens,
+            tokenDerivedWarnings: new[] { "MissingStringCtorToken" }));
+        Assert.NotEqual(baseline, new GrammarModel("Expr", nodes, tokens,
+            discovery: AstFirst.Generator.GrammarDiscovery.TypeHierarchy));
+    }
+
     private static GrammarModel ExtractSource(string source, string rootName)
     {
         var comp = CreateCompilation(source);
@@ -146,6 +161,19 @@ public sealed class A : S { public A([Pattern(""a"")] Token t) { } }
     }
 
     [Fact]
+    public void AssemblySkipPatternCollected()
+    {
+        var source = @"
+using AstFirst;
+[assembly: Skip(""//[^\\n]*"")]
+[Grammar]
+public abstract class S : AstNode { }
+";
+        var model = ExtractSource(source, "S");
+        Assert.Contains("//[^\\n]*", model.SkipPatterns);
+    }
+
+    [Fact]
     public void ModeExtracted()
     {
         // [Grammar(Mode = "V2")] は GrammarModel.Mode に抽出される。
@@ -165,5 +193,140 @@ public sealed class A : M { public A([Pattern(""a"")] Token t) { } }
         // Mode 未指定時は null。
         var model = Extract();
         Assert.Null(model.Mode);
+    }
+
+    [Fact]
+    public void DefaultDiscoveryIncludesRootDescendantsFromOtherNamespaces()
+    {
+        var source = @"
+using AstFirst;
+namespace RootNs { [Grammar] public abstract partial class Expr : AstNode { } }
+namespace NodeNs {
+    public sealed partial class Num : RootNs.Expr {
+        [Rule] public static void Reduce([Token(""[0-9]+"")] Token value) { }
+    }
+}
+";
+        var model = ExtractSource(source, "RootNs.Expr");
+        Assert.Contains(model.Nodes, n => n.FullName == "NodeNs.Num");
+        Assert.Equal(AstFirst.Generator.GrammarDiscovery.NamespaceAndTypeHierarchy, model.Discovery);
+    }
+
+    [Fact]
+    public void TypeHierarchyDiscoveryDoesNotScanTheNamespace()
+    {
+        var source = @"
+using AstFirst;
+namespace Shared {
+    [Grammar(Discovery = AstFirst.GrammarDiscovery.TypeHierarchy)]
+    public abstract partial class Expr : AstNode { }
+    public sealed partial class Unrelated : AstNode {
+        [Rule] public static void Reduce([Token(""x"")] Token value) { }
+    }
+}
+namespace Nodes {
+    public sealed partial class Num : Shared.Expr {
+        [Rule] public static void Reduce([Token(""[0-9]+"")] Token value) { }
+    }
+}
+";
+        var model = ExtractSource(source, "Shared.Expr");
+        Assert.Contains(model.Nodes, n => n.FullName == "Nodes.Num");
+        Assert.DoesNotContain(model.Nodes, n => n.FullName == "Shared.Unrelated");
+        Assert.Equal(AstFirst.Generator.GrammarDiscovery.TypeHierarchy, model.Discovery);
+    }
+
+    [Fact]
+    public void GrammarPartCanIncludeANodeOutsideNamespaceAndHierarchy()
+    {
+        var source = @"
+using AstFirst;
+namespace RootNs {
+    [Grammar(Discovery = AstFirst.GrammarDiscovery.TypeHierarchy)]
+    public abstract partial class Expr : AstNode { }
+}
+namespace SharedNodes {
+    [GrammarPart(typeof(RootNs.Expr))]
+    public sealed partial class SharedValue : AstNode {
+        [Rule] public static void Reduce([Token(""value"")] Token value) { }
+    }
+}
+";
+        var model = ExtractSource(source, "RootNs.Expr");
+        Assert.Contains(model.Nodes, n => n.FullName == "SharedNodes.SharedValue");
+    }
+
+    [Fact]
+    public void UnrelatedGrammarPartAttributeIsIgnored()
+    {
+        var source = @"
+using AstFirst;
+namespace Other {
+    [System.AttributeUsage(System.AttributeTargets.Class)]
+    public sealed class GrammarPartAttribute : System.Attribute {
+        public GrammarPartAttribute(System.Type grammarRoot) { }
+    }
+}
+namespace RootNs {
+    [Grammar(Discovery = AstFirst.GrammarDiscovery.TypeHierarchy)]
+    public abstract partial class Expr : AstNode { }
+}
+namespace SharedNodes {
+    [Other.GrammarPart(typeof(RootNs.Expr))]
+    public sealed partial class SharedValue : AstNode {
+        [Rule] public static void Reduce([Token(""value"")] Token value) { }
+    }
+}
+";
+
+        var model = ExtractSource(source, "RootNs.Expr");
+
+        Assert.DoesNotContain(model.Nodes, n => n.FullName == "SharedNodes.SharedValue");
+    }
+
+    [Fact]
+    public void UnrelatedGrammarAndAssemblySkipAttributesAreIgnored()
+    {
+        var source = @"
+using AstFirst;
+[assembly: Other.Skip(""not-a-lexer-pattern"")]
+namespace Other {
+    [System.AttributeUsage(System.AttributeTargets.Class)]
+    public sealed class GrammarAttribute : System.Attribute {
+        public string Mode { get; set; } = """";
+    }
+    [System.AttributeUsage(System.AttributeTargets.Assembly)]
+    public sealed class SkipAttribute : System.Attribute {
+        public SkipAttribute(string value) { }
+    }
+}
+[AstFirst.Grammar(Mode = ""Real"")]
+[Other.Grammar(Mode = ""Fake"")]
+public abstract partial class Expr : AstFirst.AstNode { }
+";
+
+        var model = ExtractSource(source, "Expr");
+
+        Assert.Equal("Real", model.Mode);
+        Assert.Empty(model.SkipPatterns);
+    }
+
+    [Fact]
+    public void NamespaceDiscoveryRetainsTheLegacyBoundary()
+    {
+        var source = @"
+using AstFirst;
+namespace RootNs {
+    [Grammar(Discovery = AstFirst.GrammarDiscovery.Namespace)]
+    public abstract partial class Expr : AstNode { }
+}
+namespace NodeNs {
+    public sealed partial class Num : RootNs.Expr {
+        [Rule] public static void Reduce([Token(""[0-9]+"")] Token value) { }
+    }
+}
+";
+        var model = ExtractSource(source, "RootNs.Expr");
+        Assert.DoesNotContain(model.Nodes, n => n.FullName == "NodeNs.Num");
     }
 }

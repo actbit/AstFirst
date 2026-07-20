@@ -9,12 +9,13 @@ AstFirst grammars are written with C# classes and attributes. The generator emit
 | Attribute | Target | Role |
 |---|---|---|
 | `[Grammar]` | class | Start symbol (root nonterminal). Generator's extraction entry point. `Mode` switches dialects. |
+| `[GrammarPart(typeof(Root))]` | class | Explicitly includes an `AstNode` outside the grammar namespace/root hierarchy. |
 | `[Rule]` | static method | A production. The method's **parameters** are the RHS. Multiple per class allowed (see below). |
 | `[Token(@"regex")]` / `[Pattern(@"regex")]` | `Token` parameter of a `[Rule]` method | Lexical rule (regex). `Priority` sets lexer priority, `Kind` sets token category. |
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. |
 | `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more. Expands to `IReadOnlyList<T>`. |
-| `[Skip(@"regex")]` | class (same as `[Grammar]`) | Skip pattern (whitespace, comments). |
-| `[OnReduce]` / `[Enter]` / `[Exit]` | static method (on the `[Grammar]` root class) | Semantic rule. The generator dispatches it from the constructor (`[OnReduce]`) / Walker (`[Enter]`/`[Exit]`); the ctx cast is injected. |
+| `[Skip(@"regex")]` | `[Grammar]` class / assembly | Skip pattern (whitespace, comments). Assembly-level patterns apply to every grammar. |
+| `[OnReduce]` / `[Enter]` / `[Exit]` | static method (on the `[Grammar]` root class) | Semantic rule. The generator dispatches `[OnReduce]` during parser reduction and `[Enter]`/`[Exit]` from the Walker; the ctx cast is injected. |
 
 ## `[Grammar]`
 
@@ -27,6 +28,28 @@ public abstract partial class Expr : AstNode { }
 ```
 
 The `Mode` named property switches dialects (see below).
+
+### GrammarDiscovery (node discovery)
+
+Use `Discovery` to select how grammar nodes are found.
+
+| Value | Behavior |
+|---|---|
+| `NamespaceAndTypeHierarchy` (default) | Includes `AstNode` types in the root namespace, root-derived types anywhere in the assembly, and explicit `[GrammarPart]` types. |
+| `TypeHierarchy` | Disables namespace scanning; includes root-derived types anywhere in the assembly and explicit `[GrammarPart]` types. |
+| `Namespace` | Legacy boundary; includes `AstNode` types in the root namespace and explicit `[GrammarPart]` types. |
+
+```csharp
+[Grammar(Discovery = GrammarDiscovery.TypeHierarchy)]
+public abstract partial class Expr : AstNode { }
+
+// Discovered across namespaces because it derives from Expr.
+public sealed partial class NumberExpr : Expr { }
+
+// A shared node outside the hierarchy can opt in explicitly.
+[GrammarPart(typeof(Expr))]
+public sealed partial class SharedValue : AstNode { }
+```
 
 ### ParseMode (parser execution mode)
 
@@ -48,7 +71,7 @@ The `ParseMode` named property selects the parser execution mode. Default is `La
   - **N=3 and costs are fixed**: Forward move symbols `N=3`, insert cost=1/delete cost=2 are hardcoded. The Corchuelo paper recommends per-language tuning; not yet supported.
   - **Single-pass repair (no recursion)**: The original Corchuelo applies ER1/ER2/ER3 recursively; this implementation applies one round only. Consecutive errors are repaired one at a time on subsequent dead states.
   - **SimulateForward checks the first path only**: Does not fork at conflict cells during simulation, so full agreement with production fork paths is not guaranteed.
-- **Error recovery behavior**: LightGlr's Corchuelo repair differs from the panic-mode recovery used in Lalr mode — it inserts/deletes tokens to continue parsing. The same input may produce different error positions/messages depending on the mode.
+- **Error recovery behavior**: Both Lalr and LightGlr use Corchuelo ER1/ER2/ER3 to insert/delete tokens and continue parsing. GLR branching can still produce different error positions/messages between modes for the same input.
 
 ### ⚠ Breaking Changes (0.4.0)
 
@@ -197,10 +220,11 @@ public sealed partial class NonEmpty : Program
 
 ## `[Skip]`
 
-Skip pattern (whitespace, comments). Attach to the same class as `[Grammar]`. Matched spans are removed from the token stream.
+Skip pattern (whitespace, comments). Attach it to a `[Grammar]` class for one grammar or to the assembly for every grammar. Matched spans are removed from the token stream.
 
 ```csharp
 [Skip(@"(\s|//[^\n]*)+")]   // whitespace and line comments
+[assembly: Skip(@"//[^\n]*")]   // shared by every grammar
 ```
 
 ## Writing grammar
@@ -242,7 +266,7 @@ Special parameter types of a `[Rule]` method:
 - **`OnReduce(ctx)`**: a partial method called when a rule is reduced (bottom-up). Child properties and `Span` (auto-computed from children) are already set. Use `this.RuleName` to branch on the rule, override `Span`, etc.
 - **Accept/Reject**: override `IsAccepted` to return `false` to reject a reduce and try fallback candidates. See the [README](../../README.md) "Accept/Reject and fallback" section.
 - **`OnSecondPass`**: the second-pass traversal (top-down). For nodes implementing `IOnSecondPassEnter`/`IOnSecondPassExit`, the generator calls `OnSecondPassEnter` (before children) → recurse children → `OnSecondPassExit` (after children).
-- **`[OnReduce]` / `[Enter]` / `[Exit]` attributes**: attach to a `static` method on the `[Grammar]` root class and the generator dispatches it from the Walker / constructor (the ctx cast is injected automatically). `[OnReduce]` runs at reduce; `[Enter]`/`[Exit]` run in the second pass. See the [semantic analysis guide](semantic-analysis.md).
+- **`[OnReduce]` / `[Enter]` / `[Exit]` attributes**: attach to a `static` method on the `[Grammar]` root class. The generator dispatches `[OnReduce]` during parser reduction and `[Enter]`/`[Exit]` from the Walker (the ctx cast is injected automatically). `[OnReduce]` runs at reduce; `[Enter]`/`[Exit]` run in the second pass. See the [semantic analysis guide](semantic-analysis.md).
 
 ## Dialects (Mode)
 
