@@ -253,7 +253,7 @@ public sealed class ChildModel : IEquatable<ChildModel>
 /// <summary>意味解析ルールのフェーズ。</summary>
 public enum AnalyzePhase
 {
-    /// <summary>1パス目: reduce 時 (ボトムアップ)。[OnReduce] 属性。Walker 不要 (コンストラクタ経路)。</summary>
+    /// <summary>1パス目: reduce 時 (ボトムアップ)。[OnReduce] 属性。Parser の reduce 経路から呼び出す。</summary>
     OnReduce,
     /// <summary>2パス目: ノードに入る時 (トップダウン)。[Enter] 属性。Walker の Enter フェーズ。</summary>
     Enter,

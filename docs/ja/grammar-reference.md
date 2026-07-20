@@ -15,7 +15,7 @@ AstFirst では C# のクラスと属性で文法を書く。Generator がコン
 | `[Precedence(n)]` | クラス（演算ノード） | 演算子優先度/結合性。`n` が大きいほど高優先。 |
 | `[Repeat]` / `[Repeat(Min=0)]` | `[Rule]` メソッドの `AstNode` 派生引数 | リスト（繰り返し）。`Min=1`（既定）= 1回以上、`Min=0` = 0回以上。`IReadOnlyList<T>` に展開。 |
 | `[Skip(@"regex")]` | `[Grammar]` クラス／アセンブリ | スキップパターン（空白・コメント等）。アセンブリ指定は全Grammar共通。 |
-| `[OnReduce]` / `[Enter]` / `[Exit]` | static メソッド（`[Grammar]` ルートクラス） | 意味ルール。Generator がコンストラクタ（`[OnReduce]`）/ Walker（`[Enter]`/`[Exit]`）から dispatch（ctx キャスト自動注入）。 |
+| `[OnReduce]` / `[Enter]` / `[Exit]` | static メソッド（`[Grammar]` ルートクラス） | 意味ルール。Generator が `[OnReduce]` を Parser の reduce 処理から、`[Enter]`/`[Exit]` を Walker から dispatch（ctx キャスト自動注入）。 |
 
 ## `[Grammar]`
 
@@ -266,7 +266,7 @@ public sealed partial class AAdd : ABinary
 - **`OnReduce(ctx)`**: 規則が reduce されたとき（ボトムアップ）に呼ばれる partial メソッド。子プロパティと `Span`（子から自動計算）が既に設定済み。`this.RuleName` で規則を判定、`Span` を上書きする等を行う。
 - **Accept/Reject**: `IsAccepted` をオーバーライドして `false` を返すと、その reduce を拒否（Reject）しフォールバック候補を試す。詳細は [README](../../README.md) の「Accept/Reject とフォールバック」。
 - **`OnSecondPass`**: 2パス目のトラバーサル（トップダウン）。`IOnSecondPassEnter`/`IOnSecondPassExit` を実装したノードに対し、`OnSecondPassEnter`（子の前）→ 子再帰 → `OnSecondPassExit`（子の後）を自動呼出。
-- **`[OnReduce]` / `[Enter]` / `[Exit]` 属性**: `[Grammar]` ルートクラスの `static` メソッドに付けると、Generator が Walker / コンストラクタに dispatch する（ctx キャストは自動注入）。`[OnReduce]` は reduce 時、`[Enter]`/`[Exit]` は 2パス目。詳細は [意味解析ガイド](semantic-analysis.md)。
+- **`[OnReduce]` / `[Enter]` / `[Exit]` 属性**: `[Grammar]` ルートクラスの `static` メソッドに付けると、Generator が `[OnReduce]` を Parser の reduce 処理から、`[Enter]`/`[Exit]` を Walker から dispatch する（ctx キャストは自動注入）。`[OnReduce]` は reduce 時、`[Enter]`/`[Exit]` は 2パス目。詳細は [意味解析ガイド](semantic-analysis.md)。
 
 ## 複数方言（Mode）
 

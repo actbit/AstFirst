@@ -15,7 +15,7 @@ AstFirst grammars are written with C# classes and attributes. The generator emit
 | `[Precedence(n)]` | class (operator node) | Operator precedence/associativity. Higher `n` binds tighter. |
 | `[Repeat]` / `[Repeat(Min=0)]` | `AstNode`-derived parameter of a `[Rule]` method | List (repetition). `Min=1` (default) = one or more, `Min=0` = zero or more. Expands to `IReadOnlyList<T>`. |
 | `[Skip(@"regex")]` | `[Grammar]` class / assembly | Skip pattern (whitespace, comments). Assembly-level patterns apply to every grammar. |
-| `[OnReduce]` / `[Enter]` / `[Exit]` | static method (on the `[Grammar]` root class) | Semantic rule. The generator dispatches it from the constructor (`[OnReduce]`) / Walker (`[Enter]`/`[Exit]`); the ctx cast is injected. |
+| `[OnReduce]` / `[Enter]` / `[Exit]` | static method (on the `[Grammar]` root class) | Semantic rule. The generator dispatches `[OnReduce]` during parser reduction and `[Enter]`/`[Exit]` from the Walker; the ctx cast is injected. |
 
 ## `[Grammar]`
 
@@ -266,7 +266,7 @@ Special parameter types of a `[Rule]` method:
 - **`OnReduce(ctx)`**: a partial method called when a rule is reduced (bottom-up). Child properties and `Span` (auto-computed from children) are already set. Use `this.RuleName` to branch on the rule, override `Span`, etc.
 - **Accept/Reject**: override `IsAccepted` to return `false` to reject a reduce and try fallback candidates. See the [README](../../README.md) "Accept/Reject and fallback" section.
 - **`OnSecondPass`**: the second-pass traversal (top-down). For nodes implementing `IOnSecondPassEnter`/`IOnSecondPassExit`, the generator calls `OnSecondPassEnter` (before children) → recurse children → `OnSecondPassExit` (after children).
-- **`[OnReduce]` / `[Enter]` / `[Exit]` attributes**: attach to a `static` method on the `[Grammar]` root class and the generator dispatches it from the Walker / constructor (the ctx cast is injected automatically). `[OnReduce]` runs at reduce; `[Enter]`/`[Exit]` run in the second pass. See the [semantic analysis guide](semantic-analysis.md).
+- **`[OnReduce]` / `[Enter]` / `[Exit]` attributes**: attach to a `static` method on the `[Grammar]` root class. The generator dispatches `[OnReduce]` during parser reduction and `[Enter]`/`[Exit]` from the Walker (the ctx cast is injected automatically). `[OnReduce]` runs at reduce; `[Enter]`/`[Exit]` run in the second pass. See the [semantic analysis guide](semantic-analysis.md).
 
 ## Dialects (Mode)
 

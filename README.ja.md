@@ -104,7 +104,7 @@ var result2 = ExprParser.Parse("1+");
 
 AstFirst は構文解析（AST 構築）に加え、意味解析のための標準ヘルパーと 2パスの枠組みを提供する。詳細は [docs/ja/semantic-analysis.md](docs/ja/semantic-analysis.md)。
 
-- **属性ベースのルール `[OnReduce]` / `[Enter]` / `[Exit]` (推奨)**: 意味ルールを `[Grammar]` ルートクラスの `static` メソッドで書く。Generator がコンストラクタ / Walker から dispatch し、ctx のキャストも自動で挿入（ノード毎のボイラープレート不要）。
+- **属性ベースのルール `[OnReduce]` / `[Enter]` / `[Exit]` (推奨)**: 意味ルールを `[Grammar]` ルートクラスの `static` メソッドで書く。Generator が `[OnReduce]` を Parser の reduce 処理から、`[Enter]`/`[Exit]` を Walker から dispatch し、ctx のキャストも自動で挿入（ノード毎のボイラープレート不要）。
 - **1パス目 `OnReduce` (ボトムアップ)**: reduce 時に呼ばれる partial メソッド。`Accept()`/`Reject()` でこの構文を受け入れるか判定（既定 Accept）。`Reject` すると別候補へフォールバック。
 - **2パス目 `[Enter]`/`[Exit]` / `OnSecondPassEnter`/`Exit` (トップダウン)**: 生成された汎用 Walker (`{Root}Walker`) が `Parse` 後に `Enter → 子 → Exit` を駆動。スコープ Push/Pop 等の正確な意味解析が書ける。意味フックのない文法では走査を省略（オーバーヘッドなし・ゼロコスト）。
 - **型システム**: `TypeSymbol` は継承可能で `FunctionTypeSymbol`/`ArrayTypeSymbol`（共変・反変・構造等価）を組み込み、暗黙の型変換の分類と `OverloadResolver` も提供。`BasicSemanticContext` は `TypeContext` を標準で保持。

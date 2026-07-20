@@ -104,7 +104,7 @@ var result2 = ExprParser.Parse("1+");
 
 AstFirst provides standard helpers and a two-pass framework for semantic analysis on top of parsing. See [docs/en/semantic-analysis.md](docs/en/semantic-analysis.md) for details.
 
-- **Attribute-based rules `[OnReduce]` / `[Enter]` / `[Exit]` (recommended)**: write semantic rules as `static` methods on the `[Grammar]` root class. The generator dispatches them from the constructor / Walker and injects the `ctx` cast for you — no per-node boilerplate.
+- **Attribute-based rules `[OnReduce]` / `[Enter]` / `[Exit]` (recommended)**: write semantic rules as `static` methods on the `[Grammar]` root class. The generator dispatches `[OnReduce]` during parser reduction and `[Enter]`/`[Exit]` from the Walker, injecting the `ctx` cast for you — no per-node boilerplate.
 - **First pass `OnReduce` (bottom-up)**: a partial method called at reduce time. `Accept()`/`Reject()` decides whether to accept this interpretation (default Accept). `Reject` falls back to the next candidate.
 - **Second pass `[Enter]`/`[Exit]` / `OnSecondPassEnter`/`Exit` (top-down)**: a generated generic Walker (`{Root}Walker`) drives `Enter -> children -> Exit` after `Parse`. Accurate semantic analysis like scope Push/Pop fits here. Grammars with no semantic hook skip the traversal entirely (no overhead, zero-cost).
 - **Type system**: `TypeSymbol` is inheritable with built-in `FunctionTypeSymbol`/`ArrayTypeSymbol` (variance + structural equality), plus implicit-conversion classification and `OverloadResolver`. `BasicSemanticContext` carries a `TypeContext` by default.
