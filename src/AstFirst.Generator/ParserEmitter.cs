@@ -83,7 +83,7 @@ public static class ParserEmitter
         // 2パス目 (Walker) を使う文法でのみ、既定 Walker インスタンスを保持 (ゼロコスト)。
         if (model.HasSecondPass)
         {
-            var walkerSuffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+            var walkerSuffix = CodeEmitter.ModeSuffix(model.Mode);
             var (_, rootType) = CodeEmitter.SplitFullName(model.RootTypeFullName);
             var walkerName = rootType + walkerSuffix + "Walker";
             sb.AppendLine("    private static readonly " + walkerName + " __defaultWalker = new " + walkerName + "._Default();");
@@ -401,9 +401,8 @@ public static class ParserEmitter
         if (nodeNs.Length > 0) { sb.AppendLine("namespace " + nodeNs + ";"); sb.AppendLine(); }
 
         string? ctxType = CtxTypeOf(node);
-        string? ctxArg = CtxArgOf(node);
-        string ctxParam = ctxType is not null ? "(" + ctxType + " " + (ctxArg ?? "ctx") + ")" : "()";
-        string ctxCall = ctxType is not null ? (ctxArg ?? "ctx") : "";
+        string ctxParam = ctxType is not null ? "(" + ctxType + " __astFirstCtx)" : "()";
+        var propertyNames = CodeEmitter.GetPropertyNames(node.FullName, node.Rules, node.ReservedMemberNames);
 
         sb.AppendLine("public partial class " + simple);
         sb.AppendLine("{");
@@ -420,7 +419,7 @@ public static class ParserEmitter
             foreach (var p in rule.Parameters)
             {
                 if (p.IsContext || p.Name is null) continue;
-                var prop = CodeEmitter.Pascalize(p.Name);
+                var prop = propertyNames[p.Name!];
                 if (!propSet.Add(prop)) continue;
                 if (!isAbstractBase && inheritedSet.Contains(prop)) continue;
                 var typeStr = p.IsRepeat
@@ -447,31 +446,37 @@ public static class ParserEmitter
         var seenSigs = new HashSet<string>();
         foreach (var rule in node.Rules)
         {
-            var sigBuilder = new StringBuilder();
-            foreach (var p in rule.Parameters) { if (sigBuilder.Length > 0) sigBuilder.Append(','); sigBuilder.Append(p.TypeFullName); }
-            if (!seenSigs.Add(sigBuilder.ToString())) continue;
+            var signature = RuleSignature(rule);
+            if (!seenSigs.Add(signature)) continue;
+            var sameSignatureRules = new List<RuleModel>();
+            foreach (var candidate in node.Rules)
+                if (RuleSignature(candidate) == signature) sameSignatureRules.Add(candidate);
 
-            sb.Append("    " + ctorKind + " " + simple + "(string ruleName");
-            foreach (var p in rule.Parameters)
+            sb.Append("    " + ctorKind + " " + simple + "(string __astFirstRuleName");
+            for (int parameterIndex = 0; parameterIndex < rule.Parameters.Count; parameterIndex++)
             {
+                var p = rule.Parameters[parameterIndex];
                 sb.Append(", ");
                 var typeStr = p.IsRepeat
                     ? "System.Collections.Generic.IReadOnlyList<" + p.TypeFullName + ">"
                     : p.TypeFullName;
-                sb.Append(typeStr).Append(" ").Append(p.Name ?? "p");
+                sb.Append(typeStr).Append(" ").Append(CtorArgumentName(parameterIndex));
             }
             sb.AppendLine(")");
 
             // 継承ありの具象: : base(ruleName, 継承プロパティ...) を呼ぶ (基底のプロパティ順)。
             if (hasInherited && !isAbstractBase)
             {
-                sb.Append("        : base(ruleName");
+                sb.Append("        : base(__astFirstRuleName");
                 foreach (var inheritedProp in node.InheritedPropertyNames)
                 {
-                    string? argName = null;
-                    foreach (var p in rule.Parameters)
-                        if (p.Name is not null && CodeEmitter.Pascalize(p.Name) == inheritedProp) { argName = p.Name; break; }
-                    if (argName is not null) sb.Append(", ").Append(argName);
+                    int parameterIndex = -1;
+                    for (int i = 0; i < rule.Parameters.Count; i++)
+                    {
+                        var p = rule.Parameters[i];
+                        if (p.Name is not null && propertyNames[p.Name] == inheritedProp) { parameterIndex = i; break; }
+                    }
+                    if (parameterIndex >= 0) sb.Append(", ").Append(CtorArgumentName(parameterIndex));
                 }
                 sb.AppendLine(")");
             }
@@ -479,44 +484,95 @@ public static class ParserEmitter
             sb.AppendLine("    {");
             // RuleName 代入: 抽象基底、または継承なし (基底が持たない) の場合。
             if (isAbstractBase || !hasInherited)
-                sb.AppendLine("        RuleName = ruleName;");
-            foreach (var p in rule.Parameters)
-                if (!p.IsContext && p.Name is not null)
-                {
-                    var prop = CodeEmitter.Pascalize(p.Name);
-                    if (isAbstractBase || !inheritedSet.Contains(prop))
-                        sb.AppendLine("        this." + prop + " = " + p.Name + ";");
-                }
-            // Span 自動計算: 子の Span を順次マージして this.Span に設定。
-            // OnReduce の「前」に設定するのでユーザーが OnReduce で上書き可能 (後方互換)。
-            // 抽象基底 (isAbstractBase) ではスキップ — 具象コンストラクタが継承子含む全子を持つため冗長。
-            if (!isAbstractBase)
+                sb.AppendLine("        RuleName = __astFirstRuleName;");
+            if (sameSignatureRules.Count == 1)
             {
-                sb.AppendLine("        var __autoSpan = default(AstFirst.SourceSpan);");
-                sb.AppendLine("        var __autoSpanHas = false;");
-                foreach (var p in rule.Parameters)
-                {
-                    if (p.IsContext || p.Name is null) continue;
-                    if (p.IsRepeat)
-                    {
-                        // [Repeat] 子: IReadOnlyList<T> (T は AstNode/Token 派生、いずれも .Span を持つ)。
-                        sb.AppendLine("        foreach (var __autoSpanItem in " + p.Name
-                            + ") { __autoSpan = __autoSpanHas ? AstFirst.SourceSpan.Merge(__autoSpan, __autoSpanItem.Span) : __autoSpanItem.Span; __autoSpanHas = true; }");
-                    }
-                    else
-                    {
-                        sb.AppendLine("        __autoSpan = __autoSpanHas ? AstFirst.SourceSpan.Merge(__autoSpan, "
-                            + p.Name + ".Span) : " + p.Name + ".Span; __autoSpanHas = true;");
-                    }
-                }
-                sb.AppendLine("        if (__autoSpanHas) Span = __autoSpan;");
+                EmitCtorRuleBody(sb, rule, propertyNames, inheritedSet, isAbstractBase, "        ");
             }
-            sb.AppendLine("        OnReduce(" + ctxCall + ");");
+            else
+            {
+                for (int ruleIndex = 0; ruleIndex < sameSignatureRules.Count; ruleIndex++)
+                {
+                    var branchRule = sameSignatureRules[ruleIndex];
+                    var keyword = ruleIndex == 0 ? "if" : "else if";
+                    sb.Append("        ").Append(keyword).Append(" (__astFirstRuleName == \"")
+                        .Append(branchRule.MethodName).AppendLine("\")");
+                    sb.AppendLine("        {");
+                    EmitCtorRuleBody(sb, branchRule, propertyNames, inheritedSet, isAbstractBase, "            ");
+                    sb.AppendLine("        }");
+                }
+            }
+            var contextIndex = -1;
+            for (int i = 0; i < rule.Parameters.Count; i++)
+                if (rule.Parameters[i].IsContext) { contextIndex = i; break; }
+            sb.AppendLine("        OnReduce(" + (contextIndex >= 0 ? CtorArgumentName(contextIndex) : "") + ");");
             sb.AppendLine("    }");
         }
         sb.AppendLine("}");
         return sb.ToString();
     }
+
+    private static string RuleSignature(RuleModel rule)
+    {
+        var signature = new StringBuilder();
+        foreach (var p in rule.Parameters)
+        {
+            if (signature.Length > 0) signature.Append(',');
+            signature.Append(ConstructorType(p));
+        }
+        return signature.ToString();
+    }
+
+    private static string ConstructorType(ParamModel p) => p.IsRepeat
+        ? "System.Collections.Generic.IReadOnlyList<" + p.TypeFullName + ">"
+        : p.TypeFullName;
+
+    private static void EmitCtorRuleBody(
+        StringBuilder sb,
+        RuleModel rule,
+        IReadOnlyDictionary<string, string> propertyNames,
+        HashSet<string> inheritedSet,
+        bool isAbstractBase,
+        string indent)
+    {
+        for (int parameterIndex = 0; parameterIndex < rule.Parameters.Count; parameterIndex++)
+        {
+            var p = rule.Parameters[parameterIndex];
+            if (!p.IsContext && p.Name is not null)
+            {
+                var prop = propertyNames[p.Name];
+                if (isAbstractBase || !inheritedSet.Contains(prop))
+                    sb.AppendLine(indent + "this." + prop + " = " + CtorArgumentName(parameterIndex) + ";");
+            }
+        }
+
+        // Span 自動計算: 子の Span を順次マージして this.Span に設定。
+        // OnReduce の「前」に設定するのでユーザーが OnReduce で上書き可能 (後方互換)。
+        // 抽象基底ではスキップ — 具象コンストラクタが継承子含む全子を持つため冗長。
+        if (isAbstractBase) return;
+
+        sb.AppendLine(indent + "var __astFirstAutoSpan = default(AstFirst.SourceSpan);");
+        sb.AppendLine(indent + "var __astFirstAutoSpanHas = false;");
+        for (int parameterIndex = 0; parameterIndex < rule.Parameters.Count; parameterIndex++)
+        {
+            var p = rule.Parameters[parameterIndex];
+            if (p.IsContext || p.Name is null) continue;
+            if (p.IsRepeat)
+            {
+                // [Repeat] 子: IReadOnlyList<T> (T は AstNode/Token 派生、いずれも .Span を持つ)。
+                sb.AppendLine(indent + "foreach (var __astFirstAutoSpanItem in " + CtorArgumentName(parameterIndex)
+                    + ") { __astFirstAutoSpan = __astFirstAutoSpanHas ? AstFirst.SourceSpan.Merge(__astFirstAutoSpan, __astFirstAutoSpanItem.Span) : __astFirstAutoSpanItem.Span; __astFirstAutoSpanHas = true; }");
+            }
+            else
+            {
+                sb.AppendLine(indent + "__astFirstAutoSpan = __astFirstAutoSpanHas ? AstFirst.SourceSpan.Merge(__astFirstAutoSpan, "
+                    + CtorArgumentName(parameterIndex) + ".Span) : " + CtorArgumentName(parameterIndex) + ".Span; __astFirstAutoSpanHas = true;");
+            }
+        }
+        sb.AppendLine(indent + "if (__astFirstAutoSpanHas) Span = __astFirstAutoSpan;");
+    }
+
+    private static string CtorArgumentName(int index) => "__astFirstArg" + index;
 
     internal static void EmitOnReduceAnalyzeRules(StringBuilder sb, GrammarModel model, string nodeTypeName, string nodeVariable)
     {
@@ -538,16 +594,6 @@ public static class ParserEmitter
         return null;
     }
 
-    /// <summary>ノードの ctx 引数の名前。なければ null。</summary>
-    private static string? CtxArgOf(NodeModel n)
-    {
-        if (n.Rules.Count == 0) return null;
-        var ps = n.Rules[0].Parameters;
-        for (int j = ps.Count - 1; j >= 0; j--)
-            if (ps[j].IsContext) return ps[j].Name ?? "ctx";
-        return null;
-    }
-
     private static int EncodeAction(LrAction a)
     {
         int k = a.Kind switch { LrActionKind.Shift => 1, LrActionKind.Reduce => 2, LrActionKind.Accept => 3, _ => 0 };
@@ -565,7 +611,7 @@ public static class ParserEmitter
     private static (string type, string lexer, string parser) Names(GrammarModel model)
     {
         var (ns, type) = CodeEmitter.SplitFullName(model.RootTypeFullName);
-        var suffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+        var suffix = CodeEmitter.ModeSuffix(model.Mode);
         return (type + suffix, type + suffix + "Lexer", type + suffix + "Parser");
     }
 

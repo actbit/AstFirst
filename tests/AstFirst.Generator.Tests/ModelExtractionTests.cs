@@ -329,4 +329,57 @@ namespace NodeNs {
         var model = ExtractSource(source, "RootNs.Expr");
         Assert.DoesNotContain(model.Nodes, n => n.FullName == "NodeNs.Num");
     }
+
+    [Fact]
+    public void InvalidAnalyzeRuleSignaturesAreIgnored()
+    {
+        var source = @"
+using AstFirst;
+[Grammar]
+public abstract partial class Expr : AstNode
+{
+    [OnReduce] public static void MissingContext(Expr node) { }
+    [Enter] public static void TooManyArguments(Expr node, SemanticContext ctx, int extra) { }
+    [Exit] public static void WrongContext(Expr node, string ctx) { }
+    [OnReduce] static void Private(Expr node, SemanticContext ctx) { }
+    [OnReduce] public static void Valid(Expr node, SemanticContext ctx) { }
+}
+";
+
+        var model = ExtractSource(source, "Expr");
+
+        var rule = Assert.Single(model.AnalyzeRules);
+        Assert.Equal("Valid", rule.MethodName);
+        Assert.Equal("AstFirst.SemanticContext", rule.CtxTypeFullName);
+    }
+
+    [Fact]
+    public void InheritedChildrenRemainAvailableToTheWalkerModel()
+    {
+        var source = @"
+using AstFirst;
+namespace Inherited {
+    [Grammar]
+    public abstract partial class Root : AstNode { }
+    public abstract partial class Base : Root
+    {
+        [Rule] public static void BaseRule(Child child) { }
+    }
+    public sealed partial class Leaf : Base
+    {
+        [Rule] public static void LeafRule(Child child, Child other, [Token(""x"")] Token token) { }
+    }
+    public sealed partial class Child : Root
+    {
+        [Rule] public static void ChildRule([Token(""c"")] Token token) { }
+    }
+}
+";
+
+        var model = ExtractSource(source, "Inherited.Root");
+        var leaf = model.Nodes.Single(node => node.FullName == "Inherited.Leaf");
+
+        Assert.Contains(leaf.Children, child => child.PropertyName == "Child");
+        Assert.Contains(leaf.Children, child => child.PropertyName == "Other");
+    }
 }

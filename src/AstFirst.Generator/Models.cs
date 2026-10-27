@@ -114,6 +114,8 @@ public sealed class NodeModel : IEquatable<NodeModel>
     public bool IsAbstract { get; }
     public IReadOnlyList<RuleModel> Rules { get; }      // [Rule] static メソッド (1クラス1つだがリストで保持)
     public IReadOnlyList<ChildModel> Children { get; }   // [Rule] 引数の子 (partial プロパティ + Walker 用)
+    /// <summary>ユーザーがノード本体で宣言したメンバー名。生成プロパティとの衝突回避に使う。</summary>
+    public IReadOnlyList<string> ReservedMemberNames { get; }
     /// <summary>基底クラスから継承するプロパティ名 (PascalCase・順序付き)。具象クラスの partial で再定義を避け、: base(...) に渡す。</summary>
     public IReadOnlyList<string> InheritedPropertyNames { get; }
     public int PrecedencePriority { get; }    // [Precedence] の Priority (0=未設定)
@@ -127,13 +129,15 @@ public sealed class NodeModel : IEquatable<NodeModel>
         IReadOnlyList<ChildModel>? children = null,
         IReadOnlyList<string>? inheritedPropertyNames = null,
         int precedencePriority = 0, AstFirst.Core.Parsing.Associativity precedenceAssoc = AstFirst.Core.Parsing.Associativity.Left,
-        bool hasSecondPassEnter = false, bool hasSecondPassExit = false)
+        bool hasSecondPassEnter = false, bool hasSecondPassExit = false,
+        IReadOnlyList<string>? reservedMemberNames = null)
     {
         FullName = fullName;
         BaseFullName = baseFullName;
         IsAbstract = isAbstract;
         Rules = rules;
         Children = children ?? Array.Empty<ChildModel>();
+        ReservedMemberNames = reservedMemberNames ?? Array.Empty<string>();
         InheritedPropertyNames = inheritedPropertyNames ?? Array.Empty<string>();
         PrecedencePriority = precedencePriority;
         PrecedenceAssoc = precedenceAssoc;
@@ -144,6 +148,7 @@ public sealed class NodeModel : IEquatable<NodeModel>
     public bool Equals(NodeModel? other) =>
         other is not null && FullName == other.FullName && BaseFullName == other.BaseFullName
         && IsAbstract == other.IsAbstract && Rules.SequenceEqual(other.Rules) && Children.SequenceEqual(other.Children)
+        && ReservedMemberNames.SequenceEqual(other.ReservedMemberNames)
         && InheritedPropertyNames.SequenceEqual(other.InheritedPropertyNames)
         && PrecedencePriority == other.PrecedencePriority && PrecedenceAssoc == other.PrecedenceAssoc
         && HasSecondPassEnter == other.HasSecondPassEnter && HasSecondPassExit == other.HasSecondPassExit;

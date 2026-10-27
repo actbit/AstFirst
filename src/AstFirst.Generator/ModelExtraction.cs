@@ -122,18 +122,18 @@ public static class ModelExtraction
         {
             if (member is not IMethodSymbol method) continue;
             if (!method.IsStatic) continue;
+            if (method.DeclaredAccessibility is not (Accessibility.Public or Accessibility.Internal or Accessibility.ProtectedOrInternal)) continue;
             AnalyzePhase phase;
             if (HasAttribute(method, "EnterAttribute")) phase = AnalyzePhase.Enter;
             else if (HasAttribute(method, "ExitAttribute")) phase = AnalyzePhase.Exit;
             else if (HasAttribute(method, "OnReduceAttribute")) phase = AnalyzePhase.OnReduce;
             else continue;
             var ps = method.Parameters;
+            if (ps.Length != 2 || contextBase is null || !InheritsFromOrEquals(ps[1].Type, contextBase)) continue;
             // 第1引数 = AstNode 派生の対象ノード。
             if (ps.Length < 1 || astNodeBase is null || !InheritsFromOrEquals(ps[0].Type, astNodeBase)) continue;
             string targetNode = ps[0].Type.ToDisplayString();
-            string ctxType = SemanticContextFullName;
-            if (ps.Length >= 2 && contextBase is not null && InheritsFromOrEquals(ps[1].Type, contextBase))
-                ctxType = ps[1].Type.ToDisplayString();
+            string ctxType = ps[1].Type.ToDisplayString();
             rules.Add(new AnalyzeRuleModel(phase, targetNode, method.Name, ctxType, rootFullName));
         }
         return rules;
@@ -166,10 +166,12 @@ public static class ModelExtraction
                 else if (na.Key == "IsRightAssociative" && na.Value.Value is bool ir && ir) precAssoc = AstFirst.Core.Parsing.Associativity.Right;
             }
         }
-        var children = ExtractChildrenFromRules(rules);
+        var reservedMemberNames = type.GetMembers().Select(member => member.Name).Distinct().OrderBy(name => name, StringComparer.Ordinal).ToArray();
+        var propertyNames = CodeEmitter.GetPropertyNames(type.ToDisplayString(), rules, reservedMemberNames);
+        var children = ExtractChildrenFromRules(rules, propertyNames);
         bool hasEnter = secondPassEnter is not null && ImplementsInterface(type, secondPassEnter);
         bool hasExit = secondPassExit is not null && ImplementsInterface(type, secondPassExit);
-        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, rules, children, null, precPriority, precAssoc, hasEnter, hasExit);
+        return new NodeModel(type.ToDisplayString(), baseName, type.IsAbstract, rules, children, null, precPriority, precAssoc, hasEnter, hasExit, reservedMemberNames);
     }
 
     /// <summary>型が指定インターフェースを実装するか (継承含む)。</summary>
@@ -190,17 +192,29 @@ public static class ModelExtraction
         foreach (var n in nodes)
         {
             var inherited = new List<string>();
+            var inheritedChildren = new List<ChildModel>();
             var baseName = n.BaseFullName;
+            var ancestors = new List<NodeModel>();
             while (!string.IsNullOrEmpty(baseName) && baseName != AstNodeFullName)
             {
                 if (!byFullName.TryGetValue(baseName, out var baseNode)) break;
-                foreach (var c in baseNode.Children)
-                    if (!inherited.Contains(c.PropertyName))
-                        inherited.Add(c.PropertyName);
+                ancestors.Add(baseNode);
                 baseName = baseNode.BaseFullName;
             }
-            result.Add(new NodeModel(n.FullName, n.BaseFullName, n.IsAbstract, n.Rules, n.Children,
-                inherited, n.PrecedencePriority, n.PrecedenceAssoc, n.HasSecondPassEnter, n.HasSecondPassExit));
+            for (int i = ancestors.Count - 1; i >= 0; i--)
+                foreach (var c in ancestors[i].Children)
+                    if (!inherited.Contains(c.PropertyName))
+                    {
+                        inherited.Add(c.PropertyName);
+                        inheritedChildren.Add(c);
+                    }
+            var allChildren = new List<ChildModel>(inheritedChildren);
+            foreach (var c in n.Children)
+                if (!inherited.Contains(c.PropertyName)) allChildren.Add(c);
+
+            result.Add(new NodeModel(n.FullName, n.BaseFullName, n.IsAbstract, n.Rules, allChildren,
+                inherited, n.PrecedencePriority, n.PrecedenceAssoc, n.HasSecondPassEnter, n.HasSecondPassExit,
+                n.ReservedMemberNames));
         }
         return result;
     }
@@ -253,7 +267,8 @@ public static class ModelExtraction
     }
 
     /// <summary>[Rule] の引数から AstNode 派生の子を収集 (partial プロパティ + Walker 用)。</summary>
-    private static IReadOnlyList<ChildModel> ExtractChildrenFromRules(IReadOnlyList<RuleModel> rules)
+    private static IReadOnlyList<ChildModel> ExtractChildrenFromRules(
+        IReadOnlyList<RuleModel> rules, IReadOnlyDictionary<string, string> propertyNames)
     {
         var children = new List<ChildModel>();
         foreach (var r in rules)
@@ -261,7 +276,7 @@ public static class ModelExtraction
             {
                 if (!p.IsChild || p.Name is null) continue;
                 bool isNullable = p.TypeFullName.EndsWith("?");
-                var prop = CodeEmitter.Pascalize(p.Name);
+                var prop = propertyNames[p.Name];
                 if (children.Exists(c => c.PropertyName == prop)) continue;
                 // [Repeat] の子は IReadOnlyList<T> 型 (リスト展開された結果を格納)。
                 var typeFullName = p.IsRepeat
@@ -269,7 +284,6 @@ public static class ModelExtraction
                     : p.TypeFullName;
                 children.Add(new ChildModel(prop, typeFullName, isNullable, p.RepeatMin));
             }
-        children.Sort((a, b) => string.CompareOrdinal(a.PropertyName, b.PropertyName));
         return children;
     }
 

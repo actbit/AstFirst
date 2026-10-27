@@ -113,7 +113,7 @@ public sealed partial class NumExpr : Expr
 ```
 
 - **引数 = 右辺**: 引数の型と順序が右辺。`Token` + `[Token]`/`[Pattern]` は終端、`AstNode` 派生は子、`SemanticContext` 派生は ctx（パーサが注入）。
-- **`partial` 宣言必須**: Generator が子・終端のプロパティ（引数名の PascalCase、例: `Num`/`Left`/`Right`）と partial コンストラクタを生成し、`OnReduce` を呼ぶ。
+- **`partial` 宣言必須**: Generator が子・終端のプロパティ（引数名の PascalCase、例: `Num`/`Left`/`Right`）と partial コンストラクタを生成し、`OnReduce` を呼ぶ。生成プロパティは既存メンバー・ノード型名・生成メンバー・`[Rule]` メソッド名・PascalCase 化後の衝突を避け、衝突時は末尾に `_` を1つ以上付ける（`Value` 型の引数 `value` は `Value_`）。
 - **複数 `[Rule]`**: 同じクラスに複数の `[Rule]` を書くと、それぞれ独立の生成規則になる。どの規則で reduce されたかは `RuleName` プロパティ（メソッド名）で判定し、`OnReduce` で `switch` する。
 
 ```csharp

@@ -113,7 +113,7 @@ public sealed partial class NumExpr : Expr
 ```
 
 - **Parameters = RHS**: types and order express the RHS. `Token` + `[Token]`/`[Pattern]` is a terminal, an `AstNode`-derived type is a child, a `SemanticContext`-derived type is the ctx (injected by the parser).
-- **`partial` is required**: the generator emits child/terminal properties (PascalCase of the parameter name, e.g. `Num`/`Left`/`Right`) and a partial constructor that calls `OnReduce`.
+- **`partial` is required**: the generator emits child/terminal properties (PascalCase of the parameter name, e.g. `Num`/`Left`/`Right`) and a partial constructor that calls `OnReduce`. Generated properties avoid existing members, the node type, generated members, `[Rule]` method names, and PascalCase collisions; a conflict gets one or more trailing `_` characters (for example, parameter `value` on `Value` becomes `Value_`).
 - **Multiple `[Rule]`s**: several `[Rule]` methods on one class each become an independent production. Which rule reduced is exposed via the `RuleName` property (method name); branch on it in `OnReduce` with a `switch`.
 
 ```csharp

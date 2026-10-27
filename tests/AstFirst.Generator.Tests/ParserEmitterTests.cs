@@ -358,8 +358,8 @@ public class StmtItem : AstFirst.AstNode { public StmtItem(string ruleName, AstF
         }, inheritedPropertyNames: new List<string> { "Items" });
 
         var source = ParserEmitter.EmitPartial(model, concrete, "Test");
-        // 具象は : base(ruleName, items) で基底の Items (IReadOnlyList<EItem>) を初期化。
-        Assert.Contains(": base(ruleName, items)", source);
+        // 具象は : base(__astFirstRuleName, __astFirstArg0) で基底の Items (IReadOnlyList<EItem>) を初期化。
+        Assert.Contains(": base(__astFirstRuleName, __astFirstArg0)", source);
         // Items フィールドは基底から継承するため、具象では再定義しない。
         Assert.DoesNotContain("public readonly System.Collections.Generic.IReadOnlyList<Test.EItem> Items;", source);
     }
@@ -378,11 +378,11 @@ public class StmtItem : AstFirst.AstNode { public StmtItem(string ruleName, AstF
             })
         });
         var source = ParserEmitter.EmitPartial(CalcModel(), node, "Test");
-        Assert.Contains("var __autoSpan = default(AstFirst.SourceSpan);", source);
-        Assert.Contains("AstFirst.SourceSpan.Merge(__autoSpan, left.Span)", source);
-        Assert.Contains("AstFirst.SourceSpan.Merge(__autoSpan, op.Span)", source);
-        Assert.Contains("AstFirst.SourceSpan.Merge(__autoSpan, right.Span)", source);
-        Assert.Contains("if (__autoSpanHas) Span = __autoSpan;", source);
+        Assert.Contains("var __astFirstAutoSpan = default(AstFirst.SourceSpan);", source);
+        Assert.Contains("AstFirst.SourceSpan.Merge(__astFirstAutoSpan, __astFirstArg0.Span)", source);
+        Assert.Contains("AstFirst.SourceSpan.Merge(__astFirstAutoSpan, __astFirstArg1.Span)", source);
+        Assert.Contains("AstFirst.SourceSpan.Merge(__astFirstAutoSpan, __astFirstArg2.Span)", source);
+        Assert.Contains("if (__astFirstAutoSpanHas) Span = __astFirstAutoSpan;", source);
     }
 
     [Fact]
@@ -397,8 +397,8 @@ public class StmtItem : AstFirst.AstNode { public StmtItem(string ruleName, AstF
             })
         });
         var source = ParserEmitter.EmitPartial(CalcModel(), node, "Test");
-        Assert.Contains("foreach (var __autoSpanItem in statements)", source);
-        Assert.Contains("__autoSpanItem.Span", source);
+        Assert.Contains("foreach (var __astFirstAutoSpanItem in __astFirstArg0)", source);
+        Assert.Contains("__astFirstAutoSpanItem.Span", source);
     }
 
     [Fact]

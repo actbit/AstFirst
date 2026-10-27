@@ -30,7 +30,7 @@ public sealed class ParserGenerator : IIncrementalGenerator
             foreach (var model in modelArray)
             {
                 var (ns, typeName) = CodeEmitter.SplitFullName(model.RootTypeFullName);
-                var suffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+                var suffix = CodeEmitter.ModeSuffix(model.Mode);
                 var modelKey = model.RootTypeFullName + "\0" + model.Mode;
                 if (!emittedModels.Add(modelKey)) continue;
                 var modelHintName = HintNamePart(modelKey);

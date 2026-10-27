@@ -87,9 +87,79 @@ public static class CodeEmitter
         return i < 0 ? ("", fullName) : (fullName.Substring(0, i), fullName.Substring(i + 1));
     }
 
+    /// <summary>[Grammar(Mode=...)] の値を生成型名用の suffix に変換する。</summary>
+    /// <remarks>通常の識別子は従来の名前を維持し、記号や空白を含む値は衝突しない hash を付ける。</remarks>
+    public static string ModeSuffix(string? mode)
+    {
+        if (string.IsNullOrEmpty(mode)) return "";
+        var modeText = mode!;
+
+        var sanitized = new StringBuilder(modeText.Length + 1);
+        for (int i = 0; i < modeText.Length; i++)
+        {
+            char c = modeText[i];
+            if (i == 0 && char.IsDigit(c)) sanitized.Append('_');
+            sanitized.Append(char.IsLetterOrDigit(c) || c == '_' ? c : '_');
+        }
+
+        var safe = sanitized.ToString();
+        if (safe == modeText) return "_" + safe;
+
+        uint hash = 2166136261;
+        unchecked
+        {
+            for (int i = 0; i < modeText.Length; i++) hash = (hash ^ modeText[i]) * 16777619;
+        }
+        return "_" + safe + "_" + hash.ToString("x8");
+    }
+
     /// <summary>[Rule] 引数名 (lowerCamel) をプロパティ名 (PascalCase) に。空なら "Item"。</summary>
     public static string Pascalize(string? s)
         => string.IsNullOrEmpty(s) ? "Item" : char.ToUpperInvariant(s![0]) + s.Substring(1);
+
+    /// <summary>生成ノードのメンバー名として安全な、引数由来のプロパティ名を返す。</summary>
+    /// <remarks>C# では型と同名のメンバーを宣言できないため、衝突時は末尾に '_' を付ける。</remarks>
+    public static string PropertyName(string nodeFullName, string? parameterName)
+    {
+        var propertyName = Pascalize(parameterName);
+        var (_, nodeName) = SplitFullName(nodeFullName);
+        return propertyName == nodeName ? propertyName + "_" : propertyName;
+    }
+
+    /// <summary>ノード内で生成する全パラメータプロパティの名前を決定する。</summary>
+    /// <remarks>型・生成メンバーとの衝突と、異なる引数名の PascalCase 衝突を避ける。</remarks>
+    public static IReadOnlyDictionary<string, string> GetPropertyNames(
+        string nodeFullName, IReadOnlyList<RuleModel> rules, IReadOnlyList<string>? reservedMemberNames = null)
+    {
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        var used = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "Span", "AcceptState", "IsAccepted", "NotifyAccepted",
+            "OnReduce", "OnAccepted"
+        };
+        var (_, nodeName) = SplitFullName(nodeFullName);
+        used.Add(nodeName);
+        if (rules.Count > 0) used.Add("RuleName");
+        foreach (var rule in rules)
+            used.Add(rule.MethodName);
+        if (reservedMemberNames is not null)
+            foreach (var memberName in reservedMemberNames)
+                used.Add(memberName);
+
+        foreach (var rule in rules)
+            foreach (var parameter in rule.Parameters)
+            {
+                if (parameter.IsContext || parameter.Name is null || names.ContainsKey(parameter.Name))
+                    continue;
+
+                var baseName = PropertyName(nodeFullName, parameter.Name);
+                var name = baseName;
+                while (!used.Add(name)) name += "_";
+                names.Add(parameter.Name, name);
+            }
+
+        return names;
+    }
 
     private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 }

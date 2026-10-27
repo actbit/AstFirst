@@ -18,7 +18,7 @@ public static class WalkerEmitter
     public static string EmitWalker(GrammarModel model, string ns)
     {
         var (_, rootType) = CodeEmitter.SplitFullName(model.RootTypeFullName);
-        var suffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+        var suffix = CodeEmitter.ModeSuffix(model.Mode);
         var walkerName = rootType + suffix + "Walker";
 
         var concrete = model.Nodes.Where(n => !n.IsAbstract).ToList();
@@ -116,11 +116,9 @@ public static class WalkerEmitter
             foreach (var c in n.Children)
             {
                 if (c.IsRepeat)
-                    sb.AppendLine("                foreach (var __c in __n." + c.PropertyName + ") children.Add(__c);");
-                else if (c.IsNullable)
-                    sb.AppendLine("                if (__n." + c.PropertyName + " is not null) children.Add(__n." + c.PropertyName + ");");
+                    sb.AppendLine("                if (__n." + c.PropertyName + " is not null) foreach (var __c in __n." + c.PropertyName + ") children.Add(__c);");
                 else
-                    sb.AppendLine("                children.Add(__n." + c.PropertyName + ");");
+                    sb.AppendLine("                if (__n." + c.PropertyName + " is not null) children.Add(__n." + c.PropertyName + ");");
             }
             sb.AppendLine("                break;");
         }

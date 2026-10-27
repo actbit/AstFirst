@@ -79,7 +79,7 @@ internal static class GlrParserEmitter
         sb.AppendLine("{");
         if (model.HasSecondPass)
         {
-            var walkerSuffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+            var walkerSuffix = CodeEmitter.ModeSuffix(model.Mode);
             var (_, rootType) = CodeEmitter.SplitFullName(model.RootTypeFullName);
             var walkerName = rootType + walkerSuffix + "Walker";
             sb.AppendLine("    private static readonly " + walkerName + " __defaultWalker = new " + walkerName + "._Default();");
@@ -280,7 +280,7 @@ internal static class GlrParserEmitter
     private static (string type, string lexer, string parser) Names(GrammarModel model)
     {
         var (ns, type) = CodeEmitter.SplitFullName(model.RootTypeFullName);
-        var suffix = string.IsNullOrEmpty(model.Mode) ? "" : "_" + model.Mode;
+        var suffix = CodeEmitter.ModeSuffix(model.Mode);
         return (type + suffix, type + suffix + "Lexer", type + suffix + "Parser");
     }
 
