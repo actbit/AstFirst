@@ -69,6 +69,12 @@ public class CodeEmitterTests
     }
 
     [Fact]
+    public void EscapeStringLiteralPreservesControlCharacters()
+    {
+        Assert.Equal("line\\n\\tquote\\\"slash\\\\", CodeEmitter.EscapeStringLiteral("line\n\tquote\"slash\\"));
+    }
+
+    [Fact]
     public void SplitFullNameHandlesNoNamespace()
     {
         var (ns, type) = CodeEmitter.SplitFullName("Expr");

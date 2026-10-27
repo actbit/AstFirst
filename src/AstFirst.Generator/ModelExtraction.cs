@@ -208,13 +208,17 @@ public static class ModelExtraction
                         inherited.Add(c.PropertyName);
                         inheritedChildren.Add(c);
                     }
+            var reservedMemberNames = n.ReservedMemberNames.ToList();
+            var propertyNames = CodeEmitter.GetPropertyNames(
+                n.FullName, n.Rules, reservedMemberNames, inheritedChildren);
+            var directChildren = ExtractChildrenFromRules(n.Rules, propertyNames);
             var allChildren = new List<ChildModel>(inheritedChildren);
-            foreach (var c in n.Children)
+            foreach (var c in directChildren)
                 if (!inherited.Contains(c.PropertyName)) allChildren.Add(c);
 
             result.Add(new NodeModel(n.FullName, n.BaseFullName, n.IsAbstract, n.Rules, allChildren,
                 inherited, n.PrecedencePriority, n.PrecedenceAssoc, n.HasSecondPassEnter, n.HasSecondPassExit,
-                n.ReservedMemberNames));
+                reservedMemberNames));
         }
         return result;
     }
@@ -272,11 +276,12 @@ public static class ModelExtraction
     {
         var children = new List<ChildModel>();
         foreach (var r in rules)
-            foreach (var p in r.Parameters)
+            for (int parameterIndex = 0; parameterIndex < r.Parameters.Count; parameterIndex++)
             {
+                var p = r.Parameters[parameterIndex];
                 if (!p.IsChild || p.Name is null) continue;
                 bool isNullable = p.TypeFullName.EndsWith("?");
-                var prop = propertyNames[p.Name];
+                var prop = propertyNames[CodeEmitter.PropertyKey(r, parameterIndex)];
                 if (children.Exists(c => c.PropertyName == prop)) continue;
                 // [Repeat] の子は IReadOnlyList<T> 型 (リスト展開された結果を格納)。
                 var typeFullName = p.IsRepeat

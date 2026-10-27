@@ -196,6 +196,29 @@ public sealed partial class Choice : Root
     }
 
     [Fact]
+    public void SameParameterNameWithDifferentTypesGetsDistinctProperties()
+    {
+        var source = @"
+using AstFirst;
+[Grammar]
+public abstract partial class Root : AstNode { }
+public sealed partial class Child : Root
+{
+    [Rule] public static void Reduce([Token(""c"")] Token token) { }
+}
+public sealed partial class Choice : Root
+{
+    [Rule] public static void Node(Child value) { }
+    [Rule] public static void Token([Token(""t"")] Token value) { }
+}
+";
+
+        var errors = Generate(source, out _);
+
+        Assert.Empty(errors);
+    }
+
+    [Fact]
     public void InheritedConstructorArgumentsKeepBaseRuleOrder()
     {
         var source = @"

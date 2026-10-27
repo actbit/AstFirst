@@ -42,12 +42,12 @@ internal static class GlrParserEmitter
                 tokenIdToSym[r.TokenId] = sid;
 
         // TokenId → Kind マッピング ([Token]/[Pattern] の Kind 属性から)。
-        var kindByPattern = new Dictionary<string, string>();
+        var kindByPattern = new Dictionary<string, string?>();
         foreach (var td in model.TokenDefs)
-            if (td.Kind is string k) kindByPattern[td.Pattern] = k;
+            if (!kindByPattern.ContainsKey(td.Pattern)) kindByPattern[td.Pattern] = td.Kind;
         var tokenIdToKind = new string?[maxTokenId + 1];
         foreach (var r in rules)
-            if (kindByPattern.TryGetValue(r.Pattern, out var kind))
+            if (kindByPattern.TryGetValue(r.Pattern, out var kind) && kind is not null)
                 tokenIdToKind[r.TokenId] = kind;
         bool hasKinds = tokenIdToKind.Any(k => k is not null);
 
@@ -108,7 +108,7 @@ internal static class GlrParserEmitter
                 if (i > 0) sb.Append(", ");
                 var k = tokenIdToKind[i];
                 if (k is null) sb.Append("null");
-                else sb.Append("\"").Append(k.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"");
+                else sb.Append("\"").Append(CodeEmitter.EscapeStringLiteral(k)).Append("\"");
             }
             sb.AppendLine(" };");
         }
@@ -121,7 +121,7 @@ internal static class GlrParserEmitter
         for (int si = 0; si < symbolCount; si++)
         {
             if (si > 0) sb.Append(", ");
-            var escaped = grammar.Symbols[si].Name.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var escaped = CodeEmitter.EscapeStringLiteral(grammar.Symbols[si].Name);
             sb.Append("\"").Append(escaped).Append("\"");
         }
         sb.AppendLine(" };");

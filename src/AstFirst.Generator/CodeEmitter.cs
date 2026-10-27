@@ -64,7 +64,7 @@ public static class CodeEmitter
         {
             var r = rules[i];
             sb.AppendLine();
-            sb.Append("        new LexerRule(\"").Append(Escape(r.Pattern)).Append("\", ")
+            sb.Append("        new LexerRule(\"").Append(EscapeStringLiteral(r.Pattern)).Append("\", ")
               .Append(r.TokenId).Append(", ").Append(r.Priority).Append(", ").Append(r.IsHidden ? "true" : "false").Append("),");
         }
         sb.AppendLine();
@@ -129,7 +129,8 @@ public static class CodeEmitter
     /// <summary>ノード内で生成する全パラメータプロパティの名前を決定する。</summary>
     /// <remarks>型・生成メンバーとの衝突と、異なる引数名の PascalCase 衝突を避ける。</remarks>
     public static IReadOnlyDictionary<string, string> GetPropertyNames(
-        string nodeFullName, IReadOnlyList<RuleModel> rules, IReadOnlyList<string>? reservedMemberNames = null)
+        string nodeFullName, IReadOnlyList<RuleModel> rules, IReadOnlyList<string>? reservedMemberNames = null,
+        IReadOnlyList<ChildModel>? inheritedChildren = null)
     {
         var names = new Dictionary<string, string>(StringComparer.Ordinal);
         var used = new HashSet<string>(StringComparer.Ordinal)
@@ -146,20 +147,88 @@ public static class CodeEmitter
             foreach (var memberName in reservedMemberNames)
                 used.Add(memberName);
 
-        foreach (var rule in rules)
-            foreach (var parameter in rule.Parameters)
+        var inheritedByName = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (inheritedChildren is not null)
+            foreach (var child in inheritedChildren)
             {
-                if (parameter.IsContext || parameter.Name is null || names.ContainsKey(parameter.Name))
-                    continue;
+                inheritedByName[child.PropertyName] = child.TypeFullName;
+                used.Add(child.PropertyName);
+            }
+        var reusedInherited = new HashSet<string>(StringComparer.Ordinal);
+        var grouped = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        for (int ruleIndex = 0; ruleIndex < rules.Count; ruleIndex++)
+        {
+            var rule = rules[ruleIndex];
+            for (int parameterIndex = 0; parameterIndex < rule.Parameters.Count; parameterIndex++)
+            {
+                var parameter = rule.Parameters[parameterIndex];
+                if (parameter.IsContext || parameter.Name is null) continue;
 
                 var baseName = PropertyName(nodeFullName, parameter.Name);
-                var name = baseName;
-                while (!used.Add(name)) name += "_";
-                names.Add(parameter.Name, name);
+                var groupKey = ParameterGroupKey(parameter);
+                if (!grouped.TryGetValue(groupKey, out var name))
+                {
+                    if (inheritedByName.TryGetValue(baseName, out var inheritedType)
+                        && inheritedType == ConstructorType(parameter)
+                        && reusedInherited.Add(baseName))
+                    {
+                        name = baseName;
+                    }
+                    else
+                    {
+                        name = baseName;
+                        while (!used.Add(name)) name += "_";
+                    }
+                    grouped[groupKey] = name;
+                }
+                names[PropertyKey(rule, parameterIndex)] = name;
             }
+        }
 
         return names;
     }
 
-    private static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    /// <summary>Returns the generated-property lookup key for one rule parameter.</summary>
+    public static string PropertyKey(RuleModel rule, int parameterIndex)
+        => RuleKey(rule) + "\0" + parameterIndex;
+
+    private static string ParameterGroupKey(ParamModel parameter)
+        => (parameter.Name ?? "") + "\0" + ConstructorType(parameter);
+
+    private static string RuleKey(RuleModel rule)
+    {
+        var sb = new StringBuilder(rule.MethodName.Length + 32);
+        sb.Append(rule.MethodName).Append('\0');
+        foreach (var parameter in rule.Parameters)
+            sb.Append(ConstructorType(parameter)).Append('\0');
+        return sb.ToString();
+    }
+
+    private static string ConstructorType(ParamModel parameter) => parameter.IsRepeat
+        ? "System.Collections.Generic.IReadOnlyList<" + parameter.TypeFullName + ">"
+        : parameter.TypeFullName;
+
+    /// <summary>Escapes a value for a regular C# string literal.</summary>
+    public static string EscapeStringLiteral(string s)
+    {
+        var escaped = new StringBuilder(s.Length + 8);
+        foreach (var c in s)
+        {
+            switch (c)
+            {
+                case '\\': escaped.Append("\\\\"); break;
+                case '"': escaped.Append("\\\""); break;
+                case '\r': escaped.Append("\\r"); break;
+                case '\n': escaped.Append("\\n"); break;
+                case '\t': escaped.Append("\\t"); break;
+                case '\0': escaped.Append("\\0"); break;
+                default:
+                    if (char.IsControl(c)) escaped.Append("\\u").Append(((int)c).ToString("x4"));
+                    else escaped.Append(c);
+                    break;
+            }
+        }
+        return escaped.ToString();
+    }
 }

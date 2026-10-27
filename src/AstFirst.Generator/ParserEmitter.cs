@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using AstFirst.Core.Lexing;
 using AstFirst.Core.Parsing;
@@ -44,12 +45,12 @@ public static class ParserEmitter
                 tokenIdToSym[r.TokenId] = sid;
 
         // TokenId → Kind マッピング ([Token]/[Pattern] の Kind 属性から)。
-        var kindByPattern = new Dictionary<string, string>();
+        var kindByPattern = new Dictionary<string, string?>();
         foreach (var td in model.TokenDefs)
-            if (td.Kind is string k) kindByPattern[td.Pattern] = k;
+            if (!kindByPattern.ContainsKey(td.Pattern)) kindByPattern[td.Pattern] = td.Kind;
         var tokenIdToKind = new string?[maxTokenId + 1];
         foreach (var r in rules)
-            if (kindByPattern.TryGetValue(r.Pattern, out var kind))
+            if (kindByPattern.TryGetValue(r.Pattern, out var kind) && kind is not null)
                 tokenIdToKind[r.TokenId] = kind;
         bool hasKinds = tokenIdToKind.Any(k => k is not null);
 
@@ -112,7 +113,7 @@ public static class ParserEmitter
                 if (i > 0) sb.Append(", ");
                 var k = tokenIdToKind[i];
                 if (k is null) sb.Append("null");
-                else sb.Append("\"").Append(k.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\"");
+                else sb.Append("\"").Append(CodeEmitter.EscapeStringLiteral(k)).Append("\"");
             }
             sb.AppendLine(" };");
         }
@@ -125,7 +126,7 @@ public static class ParserEmitter
         for (int si = 0; si < symbolCount; si++)
         {
             if (si > 0) sb.Append(", ");
-            var escaped = grammar.Symbols[si].Name.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var escaped = CodeEmitter.EscapeStringLiteral(grammar.Symbols[si].Name);
             sb.Append("\"").Append(escaped).Append("\"");
         }
         sb.AppendLine(" };");
@@ -402,7 +403,6 @@ public static class ParserEmitter
 
         string? ctxType = CtxTypeOf(node);
         string ctxParam = ctxType is not null ? "(" + ctxType + " __astFirstCtx)" : "()";
-        var propertyNames = CodeEmitter.GetPropertyNames(node.FullName, node.Rules, node.ReservedMemberNames);
 
         sb.AppendLine("public partial class " + simple);
         sb.AppendLine("{");
@@ -411,15 +411,18 @@ public static class ParserEmitter
         bool isAbstractBase = node.IsAbstract && node.Rules.Count > 0;
         var inheritedSet = new HashSet<string>(node.InheritedPropertyNames);
         bool hasInherited = inheritedSet.Count > 0;
+        var inheritedChildren = node.Children.Where(c => inheritedSet.Contains(c.PropertyName)).ToArray();
+        var propertyNames = CodeEmitter.GetPropertyNames(node.FullName, node.Rules, node.ReservedMemberNames, inheritedChildren);
 
         // 子 (AstNode 派生) + 終端 (Token): readonly フィールド (全[Rule]の引数から統合、PascalCase)。
         // 具象クラスは継承プロパティ (基底で定義済み) を再定義しない。
         var propSet = new HashSet<string>();
         foreach (var rule in node.Rules)
-            foreach (var p in rule.Parameters)
+            for (int parameterIndex = 0; parameterIndex < rule.Parameters.Count; parameterIndex++)
             {
+                var p = rule.Parameters[parameterIndex];
                 if (p.IsContext || p.Name is null) continue;
-                var prop = propertyNames[p.Name!];
+                var prop = propertyNames[CodeEmitter.PropertyKey(rule, parameterIndex)];
                 if (!propSet.Add(prop)) continue;
                 if (!isAbstractBase && inheritedSet.Contains(prop)) continue;
                 var typeStr = p.IsRepeat
@@ -474,7 +477,7 @@ public static class ParserEmitter
                     for (int i = 0; i < rule.Parameters.Count; i++)
                     {
                         var p = rule.Parameters[i];
-                        if (p.Name is not null && propertyNames[p.Name] == inheritedProp) { parameterIndex = i; break; }
+                        if (p.Name is not null && propertyNames[CodeEmitter.PropertyKey(rule, i)] == inheritedProp) { parameterIndex = i; break; }
                     }
                     if (parameterIndex >= 0) sb.Append(", ").Append(CtorArgumentName(parameterIndex));
                 }
@@ -540,7 +543,7 @@ public static class ParserEmitter
             var p = rule.Parameters[parameterIndex];
             if (!p.IsContext && p.Name is not null)
             {
-                var prop = propertyNames[p.Name];
+                var prop = propertyNames[CodeEmitter.PropertyKey(rule, parameterIndex)];
                 if (isAbstractBase || !inheritedSet.Contains(prop))
                     sb.AppendLine(indent + "this." + prop + " = " + CtorArgumentName(parameterIndex) + ";");
             }
@@ -560,13 +563,26 @@ public static class ParserEmitter
             if (p.IsRepeat)
             {
                 // [Repeat] 子: IReadOnlyList<T> (T は AstNode/Token 派生、いずれも .Span を持つ)。
-                sb.AppendLine(indent + "foreach (var __astFirstAutoSpanItem in " + CtorArgumentName(parameterIndex)
-                    + ") { __astFirstAutoSpan = __astFirstAutoSpanHas ? AstFirst.SourceSpan.Merge(__astFirstAutoSpan, __astFirstAutoSpanItem.Span) : __astFirstAutoSpanItem.Span; __astFirstAutoSpanHas = true; }");
+                sb.Append(indent + "foreach (var __astFirstAutoSpanItem in " + CtorArgumentName(parameterIndex) + ") { ");
+                if (p.TypeFullName.EndsWith("?")) sb.Append("if (__astFirstAutoSpanItem is null) continue; ");
+                sb.AppendLine("__astFirstAutoSpan = __astFirstAutoSpanHas ? AstFirst.SourceSpan.Merge(__astFirstAutoSpan, __astFirstAutoSpanItem.Span) : __astFirstAutoSpanItem.Span; __astFirstAutoSpanHas = true; }");
             }
             else
             {
-                sb.AppendLine(indent + "__astFirstAutoSpan = __astFirstAutoSpanHas ? AstFirst.SourceSpan.Merge(__astFirstAutoSpan, "
-                    + CtorArgumentName(parameterIndex) + ".Span) : " + CtorArgumentName(parameterIndex) + ".Span; __astFirstAutoSpanHas = true;");
+                var argument = CtorArgumentName(parameterIndex);
+                if (p.TypeFullName.EndsWith("?"))
+                {
+                    sb.AppendLine(indent + "if (" + argument + " is not null)");
+                    sb.AppendLine(indent + "{");
+                    sb.AppendLine(indent + "    __astFirstAutoSpan = __astFirstAutoSpanHas ? AstFirst.SourceSpan.Merge(__astFirstAutoSpan, "
+                        + argument + ".Span) : " + argument + ".Span; __astFirstAutoSpanHas = true;");
+                    sb.AppendLine(indent + "}");
+                }
+                else
+                {
+                    sb.AppendLine(indent + "__astFirstAutoSpan = __astFirstAutoSpanHas ? AstFirst.SourceSpan.Merge(__astFirstAutoSpan, "
+                        + argument + ".Span) : " + argument + ".Span; __astFirstAutoSpanHas = true;");
+                }
             }
         }
         sb.AppendLine(indent + "if (__astFirstAutoSpanHas) Span = __astFirstAutoSpan;");

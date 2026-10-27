@@ -116,7 +116,7 @@ public static class WalkerEmitter
             foreach (var c in n.Children)
             {
                 if (c.IsRepeat)
-                    sb.AppendLine("                if (__n." + c.PropertyName + " is not null) foreach (var __c in __n." + c.PropertyName + ") children.Add(__c);");
+                    sb.AppendLine("                if (__n." + c.PropertyName + " is not null) foreach (var __c in __n." + c.PropertyName + ") if (__c is not null) children.Add(__c);");
                 else
                     sb.AppendLine("                if (__n." + c.PropertyName + " is not null) children.Add(__n." + c.PropertyName + ");");
             }

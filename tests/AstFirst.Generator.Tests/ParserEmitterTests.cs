@@ -402,6 +402,23 @@ public class StmtItem : AstFirst.AstNode { public StmtItem(string ruleName, AstF
     }
 
     [Fact]
+    public void EmitPartialSkipsNullableChildrenWhenMergingSpan()
+    {
+        var node = new NodeModel("Test.Optional", "Test.Expr", false, new List<RuleModel>
+        {
+            new RuleModel("Optional", new List<ParamModel>
+            {
+                new ParamModel("Test.Expr?", "child", null, false, true, 0)
+            })
+        });
+
+        var source = ParserEmitter.EmitPartial(CalcModel(), node, "Test");
+
+        Assert.Contains("if (__astFirstArg0 is not null)", source);
+        Assert.Contains("__astFirstArg0.Span", source);
+    }
+
+    [Fact]
     public void EmitPartialSkipsSpanMergeForAbstractBase()
     {
         // 抽象基底 ([Rule] 持ち abstract): 直接 new されないため Span 自動計算を生成しない。
