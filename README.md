@@ -317,7 +317,7 @@ Japanese versions are under `docs/ja/` and [README.md](README.md).
 
 ## Tests
 
-374 tests (AstFirst.Tests 308 + Generator.Tests 66). Covers lexer/DFA/LALR stages, end-to-end, error recovery (Corchuelo), GLR fork/dedup, semantic analysis, grammar discovery, Core build snapshot stability, `Accept`/`Reject` fallback, `OnAccepted`, and positions.
+384 tests (AstFirst.Tests 308 + Generator.Tests 76). Covers lexer/DFA/LALR stages, end-to-end, error recovery (Corchuelo), GLR fork/dedup, semantic analysis, grammar discovery, generated-code compilation, Core build snapshot stability, `Accept`/`Reject` fallback, `OnAccepted`, and positions.
 
 ## License
 

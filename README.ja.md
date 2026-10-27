@@ -366,7 +366,7 @@ AstFirst.slnx
 
 ## テスト
 
-374 テスト（AstFirst.Tests 308 + Generator.Tests 66）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復 (Corchuelo)、GLR fork/dedup、意味解析、文法ノード探索、Coreビルドのスナップショット安定性、`Accept`/`Reject` フォールバック、`OnAccepted`、位置情報を検証。
+384 テスト（AstFirst.Tests 308 + Generator.Tests 76）。レクサ/DFA/LALR の各段階、エンドツーエンド、エラー回復 (Corchuelo)、GLR fork/dedup、意味解析、文法ノード探索、生成コードのコンパイル、Coreビルドのスナップショット安定性、`Accept`/`Reject` フォールバック、`OnAccepted`、位置情報を検証。
 
 ## ライセンス
 
